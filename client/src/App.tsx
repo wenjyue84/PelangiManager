@@ -17,12 +17,6 @@ import Header from "./components/header";
 import Navigation from "./components/navigation";
 
 function Router() {
-  const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <LoginForm />;
-  }
-
   return (
     <div className="min-h-screen bg-hostel-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -30,10 +24,19 @@ function Router() {
         <Switch>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
-          <Route path="/check-in" component={CheckIn} />
-          <Route path="/check-out" component={CheckOut} />
+          <Route path="/check-in">
+            <ProtectedRoute requireAuth={true}>
+              <CheckIn />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/check-out">
+            <ProtectedRoute requireAuth={true}>
+              <CheckOut />
+            </ProtectedRoute>
+          </Route>
           <Route path="/history" component={History} />
           <Route path="/maintenance" component={Maintenance} />
+          <Route path="/login" component={LoginForm} />
           <Route component={NotFound} />
         </Switch>
       </div>

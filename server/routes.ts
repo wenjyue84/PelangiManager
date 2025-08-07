@@ -67,9 +67,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Login endpoint
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log("Login attempt:", req.body);
       const { email, password } = loginSchema.parse(req.body);
       
       const user = await storage.getUserByEmail(email);
+      console.log("User found:", user ? "Yes" : "No");
+      
       if (!user || user.password !== password) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -81,6 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ token, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role } });
     } catch (error) {
+      console.error("Login error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }

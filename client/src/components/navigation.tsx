@@ -43,21 +43,33 @@ export default function Navigation() {
           </Link>
         );
       })}
-      {isAuthenticated && user && (
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-gray-600 hidden sm:inline">
-            Welcome, {user.firstName || user.email}
-          </span>
-          <Button 
-            onClick={authContext?.logout} 
-            variant="outline" 
-            size="sm"
-            className="text-xs px-2 py-1"
-          >
-            Logout
-          </Button>
-        </div>
-      )}
+      <div className="ml-auto flex items-center gap-2">
+        {isAuthenticated && user ? (
+          <>
+            <span className="text-xs text-gray-600 hidden sm:inline">
+              Welcome, {user.firstName || user.email}
+            </span>
+            <Button 
+              onClick={authContext?.logout} 
+              variant="outline" 
+              size="sm"
+              className="text-xs px-2 py-1"
+            >
+              Logout
+            </Button>
+          </>
+        ) : (
+          <Link href="/login">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="text-xs px-2 py-1"
+            >
+              Login
+            </Button>
+          </Link>
+        )}
+      </div>
     </nav>
   );
 }

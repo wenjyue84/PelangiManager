@@ -72,6 +72,7 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     this.users.set(adminUser.id, adminUser);
+    console.log("Initialized default admin user with email:", adminUser.email);
   }
 
   private initializeCapsules() {

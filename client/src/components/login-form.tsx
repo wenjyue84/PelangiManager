@@ -29,8 +29,9 @@ export function LoginForm() {
 
     script.onload = () => {
       if (window.google && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+        console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
         window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "717199613266-2olcm8aqakh45pceuc6k8c9l295956g9.apps.googleusercontent.com",
           callback: handleGoogleSignIn,
         });
 
