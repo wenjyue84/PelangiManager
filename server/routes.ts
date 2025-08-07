@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, updateCapsuleProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema } from "@shared/schema";
+import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
@@ -277,43 +277,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get capsules with problems (for maintenance dashboard)
-  app.get("/api/capsules/problems", async (_req, res) => {
+  // Get all problems
+  app.get("/api/problems", authenticateToken, async (req, res) => {
     try {
-      const capsules = await storage.getCapsulesWithProblems();
-      res.json(capsules);
+      const problems = await storage.getAllProblems();
+      res.json(problems);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get capsule problems" });
+      res.status(500).json({ message: "Failed to fetch problems" });
     }
   });
 
-  // Update capsule problems
-  app.patch("/api/capsules/:number", async (req, res) => {
+  // Get active problems only
+  app.get("/api/problems/active", authenticateToken, async (req, res) => {
+    try {
+      const problems = await storage.getActiveProblems();
+      res.json(problems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch active problems" });
+    }
+  });
+
+  // Get problems for specific capsule
+  app.get("/api/capsules/:number/problems", authenticateToken, async (req, res) => {
     try {
       const { number } = req.params;
-      const updates = updateCapsuleProblemSchema.parse(req.body);
+      const problems = await storage.getCapsuleProblems(number);
+      res.json(problems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch capsule problems" });
+    }
+  });
+
+  // Report new problem
+  app.post("/api/problems", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = createCapsuleProblemSchema.parse(req.body);
       
-      // Add timestamps for problem reporting/resolution
-      if (updates.problemDescription && updates.problemDescription.trim() !== '') {
-        updates.problemReportedAt = new Date();
-        updates.problemResolvedAt = undefined;
-      } else if (updates.problemDescription === '' || updates.problemDescription === undefined) {
-        updates.problemResolvedAt = new Date();
-        updates.problemDescription = undefined;
+      // Check if capsule already has an active problem
+      const existingProblems = await storage.getCapsuleProblems(validatedData.capsuleNumber);
+      const hasActiveProblem = existingProblems.some(p => !p.isResolved);
+      
+      if (hasActiveProblem) {
+        return res.status(400).json({ 
+          message: "This capsule already has an active problem. Please resolve it first." 
+        });
       }
       
-      const capsule = await storage.updateCapsule(number, updates);
+      const problem = await storage.createCapsuleProblem({
+        ...validatedData,
+        reportedBy: req.user.username || req.user.email || "Unknown",
+      });
       
-      if (!capsule) {
-        return res.status(404).json({ message: "Capsule not found" });
+      res.json(problem);
+    } catch (error: any) {
+      console.error("Error creating problem:", error);
+      res.status(400).json({ message: error.message || "Failed to create problem" });
+    }
+  });
+
+  // Resolve problem
+  app.patch("/api/problems/:id/resolve", authenticateToken, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      
+      const resolvedBy = req.user.username || req.user.email || "Unknown";
+      const problem = await storage.resolveProblem(id, resolvedBy, notes);
+      
+      if (!problem) {
+        return res.status(404).json({ message: "Problem not found" });
       }
 
-      res.json(capsule);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to update capsule" });
+      res.json(problem);
+    } catch (error: any) {
+      console.error("Error resolving problem:", error);
+      res.status(400).json({ message: error.message || "Failed to resolve problem" });
     }
   });
 

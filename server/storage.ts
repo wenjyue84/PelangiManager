@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, users, guests, capsules, sessions, guestTokens } from "@shared/schema";
+import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, users, guests, capsules, sessions, guestTokens, capsuleProblems } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -38,7 +38,13 @@ export interface IStorage {
   getCapsule(number: string): Promise<Capsule | undefined>;
   updateCapsule(number: string, updates: Partial<Capsule>): Promise<Capsule | undefined>;
   createCapsule(capsule: InsertCapsule): Promise<Capsule>;
-  getCapsulesWithProblems(): Promise<Capsule[]>;
+  
+  // Capsule problem management
+  createCapsuleProblem(problem: InsertCapsuleProblem): Promise<CapsuleProblem>;
+  getCapsuleProblems(capsuleNumber: string): Promise<CapsuleProblem[]>;
+  getActiveProblems(): Promise<CapsuleProblem[]>;
+  getAllProblems(): Promise<CapsuleProblem[]>;
+  resolveProblem(problemId: string, resolvedBy: string, notes?: string): Promise<CapsuleProblem | undefined>;
 
   // Guest token management methods
   createGuestToken(token: InsertGuestToken): Promise<GuestToken>;
@@ -53,6 +59,7 @@ export class MemStorage implements IStorage {
   private capsules: Map<string, Capsule>;
   private sessions: Map<string, Session>;
   private guestTokens: Map<string, GuestToken>;
+  private capsuleProblems: Map<string, CapsuleProblem>;
   private totalCapsules = 22; // C1-C6 (6) + C25-C26 (2) + C11-C24 (14)
 
   constructor() {
@@ -61,6 +68,7 @@ export class MemStorage implements IStorage {
     this.capsules = new Map();
     this.sessions = new Map();
     this.guestTokens = new Map();
+    this.capsuleProblems = new Map();
     
     // Initialize capsules, admin user, and sample guests
     this.initializeCapsules();
@@ -393,6 +401,21 @@ export class MemStorage implements IStorage {
     if (capsule) {
       const updatedCapsule = { ...capsule, ...updates };
       this.capsules.set(number, updatedCapsule);
+      
+      // Check if we're marking capsule as available again (problem resolved)
+      if (updates.isAvailable === true && !capsule.isAvailable) {
+        // Auto-resolve any active problems for this capsule
+        const problems = Array.from(this.capsuleProblems.values()).filter(
+          p => p.capsuleNumber === number && !p.isResolved
+        );
+        for (const problem of problems) {
+          problem.isResolved = true;
+          problem.resolvedAt = new Date();
+          problem.resolvedBy = "System";
+          problem.notes = "Auto-resolved when capsule marked as available";
+        }
+      }
+      
       return updatedCapsule;
     }
     return undefined;
@@ -403,18 +426,79 @@ export class MemStorage implements IStorage {
     const capsule: Capsule = { 
       ...insertCapsule, 
       id,
-      problemDescription: insertCapsule.problemDescription || null,
-      problemReportedAt: null,
-      problemResolvedAt: null,
     };
     this.capsules.set(capsule.number, capsule);
     return capsule;
   }
 
-  async getCapsulesWithProblems(): Promise<Capsule[]> {
-    return Array.from(this.capsules.values()).filter(
-      capsule => capsule.problemDescription !== null
-    );
+  // Capsule problem management
+  async createCapsuleProblem(problem: InsertCapsuleProblem): Promise<CapsuleProblem> {
+    const id = randomUUID();
+    const capsuleProblem: CapsuleProblem = {
+      id,
+      capsuleNumber: problem.capsuleNumber,
+      description: problem.description,
+      reportedBy: problem.reportedBy,
+      reportedAt: problem.reportedAt || new Date(),
+      isResolved: false,
+      resolvedBy: null,
+      resolvedAt: null,
+      notes: null,
+    };
+    this.capsuleProblems.set(id, capsuleProblem);
+    
+    // Mark capsule as unavailable
+    const capsule = this.capsules.get(problem.capsuleNumber);
+    if (capsule) {
+      capsule.isAvailable = false;
+      this.capsules.set(problem.capsuleNumber, capsule);
+    }
+    
+    return capsuleProblem;
+  }
+
+  async getCapsuleProblems(capsuleNumber: string): Promise<CapsuleProblem[]> {
+    return Array.from(this.capsuleProblems.values())
+      .filter(p => p.capsuleNumber === capsuleNumber)
+      .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime());
+  }
+
+  async getActiveProblems(): Promise<CapsuleProblem[]> {
+    return Array.from(this.capsuleProblems.values())
+      .filter(p => !p.isResolved)
+      .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime());
+  }
+
+  async getAllProblems(): Promise<CapsuleProblem[]> {
+    return Array.from(this.capsuleProblems.values())
+      .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime());
+  }
+
+  async resolveProblem(problemId: string, resolvedBy: string, notes?: string): Promise<CapsuleProblem | undefined> {
+    const problem = this.capsuleProblems.get(problemId);
+    if (problem) {
+      problem.isResolved = true;
+      problem.resolvedBy = resolvedBy;
+      problem.resolvedAt = new Date();
+      problem.notes = notes || null;
+      this.capsuleProblems.set(problemId, problem);
+      
+      // Check if there are any other active problems for this capsule
+      const activeProblems = Array.from(this.capsuleProblems.values())
+        .filter(p => p.capsuleNumber === problem.capsuleNumber && !p.isResolved);
+      
+      // If no other active problems, mark capsule as available
+      if (activeProblems.length === 0) {
+        const capsule = this.capsules.get(problem.capsuleNumber);
+        if (capsule) {
+          capsule.isAvailable = true;
+          this.capsules.set(problem.capsuleNumber, capsule);
+        }
+      }
+      
+      return problem;
+    }
+    return undefined;
   }
 
   // Guest token management methods

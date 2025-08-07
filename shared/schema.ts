@@ -55,9 +55,19 @@ export const capsules = pgTable("capsules", {
   number: text("number").notNull().unique(),
   section: text("section").notNull(), // 'back', 'middle', 'front'
   isAvailable: boolean("is_available").notNull().default(true),
-  problemDescription: text("problem_description"),
-  problemReportedAt: timestamp("problem_reported_at"),
-  problemResolvedAt: timestamp("problem_resolved_at"),
+});
+
+// Separate table for tracking all capsule problems
+export const capsuleProblems = pgTable("capsule_problems", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  capsuleNumber: text("capsule_number").notNull(),
+  description: text("description").notNull(),
+  reportedBy: text("reported_by").notNull(), // Username of staff who reported
+  reportedAt: timestamp("reported_at").notNull().defaultNow(),
+  isResolved: boolean("is_resolved").notNull().default(false),
+  resolvedBy: text("resolved_by"), // Username of staff who resolved
+  resolvedAt: timestamp("resolved_at"),
+  notes: text("notes"), // Resolution notes
 });
 
 // Guest check-in tokens for self-service check-in
@@ -139,11 +149,15 @@ export const googleAuthSchema = z.object({
   token: z.string().min(1, "Google token is required"),
 });
 
-export const updateCapsuleProblemSchema = z.object({
-  problemDescription: z.string().optional(),
-  isAvailable: z.boolean().optional(),
-  problemReportedAt: z.date().optional(),
-  problemResolvedAt: z.date().optional(),
+export const createCapsuleProblemSchema = z.object({
+  capsuleNumber: z.string().min(1, "Capsule number is required"),
+  description: z.string().min(1, "Problem description is required"),
+  reportedBy: z.string().min(1, "Reporter is required"),
+});
+
+export const resolveProblemSchema = z.object({
+  resolvedBy: z.string().min(1, "Resolver is required"),
+  notes: z.string().optional(),
 });
 
 export const bulkGuestImportSchema = z.array(
@@ -194,7 +208,10 @@ export type Capsule = typeof capsules.$inferSelect;
 export type InsertCapsule = z.infer<typeof insertCapsuleSchema>;
 export type Session = typeof sessions.$inferSelect;
 export type LoginRequest = z.infer<typeof loginSchema>;
-export type UpdateCapsuleProblem = z.infer<typeof updateCapsuleProblemSchema>;
+export type CreateCapsuleProblem = z.infer<typeof createCapsuleProblemSchema>;
+export type ResolveProblem = z.infer<typeof resolveProblemSchema>;
+export type CapsuleProblem = typeof capsuleProblems.$inferSelect;
+export type InsertCapsuleProblem = typeof capsuleProblems.$inferInsert;
 export type BulkGuestImport = z.infer<typeof bulkGuestImportSchema>;
 export type GuestToken = typeof guestTokens.$inferSelect;
 export type InsertGuestToken = typeof guestTokens.$inferInsert;
