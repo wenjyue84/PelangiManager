@@ -208,6 +208,12 @@ export class MemStorage implements IStorage {
       notes: insertGuest.notes || null,
       gender: insertGuest.gender || null,
       nationality: insertGuest.nationality || null,
+      phoneNumber: insertGuest.phoneNumber || null,
+      email: insertGuest.email || null,
+      idNumber: insertGuest.idNumber || null,
+      emergencyContact: insertGuest.emergencyContact || null,
+      emergencyPhone: insertGuest.emergencyPhone || null,
+      age: insertGuest.age || null,
     };
     this.guests.set(id, guest);
     return guest;

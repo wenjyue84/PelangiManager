@@ -24,18 +24,22 @@ export default function Navigation() {
         const isActive = location === item.path;
         const canAccess = !item.requireAuth || isAuthenticated;
         
-        if (!canAccess) return null;
+        // Always show all navigation items but handle auth differently
         
         return (
-          <Link key={item.path} href={item.path}>
+          <Link key={item.path} href={canAccess ? item.path : "/login"}>
             <Button
               variant={isActive ? "default" : "ghost"}
               size="sm"
+              disabled={!canAccess}
               className={`flex items-center gap-1 text-xs px-2 py-1 whitespace-nowrap ${
                 isActive 
                   ? "bg-orange-600 text-white hover:bg-orange-700" 
-                  : "text-gray-700 hover:text-orange-600"
+                  : canAccess 
+                    ? "text-gray-700 hover:text-orange-600" 
+                    : "text-gray-400"
               }`}
+              title={!canAccess ? "Login required" : ""}
             >
               <item.icon className="h-3 w-3" />
               <span className="hidden sm:inline">{item.label}</span>
