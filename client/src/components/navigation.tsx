@@ -3,13 +3,14 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Home, UserPlus, UserX, History, AlertTriangle, Settings } from "lucide-react";
 import { AuthContext } from "../lib/auth";
+import { useQuery } from "@tanstack/react-query";
 
 const navigationItems = [
-  { path: "/", label: "Dashboard", icon: Home },
+  { path: "/", label: "Dashboard", icon: Home, showOccupancy: true },
   { path: "/check-in", label: "Check In", icon: UserPlus, requireAuth: true },
   { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: true },
   { path: "/history", label: "History", icon: History },
-  { path: "/maintenance", label: "Maintenance", icon: AlertTriangle, requireAuth: false },
+  { path: "/maintenance", label: "Maintenance", icon: AlertTriangle, requireAuth: true },
 ];
 
 export default function Navigation() {
@@ -17,6 +18,10 @@ export default function Navigation() {
   const authContext = useContext(AuthContext);
   const isAuthenticated = authContext?.isAuthenticated || false;
   const user = authContext?.user;
+
+  const { data: occupancy } = useQuery<{total: number; available: number}>({
+    queryKey: ["/api/occupancy"],
+  });
 
   return (
     <nav className="flex space-x-1 mb-4 bg-white p-2 rounded-lg shadow-sm overflow-x-auto">
@@ -42,7 +47,14 @@ export default function Navigation() {
               title={!canAccess ? "Login required" : ""}
             >
               <item.icon className="h-3 w-3" />
-              <span className="hidden sm:inline">{item.label}</span>
+              <span className="hidden sm:inline">
+                {item.label}
+                {item.showOccupancy && occupancy && (
+                  <span className="ml-1 text-xs opacity-75">
+                    ({occupancy.available}/{occupancy.total})
+                  </span>
+                )}
+              </span>
             </Button>
           </Link>
         );

@@ -252,7 +252,7 @@ export default function SortableGuestTable() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedGuests.map((guest) => {
-                  const genderIcon = getGenderIcon(guest.gender);
+                  const genderIcon = getGenderIcon(guest.gender || undefined);
                   return (
                     <tr key={guest.id} className="hover:bg-gray-50">
                       {/* Capsule column - sticky first column */}
@@ -276,7 +276,7 @@ export default function SortableGuestTable() {
                             )}
                           </div>
                           {!isCondensedView && (
-                            <span className="text-sm font-medium text-hostel-text">{truncateName(guest.name)}</span>
+                            <span className="text-sm font-medium text-hostel-text">***</span>
                           )}
                         </div>
                       </td>
