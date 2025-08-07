@@ -388,6 +388,9 @@ export default function SortableGuestTable() {
                     </div>
                   </th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
+                  {!isCondensedView && (
+                    <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nationality</th>
+                  )}
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
                       {isCondensedView ? 'In' : 'Check-in'}
@@ -452,6 +455,16 @@ export default function SortableGuestTable() {
                           )}
                         </div>
                       </td>
+                      {/* Nationality column - only in detailed view */}
+                      {!isCondensedView && (
+                        <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
+                          {guest.nationality ? (
+                            <span className="font-medium">{guest.nationality}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      )}
                       {/* Check-in column */}
                       <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
                         {isCondensedView 
