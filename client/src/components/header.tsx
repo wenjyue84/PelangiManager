@@ -21,7 +21,7 @@ export default function Header() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4" />
-              <span className="font-medium">{user.username}</span>
+              <span className="font-medium">{user.firstName || user.email}</span>
               <span className="text-gray-500 capitalize">({user.role})</span>
             </div>
             <Button variant="outline" size="sm" onClick={logout}>
