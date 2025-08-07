@@ -1,0 +1,191 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus, User, Bed } from "lucide-react";
+import { insertGuestSchema, type InsertGuest } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+export default function CheckIn() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const { data: availableCapsules = [], isLoading: capsulesLoading } = useQuery<string[]>({
+    queryKey: ["/api/capsules/available"],
+  });
+
+  const form = useForm<InsertGuest>({
+    resolver: zodResolver(insertGuestSchema),
+    defaultValues: {
+      name: "",
+      capsuleNumber: "",
+    },
+  });
+
+  const checkinMutation = useMutation({
+    mutationFn: async (data: InsertGuest) => {
+      const response = await apiRequest("POST", "/api/guests/checkin", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guests/checked-in"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] });
+      form.reset();
+      toast({
+        title: "Success",
+        description: "Guest checked in successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to check in guest",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: InsertGuest) => {
+    checkinMutation.mutate(data);
+  };
+
+  const handleClear = () => {
+    form.reset();
+  };
+
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    const dateString = now.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+    return { timeString, dateString };
+  };
+
+  const { timeString, dateString } = getCurrentDateTime();
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <Card>
+        <CardHeader>
+          <div className="text-center">
+            <div className="w-16 h-16 bg-hostel-secondary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UserPlus className="text-hostel-secondary h-8 w-8" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-hostel-text">Guest Check-In</CardTitle>
+            <p className="text-gray-600 mt-2">Enter guest information to complete check-in process</p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div>
+              <Label htmlFor="name" className="flex items-center text-sm font-medium text-hostel-text mb-2">
+                <User className="mr-2 h-4 w-4" />
+                Guest Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Enter guest full name"
+                className="w-full"
+                {...form.register("name")}
+              />
+              {form.formState.errors.name && (
+                <p className="text-hostel-error text-sm mt-1">{form.formState.errors.name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="capsuleNumber" className="flex items-center text-sm font-medium text-hostel-text mb-2">
+                <Bed className="mr-2 h-4 w-4" />
+                Capsule Number
+              </Label>
+              {capsulesLoading ? (
+                <Skeleton className="w-full h-10" />
+              ) : (
+                <Select
+                  value={form.watch("capsuleNumber")}
+                  onValueChange={(value) => form.setValue("capsuleNumber", value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select available capsule" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCapsules.length === 0 ? (
+                      <SelectItem value="" disabled>No capsules available</SelectItem>
+                    ) : (
+                      availableCapsules.map((capsule) => (
+                        <SelectItem key={capsule} value={capsule}>
+                          {capsule} (Available)
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+              {form.formState.errors.capsuleNumber && (
+                <p className="text-hostel-error text-sm mt-1">{form.formState.errors.capsuleNumber.message}</p>
+              )}
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4 border">
+              <h3 className="text-sm font-medium text-hostel-text mb-3">Check-in Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Date:</span>
+                  <span className="font-medium">{dateString}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Time:</span>
+                  <span className="font-medium">{timeString}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Staff:</span>
+                  <span className="font-medium">Admin User</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Status:</span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-hostel-accent bg-opacity-10 text-hostel-accent">
+                    Pending Check-in
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex space-x-4">
+              <Button 
+                type="submit"
+                disabled={checkinMutation.isPending || availableCapsules.length === 0}
+                className="flex-1 bg-hostel-secondary hover:bg-green-600 text-white font-medium"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                {checkinMutation.isPending ? "Processing..." : "Complete Check-In"}
+              </Button>
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={handleClear}
+                className="px-6 border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Clear
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
