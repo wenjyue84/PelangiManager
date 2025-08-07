@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/components/auth-provider";
+import GuestTokenGenerator from "@/components/guest-token-generator";
 
 export default function CheckIn() {
   const queryClient = useQueryClient();
@@ -137,6 +138,9 @@ export default function CheckIn() {
             </div>
             <CardTitle className="text-2xl font-bold text-hostel-text">Guest Check-In</CardTitle>
             <p className="text-gray-600 mt-2">Enter guest information to complete check-in process</p>
+            <div className="flex justify-center mt-4">
+              <GuestTokenGenerator onTokenCreated={() => queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] })} />
+            </div>
           </div>
         </CardHeader>
         <CardContent>

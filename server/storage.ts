@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, users, guests, capsules, sessions } from "@shared/schema";
+import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, users, guests, capsules, sessions, guestTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -39,6 +39,12 @@ export interface IStorage {
   updateCapsule(number: string, updates: Partial<Capsule>): Promise<Capsule | undefined>;
   createCapsule(capsule: InsertCapsule): Promise<Capsule>;
   getCapsulesWithProblems(): Promise<Capsule[]>;
+
+  // Guest token management methods
+  createGuestToken(token: InsertGuestToken): Promise<GuestToken>;
+  getGuestToken(token: string): Promise<GuestToken | undefined>;
+  markTokenAsUsed(token: string): Promise<GuestToken | undefined>;
+  cleanExpiredTokens(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -46,6 +52,7 @@ export class MemStorage implements IStorage {
   private guests: Map<string, Guest>;
   private capsules: Map<string, Capsule>;
   private sessions: Map<string, Session>;
+  private guestTokens: Map<string, GuestToken>;
   private totalCapsules = 22; // C1-C6 (6) + C25-C26 (2) + C11-C24 (14)
 
   constructor() {
@@ -53,6 +60,7 @@ export class MemStorage implements IStorage {
     this.guests = new Map();
     this.capsules = new Map();
     this.sessions = new Map();
+    this.guestTokens = new Map();
     
     // Initialize capsules, admin user, and sample guests
     this.initializeCapsules();
@@ -407,6 +415,45 @@ export class MemStorage implements IStorage {
     return Array.from(this.capsules.values()).filter(
       capsule => capsule.problemDescription !== null
     );
+  }
+
+  // Guest token management methods
+  async createGuestToken(insertToken: InsertGuestToken): Promise<GuestToken> {
+    const token: GuestToken = {
+      id: randomUUID(),
+      token: insertToken.token,
+      capsuleNumber: insertToken.capsuleNumber,
+      createdBy: insertToken.createdBy,
+      isUsed: false,
+      usedAt: null,
+      expiresAt: insertToken.expiresAt,
+      createdAt: new Date(),
+    };
+    this.guestTokens.set(token.token, token);
+    return token;
+  }
+
+  async getGuestToken(token: string): Promise<GuestToken | undefined> {
+    return this.guestTokens.get(token);
+  }
+
+  async markTokenAsUsed(token: string): Promise<GuestToken | undefined> {
+    const guestToken = this.guestTokens.get(token);
+    if (guestToken) {
+      const updatedToken = { ...guestToken, isUsed: true, usedAt: new Date() };
+      this.guestTokens.set(token, updatedToken);
+      return updatedToken;
+    }
+    return undefined;
+  }
+
+  async cleanExpiredTokens(): Promise<void> {
+    const now = new Date();
+    for (const [token, tokenData] of this.guestTokens) {
+      if (tokenData.expiresAt < now) {
+        this.guestTokens.delete(token);
+      }
+    }
   }
 }
 

@@ -59,6 +59,18 @@ export const capsules = pgTable("capsules", {
   problemResolvedAt: timestamp("problem_resolved_at"),
 });
 
+// Guest check-in tokens for self-service check-in
+export const guestTokens = pgTable("guest_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  token: text("token").notNull().unique(),
+  capsuleNumber: text("capsule_number").notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  isUsed: boolean("is_used").notNull().default(false),
+  usedAt: timestamp("used_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -135,6 +147,27 @@ export const bulkGuestImportSchema = z.array(
   })
 );
 
+// Guest self-check-in schema (simplified)
+export const guestSelfCheckinSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  nationality: z.string().optional(),
+  age: z.string().optional(),
+  idNumber: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  emergencyPhone: z.string().optional(),
+  expectedCheckoutDate: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+// Token creation schema
+export const createTokenSchema = z.object({
+  capsuleNumber: z.string().min(1, "Capsule number is required"),
+  expiresInHours: z.number().min(1).max(168).default(24), // 1-168 hours (1 week max)
+});
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -147,3 +180,7 @@ export type Session = typeof sessions.$inferSelect;
 export type LoginRequest = z.infer<typeof loginSchema>;
 export type UpdateCapsuleProblem = z.infer<typeof updateCapsuleProblemSchema>;
 export type BulkGuestImport = z.infer<typeof bulkGuestImportSchema>;
+export type GuestToken = typeof guestTokens.$inferSelect;
+export type InsertGuestToken = typeof guestTokens.$inferInsert;
+export type GuestSelfCheckin = z.infer<typeof guestSelfCheckinSchema>;
+export type CreateToken = z.infer<typeof createTokenSchema>;

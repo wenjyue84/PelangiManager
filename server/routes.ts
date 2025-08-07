@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, updateCapsuleProblemSchema, googleAuthSchema, insertUserSchema } from "@shared/schema";
+import { insertGuestSchema, checkoutGuestSchema, loginSchema, updateCapsuleProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
@@ -434,6 +434,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "User deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Guest token management routes
+  app.post("/api/guest-tokens", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = createTokenSchema.parse(req.body);
+      const userId = req.user.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User ID not found" });
+      }
+
+      // Generate unique token
+      const tokenValue = randomUUID();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + validatedData.expiresInHours);
+
+      const token = await storage.createGuestToken({
+        token: tokenValue,
+        capsuleNumber: validatedData.capsuleNumber,
+        createdBy: userId,
+        expiresAt,
+      });
+
+      res.json({
+        token: token.token,
+        link: `${req.protocol}://${req.get('host')}/guest-checkin?token=${token.token}`,
+        capsuleNumber: token.capsuleNumber,
+        expiresAt: token.expiresAt,
+      });
+    } catch (error: any) {
+      console.error("Error creating guest token:", error);
+      res.status(400).json({ message: error.message || "Failed to create guest token" });
+    }
+  });
+
+  // Validate guest token (public route)
+  app.get("/api/guest-tokens/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const guestToken = await storage.getGuestToken(token);
+
+      if (!guestToken) {
+        return res.status(404).json({ message: "Token not found" });
+      }
+
+      if (guestToken.isUsed) {
+        return res.status(400).json({ message: "Token already used" });
+      }
+
+      if (new Date() > guestToken.expiresAt) {
+        return res.status(400).json({ message: "Token expired" });
+      }
+
+      res.json({
+        capsuleNumber: guestToken.capsuleNumber,
+        expiresAt: guestToken.expiresAt,
+      });
+    } catch (error: any) {
+      console.error("Error validating guest token:", error);
+      res.status(500).json({ message: "Failed to validate token" });
+    }
+  });
+
+  // Guest self-check-in (public route)
+  app.post("/api/guest-checkin/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const guestToken = await storage.getGuestToken(token);
+
+      if (!guestToken) {
+        return res.status(404).json({ message: "Invalid token" });
+      }
+
+      if (guestToken.isUsed) {
+        return res.status(400).json({ message: "Token already used" });
+      }
+
+      if (new Date() > guestToken.expiresAt) {
+        return res.status(400).json({ message: "Token expired" });
+      }
+
+      const validatedGuestData = guestSelfCheckinSchema.parse(req.body);
+
+      // Create guest with token's capsule
+      const guest = await storage.createGuest({
+        name: validatedGuestData.name,
+        capsuleNumber: guestToken.capsuleNumber,
+        phoneNumber: validatedGuestData.phoneNumber,
+        email: validatedGuestData.email || undefined,
+        gender: validatedGuestData.gender || undefined,
+        nationality: validatedGuestData.nationality || undefined,
+        age: validatedGuestData.age || undefined,
+        idNumber: validatedGuestData.idNumber || undefined,
+        emergencyContact: validatedGuestData.emergencyContact || undefined,
+        emergencyPhone: validatedGuestData.emergencyPhone || undefined,
+        expectedCheckoutDate: validatedGuestData.expectedCheckoutDate || undefined,
+        notes: validatedGuestData.notes || undefined,
+        paymentAmount: "0", // Will be updated at front desk
+        paymentMethod: "cash",
+        paymentCollector: "Self Check-in",
+        isPaid: false,
+      });
+
+      // Mark token as used
+      await storage.markTokenAsUsed(token);
+
+      res.json({
+        message: "Check-in successful",
+        guest: guest,
+        capsuleNumber: guestToken.capsuleNumber,
+      });
+    } catch (error: any) {
+      console.error("Error processing guest check-in:", error);
+      res.status(400).json({ message: error.message || "Failed to complete check-in" });
     }
   });
 
