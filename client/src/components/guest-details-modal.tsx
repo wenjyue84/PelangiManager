@@ -143,6 +143,29 @@ export default function GuestDetailsModal({ guest, isOpen, onClose }: GuestDetai
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Check-in Method Indicator */}
+          <div className={`rounded-lg p-3 border ${
+            guest.paymentCollector === 'Self Check-in' 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-blue-50 border-blue-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              {guest.paymentCollector === 'Self Check-in' ? (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-green-700">Self Check-in</span>
+                  <span className="text-xs text-green-600">• Guest completed check-in independently</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm font-medium text-blue-700">Staff Assisted Check-in</span>
+                  <span className="text-xs text-blue-600">• Checked in by {guest.paymentCollector}</span>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Personal Information */}
           <div>
             <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
