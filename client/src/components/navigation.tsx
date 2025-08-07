@@ -1,61 +1,44 @@
 import { Link, useLocation } from "wouter";
-import { Home, UserPlus, UserMinus, History } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Home, UserPlus, UserX, History, AlertTriangle, Settings } from "lucide-react";
 
-const navItems = [
-  {
-    path: "/dashboard",
-    label: "Dashboard",
-    icon: Home,
-  },
-  {
-    path: "/check-in",
-    label: "Check In",
-    icon: UserPlus,
-  },
-  {
-    path: "/check-out",
-    label: "Check Out",
-    icon: UserMinus,
-  },
-  {
-    path: "/history",
-    label: "History",
-    icon: History,
-  },
+const navigationItems = [
+  { path: "/", label: "Dashboard", icon: Home },
+  { path: "/check-in", label: "Check In", icon: UserPlus, requireAuth: false },
+  { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: false },
+  { path: "/history", label: "History", icon: History },
+  { path: "/maintenance", label: "Maintenance", icon: AlertTriangle },
 ];
 
 export default function Navigation() {
   const [location] = useLocation();
-  
+  const isAuthenticated = true; // For now, treat as always authenticated
+
   return (
-    <nav className="mb-8">
-      <div className="border-b border-gray-200">
-        <ul className="flex -mb-px" role="tablist">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location === item.path || (location === "/" && item.path === "/dashboard");
-            
-            return (
-              <li key={item.path} className="mr-2">
-                <Link href={item.path}>
-                  <button 
-                    className={cn(
-                      "inline-block py-3 px-6 text-sm font-medium text-center border-b-2 rounded-t-lg transition-colors",
-                      isActive 
-                        ? "text-hostel-primary border-hostel-primary" 
-                        : "text-gray-500 border-transparent hover:text-gray-600 hover:border-gray-300"
-                    )}
-                  >
-                    <Icon className="inline-block mr-2 h-4 w-4" />
-                    {item.label}
-                  </button>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+    <nav className="flex space-x-1 mb-6 bg-white p-2 rounded-lg shadow-sm">
+      {navigationItems.map((item) => {
+        const isActive = location === item.path;
+        const canAccess = !item.requireAuth || isAuthenticated;
+        
+        if (!canAccess) return null;
+        
+        return (
+          <Link key={item.path} href={item.path}>
+            <Button
+              variant={isActive ? "default" : "ghost"}
+              size="sm"
+              className={`flex items-center gap-2 ${
+                isActive 
+                  ? "bg-orange-600 text-white hover:bg-orange-700" 
+                  : "text-gray-700 hover:text-orange-600"
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Button>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

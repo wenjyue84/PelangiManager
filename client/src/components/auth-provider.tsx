@@ -1,0 +1,95 @@
+import { useState, useEffect, ReactNode } from "react";
+import { AuthContext, type User, type AuthContextType, getStoredToken, setStoredToken, removeStoredToken } from "../lib/auth";
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const storedToken = getStoredToken();
+      if (storedToken) {
+        try {
+          const response = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${storedToken}` }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
+            setToken(storedToken);
+          } else {
+            removeStoredToken();
+          }
+        } catch (error) {
+          removeStoredToken();
+        }
+      }
+      setIsLoading(false);
+    };
+
+    checkAuth();
+  }, []);
+
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setToken(data.token);
+        setStoredToken(data.token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    if (token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (error) {
+        // Logout even if server request fails
+      }
+    }
+
+    setUser(null);
+    setToken(null);
+    removeStoredToken();
+  };
+
+  const value: AuthContextType = {
+    user,
+    token,
+    login,
+    logout,
+    isAuthenticated: !!user
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
