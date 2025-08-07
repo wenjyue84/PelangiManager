@@ -181,6 +181,7 @@ export const bulkGuestImportSchema = z.array(
 // Guest self-check-in schema (simplified)
 export const guestSelfCheckinSchema = z.object({
   nameAsInDocument: z.string().min(1, "Full name as in IC/passport is required"),
+  phoneNumber: z.string().min(1, "Contact number is required").regex(/^[\d\s\-\+\(\)]+$/, "Please enter a valid phone number"),
   gender: z.enum(["male", "female"], { required_error: "Gender is required" }),
   nationality: z.string().min(1, "Nationality is required"),
   icNumber: z.string().optional(),

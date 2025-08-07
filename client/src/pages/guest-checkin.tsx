@@ -35,6 +35,7 @@ export default function GuestCheckin() {
     resolver: zodResolver(guestSelfCheckinSchema),
     defaultValues: {
       nameAsInDocument: "",
+      phoneNumber: "",
       gender: undefined,
       nationality: "",
       icNumber: "",
@@ -325,6 +326,23 @@ export default function GuestCheckin() {
                     />
                     {form.formState.errors.nameAsInDocument && (
                       <p className="text-red-500 text-sm mt-1">{form.formState.errors.nameAsInDocument.message}</p>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="phoneNumber" className="text-sm font-medium text-hostel-text flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      Contact Number *
+                    </Label>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder={`Enter your contact number (Expected: ${guestInfo?.phoneNumber || 'e.g., +60123456789'})`}
+                      className="w-full mt-1"
+                      {...form.register("phoneNumber")}
+                    />
+                    {form.formState.errors.phoneNumber && (
+                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.phoneNumber.message}</p>
                     )}
                   </div>
                   
