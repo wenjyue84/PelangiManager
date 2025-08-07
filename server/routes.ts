@@ -203,6 +203,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get active guest tokens (reserved capsules)
+  app.get("/api/guest-tokens/active", async (_req, res) => {
+    try {
+      const activeTokens = await storage.getActiveGuestTokens();
+      res.json(activeTokens);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch active tokens" });
+    }
+  });
+
   // Get guest history
   app.get("/api/guests/history", async (_req, res) => {
     try {

@@ -49,6 +49,7 @@ export interface IStorage {
   // Guest token management methods
   createGuestToken(token: InsertGuestToken): Promise<GuestToken>;
   getGuestToken(token: string): Promise<GuestToken | undefined>;
+  getActiveGuestTokens(): Promise<GuestToken[]>;
   markTokenAsUsed(token: string): Promise<GuestToken | undefined>;
   cleanExpiredTokens(): Promise<void>;
 
@@ -541,6 +542,13 @@ export class MemStorage implements IStorage {
 
   async getGuestToken(token: string): Promise<GuestToken | undefined> {
     return this.guestTokens.get(token);
+  }
+
+  async getActiveGuestTokens(): Promise<GuestToken[]> {
+    const now = new Date();
+    return Array.from(this.guestTokens.values())
+      .filter(token => !token.isUsed && token.expiresAt > now)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   async markTokenAsUsed(token: string): Promise<GuestToken | undefined> {

@@ -75,8 +75,8 @@ export const guestTokens = pgTable("guest_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   token: text("token").notNull().unique(),
   capsuleNumber: text("capsule_number").notNull(),
-  guestName: text("guest_name").notNull(),
-  phoneNumber: text("phone_number").notNull(),
+  guestName: text("guest_name"), // Optional - guest fills it themselves
+  phoneNumber: text("phone_number"), // Optional - guest fills it themselves
   email: text("email"),
   expectedCheckoutDate: text("expected_checkout_date"),
   createdBy: varchar("created_by").notNull().references(() => users.id),
@@ -204,8 +204,8 @@ export const guestSelfCheckinSchema = z.object({
 // Token creation schema with guest info
 export const createTokenSchema = z.object({
   capsuleNumber: z.string().min(1, "Capsule number is required"),
-  guestName: z.string().min(1, "Guest name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
+  guestName: z.string().optional(), // Optional - guest fills it themselves
+  phoneNumber: z.string().optional(), // Optional - guest fills it themselves
   email: z.string().email().optional(),
   expectedCheckoutDate: z.string().optional(),
   expiresInHours: z.number().min(1).max(168).default(24), // 1-168 hours (1 week max)
