@@ -63,7 +63,14 @@ export function LoginForm() {
 
     const success = await login(email, password);
     
-    if (!success) {
+    if (success) {
+      toast({
+        title: "✅ Login Successful!",
+        description: "Welcome back! You have been logged in successfully.",
+        duration: 5000,
+        className: "border-green-500 bg-green-50 text-green-800"
+      });
+    } else {
       toast({
         title: "Login Failed",
         description: "Invalid email or password",
@@ -79,7 +86,14 @@ export function LoginForm() {
     
     const success = await loginWithGoogle(response.credential);
     
-    if (!success) {
+    if (success) {
+      toast({
+        title: "✅ Google Login Successful!",
+        description: "Welcome! You have been logged in with Google successfully.",
+        duration: 5000,
+        className: "border-green-500 bg-green-50 text-green-800"
+      });
+    } else {
       toast({
         title: "Google Login Failed",
         description: "Unable to sign in with Google",
