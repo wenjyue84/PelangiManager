@@ -1,5 +1,5 @@
 import OccupancyCards from "@/components/occupancy-cards";
-import GuestTable from "@/components/guest-table";
+import SortableGuestTable from "@/components/sortable-guest-table";
 import DailyNotifications from "@/components/daily-notifications";
 
 export default function Dashboard() {
@@ -7,7 +7,7 @@ export default function Dashboard() {
     <div>
       <DailyNotifications />
       <OccupancyCards />
-      <GuestTable />
+      <SortableGuestTable />
     </div>
   );
 }

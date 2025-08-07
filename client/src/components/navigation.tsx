@@ -9,7 +9,7 @@ const navigationItems = [
   { path: "/check-in", label: "Check In", icon: UserPlus, requireAuth: true },
   { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: true },
   { path: "/history", label: "History", icon: History },
-  { path: "/maintenance", label: "Maintenance", icon: AlertTriangle },
+  { path: "/maintenance", label: "Maintenance", icon: AlertTriangle, requireAuth: false },
 ];
 
 export default function Navigation() {
