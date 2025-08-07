@@ -17,8 +17,8 @@ export default function OccupancyCards() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {Array.from({ length: 3 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -53,13 +53,6 @@ export default function OccupancyCards() {
       iconColor: "text-hostel-secondary",
     },
     {
-      title: "Occupancy Rate",
-      value: `${occupancy?.occupancyRate || 0}%`,
-      icon: Percent,
-      bgColor: "bg-hostel-accent bg-opacity-10",
-      iconColor: "text-hostel-accent",
-    },
-    {
       title: "Available",
       value: occupancy?.available || 0,
       icon: DoorOpen,
@@ -69,7 +62,7 @@ export default function OccupancyCards() {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <div className="grid grid-cols-3 gap-2 mb-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (

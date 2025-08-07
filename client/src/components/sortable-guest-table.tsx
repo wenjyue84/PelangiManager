@@ -16,6 +16,19 @@ function getInitials(name: string): string {
   return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
 }
 
+function truncateName(name: string): string {
+  return name.length > 5 ? name.slice(0, 5) : name;
+}
+
+function getGenderIcon(gender?: string) {
+  if (gender === 'female') {
+    return { icon: '♀', bgColor: 'bg-pink-100', textColor: 'text-pink-600' };
+  } else if (gender === 'male') {
+    return { icon: '♂', bgColor: 'bg-blue-100', textColor: 'text-blue-600' };
+  }
+  return { icon: null, bgColor: 'bg-hostel-primary bg-opacity-10', textColor: 'text-hostel-primary' };
+}
+
 function formatShortDateTime(dateString: string): string {
   const date = new Date(dateString);
   const month = date.getMonth() + 1;
@@ -193,88 +206,85 @@ export default function SortableGuestTable() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
-                      Capsule
+                      Capsule/Checkout
                       <SortButton field="capsuleNumber" currentSort={sortConfig} onSort={handleSort} />
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
-                      Check-in Time
+                      Check-in
                       <SortButton field="checkinTime" currentSort={sortConfig} onSort={handleSort} />
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center gap-1">
-                      Expected Checkout
-                      <SortButton field="expectedCheckoutDate" currentSort={sortConfig} onSort={handleSort} />
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedGuests.map((guest) => (
-                  <tr key={guest.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-hostel-primary bg-opacity-10 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-hostel-primary font-medium text-sm">{getInitials(guest.name)}</span>
+                {sortedGuests.map((guest) => {
+                  const genderIcon = getGenderIcon(guest.gender);
+                  return (
+                    <tr key={guest.id} className="hover:bg-gray-50">
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className={`w-7 h-7 ${genderIcon.bgColor} rounded-full flex items-center justify-center mr-2`}>
+                            {genderIcon.icon ? (
+                              <span className={`${genderIcon.textColor} font-bold text-sm`}>{genderIcon.icon}</span>
+                            ) : (
+                              <span className={`${genderIcon.textColor} font-medium text-xs`}>{getInitials(guest.name)}</span>
+                            )}
+                          </div>
+                          <span className="text-sm font-medium text-hostel-text">{truncateName(guest.name)}</span>
                         </div>
-                        <span className="text-sm font-medium text-hostel-text">{guest.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
-                        {guest.capsuleNumber}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatShortDateTime(guest.checkinTime.toString())}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {guest.expectedCheckoutDate ? (
-                        <span className="font-medium">
-                          {formatShortDate(guest.expectedCheckoutDate)}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">Not set</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {guest.paymentAmount ? (
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
                         <div>
-                          <div className="font-medium">RM {guest.paymentAmount}</div>
-                          <div className="text-xs text-gray-500">{guest.paymentCollector || 'N/A'}</div>
+                          <div className="flex items-center gap-1 mb-1">
+                            <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
+                              {guest.capsuleNumber}
+                            </Badge>
+                            {guest.expectedCheckoutDate && (
+                              <span className="text-xs text-gray-600 font-medium">
+                                ({formatShortDate(guest.expectedCheckoutDate)})
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-gray-400">No payment</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className="bg-green-600 text-white">
-                        <div className="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></div>
-                        Checked In
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleCheckout(guest.id)}
-                        disabled={checkoutMutation.isPending}
-                        className="text-hostel-error hover:text-red-700 font-medium"
-                      >
-                        <UserMinus className="mr-1 h-4 w-4" />
-                        Check Out
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
+                        {formatShortDateTime(guest.checkinTime.toString())}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
+                        {guest.paymentAmount ? (
+                          <div>
+                            <div className="font-medium">RM {guest.paymentAmount}</div>
+                            <div className="text-xs text-gray-500">{guest.paymentCollector || 'N/A'}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">No payment</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleCheckout(guest.id)}
+                          disabled={checkoutMutation.isPending}
+                          className="text-hostel-error hover:text-red-700 font-medium p-1"
+                        >
+                          <UserMinus className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
