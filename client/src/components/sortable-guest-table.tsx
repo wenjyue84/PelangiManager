@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserMinus, ArrowUpDown, ArrowUp, ArrowDown, ToggleLeft, ToggleRight } from "lucide-react";
+import { UserMinus, ArrowUpDown, ArrowUp, ArrowDown, ToggleLeft, ToggleRight, Eye, List, Grid } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ function getFirstInitial(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-function getGenderIcon(gender?: string) {
+function getGenderIcon(gender?: string | null) {
   if (gender === 'female') {
     return { icon: '♀', bgColor: 'bg-pink-100', textColor: 'text-pink-600' };
   } else if (gender === 'male') {
@@ -82,7 +82,7 @@ function SortButton({ field, currentSort, onSort }: {
 
 export default function SortableGuestTable() {
   const queryClient = useQueryClient();
-  const [isCondensedView, setIsCondensedView] = useState(false);
+  const [isCondensedView, setIsCondensedView] = useState(true); // Default to condensed view (mobile-first)
   const { toast } = useToast();
   const [sortConfig, setSortConfig] = useState<{ field: SortField; order: SortOrder }>({
     field: 'capsuleNumber',
@@ -217,114 +217,123 @@ export default function SortableGuestTable() {
           <div className="text-center py-8 text-gray-500">
             <p>No guests currently checked in</p>
           </div>
+        ) : isCondensedView ? (
+          // Condensed View - Mobile First with initials and In/Out columns
+          <div className="space-y-2">
+            {sortedGuests.map((guest) => {
+              const genderStyle = getGenderIcon(guest.gender);
+              return (
+                <div key={guest.id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    {/* Guest Initial Circle with Gender Color */}
+                    <div className={`w-10 h-10 rounded-full ${genderStyle.bgColor} ${genderStyle.textColor} flex items-center justify-center font-semibold text-sm`}>
+                      {getInitials(guest.name)}
+                    </div>
+                    
+                    {/* Capsule Number */}
+                    <div className="text-sm font-medium text-hostel-text">
+                      {guest.capsuleNumber}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    {/* In/Out Status */}
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs px-2 py-1">
+                      In
+                    </Badge>
+                    
+                    {/* Checkout Button */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCheckout(guest.id)}
+                      disabled={checkoutMutation.isPending}
+                      className="text-xs h-7 px-2"
+                    >
+                      <UserMinus className="h-3 w-3 mr-1" />
+                      Out
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          // Detailed View - Full information table
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                    <div className="flex items-center gap-1">
+                      Guest
+                      <SortButton field="name" currentSort={sortConfig} onSort={handleSort} />
+                    </div>
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
                       Capsule
                       <SortButton field="capsuleNumber" currentSort={sortConfig} onSort={handleSort} />
                     </div>
                   </th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
-                      {isCondensedView ? 'In' : 'Check-in'}
+                      Check-in
                       <SortButton field="checkinTime" currentSort={sortConfig} onSort={handleSort} />
                     </div>
                   </th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <div className="flex items-center gap-1">
-                      {isCondensedView ? 'Out' : 'Expected Checkout'}
-                      <SortButton field="expectedCheckoutDate" currentSort={sortConfig} onSort={handleSort} />
-                    </div>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment
                   </th>
-                  {!isCondensedView && (
-                    <>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    </>
-                  )}
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Expected Checkout
+                  </th>
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {sortedGuests.map((guest) => {
-                  const genderIcon = getGenderIcon(guest.gender);
+                  const genderStyle = getGenderIcon(guest.gender);
                   return (
                     <tr key={guest.id} className="hover:bg-gray-50">
-                      {/* Capsule column - sticky first column */}
-                      <td className="px-2 py-3 whitespace-nowrap sticky left-0 bg-white z-10">
-                        <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
+                      <td className="px-3 py-3 whitespace-nowrap sticky left-0 bg-white z-10">
+                        <div className="flex items-center">
+                          <div className={`w-8 h-8 rounded-full ${genderStyle.bgColor} ${genderStyle.textColor} flex items-center justify-center font-medium text-xs mr-3`}>
+                            {getInitials(guest.name)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{guest.name}</div>
+                            <div className="text-xs text-gray-500">{guest.nationality || 'N/A'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <Badge variant="outline" className="text-xs">
                           {guest.capsuleNumber}
                         </Badge>
                       </td>
-                      {/* Guest column */}
-                      <td className="px-2 py-3 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className={`w-6 h-6 ${genderIcon.bgColor} rounded-full flex items-center justify-center mr-2`}>
-                            {isCondensedView ? (
-                              <span className={`${genderIcon.textColor} font-bold text-xs`}>
-                                {getFirstInitial(guest.name)}
-                              </span>
-                            ) : genderIcon.icon ? (
-                              <span className={`${genderIcon.textColor} font-bold text-sm`}>{genderIcon.icon}</span>
-                            ) : (
-                              <span className={`${genderIcon.textColor} font-medium text-xs`}>{getInitials(guest.name)}</span>
-                            )}
-                          </div>
-                          {!isCondensedView && (
-                            <span className="text-sm font-medium text-hostel-text">{truncateName(guest.name)}</span>
-                          )}
-                        </div>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {formatShortDateTime(guest.checkinTime)}
                       </td>
-                      {/* Check-in column */}
-                      <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
-                        {isCondensedView 
-                          ? formatShortDate(guest.checkinTime.toString())
-                          : formatShortDateTime(guest.checkinTime.toString())
-                        }
+                      <td className="px-3 py-3 whitespace-nowrap text-xs">
+                        <div className="text-sm font-medium">RM {guest.paymentAmount}</div>
+                        <div className="text-gray-500">{guest.paymentMethod}</div>
                       </td>
-                      {/* Checkout column */}
-                      <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
-                        {guest.expectedCheckoutDate ? (
-                          <span className="font-medium">
-                            {formatShortDate(guest.expectedCheckoutDate)}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {guest.expectedCheckoutDate ? formatShortDate(guest.expectedCheckoutDate) : 'Not set'}
                       </td>
-                      {/* Payment and Status columns - only in detailed view */}
-                      {!isCondensedView && (
-                        <>
-                          <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
-                            {guest.paymentAmount ? (
-                              <div>
-                                <div className="font-medium">RM {guest.paymentAmount}</div>
-                                <div className="text-xs text-gray-500">{guest.paymentCollector || 'N/A'}</div>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">No payment</span>
-                            )}
-                          </td>
-                          <td className="px-2 py-3 whitespace-nowrap">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          </td>
-                        </>
-                      )}
-                      {/* Actions column */}
-                      <td className="px-2 py-3 whitespace-nowrap">
-                        <Button 
-                          variant="ghost" 
+                      <td className="px-3 py-3 whitespace-nowrap text-center">
+                        <Button
                           size="sm"
+                          variant="outline"
                           onClick={() => handleCheckout(guest.id)}
                           disabled={checkoutMutation.isPending}
-                          className="text-hostel-error hover:text-red-700 font-medium p-1"
+                          className="text-xs h-8"
                         >
-                          <UserMinus className="h-3 w-3" />
+                          <UserMinus className="h-3 w-3 mr-1" />
+                          Check Out
                         </Button>
                       </td>
                     </tr>

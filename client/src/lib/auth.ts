@@ -1,43 +1,55 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { User } from "@shared/schema";
 
-export interface User {
-  id: string;
-  username: string;
-  role: 'admin' | 'staff';
-}
+// Re-export User type for other components
+export type { User };
 
-export interface AuthContextType {
+export type AuthContextType = {
   user: User | null;
-  token: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  isLoading: boolean;
   isAuthenticated: boolean;
-}
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => void;
+};
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (context) {
+    return context;
   }
-  return context;
+
+  // Fallback hook for when not using AuthProvider
+  const { data: user, isLoading } = useQuery<User>({
+    queryKey: ["/api/auth/me"],
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  return {
+    user: user || null,
+    isLoading,
+    isAuthenticated: !!user,
+    login: async (username: string, password: string) => {
+      // Implement login logic
+    },
+    logout: () => {
+      // Implement logout logic
+    },
+  };
 }
 
-// Token storage functions
-export const getStoredToken = () => localStorage.getItem('auth_token');
-export const setStoredToken = (token: string) => localStorage.setItem('auth_token', token);
-export const removeStoredToken = () => localStorage.removeItem('auth_token');
+// Token storage functions for auth components
+export function getStoredToken(): string | null {
+  return localStorage.getItem("authToken");
+}
 
-// API helper with authentication
-export const authenticatedFetch = (url: string, options: RequestInit = {}) => {
-  const token = getStoredToken();
-  return fetch(url, {
-    ...options,
-    headers: {
-      ...options.headers,
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    }
-  });
-};
+export function setStoredToken(token: string): void {
+  localStorage.setItem("authToken", token);
+}
+
+export function removeStoredToken(): void {
+  localStorage.removeItem("authToken");
+}

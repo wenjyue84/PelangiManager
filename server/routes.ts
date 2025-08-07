@@ -1,7 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, updateCapsuleProblemSchema } from "@shared/schema";
+import { 
+  insertGuestSchema, checkoutGuestSchema, loginSchema, updateCapsuleProblemSchema,
+  insertMaintenanceProblemSchema, insertSettingSchema, insertNotificationSchema,
+  selfCheckinSchema
+} from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 
@@ -19,11 +23,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.createUser({
-        id: randomUUID(),
         username,
         password, // In production, this should be hashed
-        role: role || 'admin',
-        createdAt: new Date()
       });
 
       res.json({ message: "Admin user created successfully", userId: user.id });
@@ -210,13 +211,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { number } = req.params;
       const updates = updateCapsuleProblemSchema.parse(req.body);
       
-      // Add timestamps for problem reporting/resolution
-      if (updates.problemDescription && updates.problemDescription.trim() !== '') {
-        updates.problemReportedAt = new Date();
-        updates.problemResolvedAt = null;
-      } else if (updates.problemDescription === null || updates.problemDescription === '') {
-        updates.problemResolvedAt = new Date();
-        updates.problemDescription = null;
+      // Problem tracking is now handled by the maintenance problems system
+      if (!updates.problemDescription || updates.problemDescription.trim() === '') {
+        updates.problemDescription = undefined;
       }
       
       const capsule = await storage.updateCapsule(number, updates);
@@ -272,6 +269,243 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to check-out guest" });
+    }
+  });
+
+  // Maintenance Problems API
+  app.get("/api/maintenance-problems", authenticateToken, async (req, res) => {
+    try {
+      const problems = await storage.getMaintenanceProblems();
+      res.json(problems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch maintenance problems" });
+    }
+  });
+
+  app.get("/api/maintenance-problems/active", authenticateToken, async (req, res) => {
+    try {
+      const problems = await storage.getActiveMaintenanceProblems();
+      res.json(problems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch active maintenance problems" });
+    }
+  });
+
+  app.post("/api/maintenance-problems", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = insertMaintenanceProblemSchema.parse(req.body);
+      const problem = await storage.createMaintenanceProblem({
+        ...validatedData,
+        reportedBy: req.user.id,
+      });
+      res.status(201).json(problem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create maintenance problem" });
+    }
+  });
+
+  app.put("/api/maintenance-problems/:id/resolve", authenticateToken, async (req: any, res) => {
+    try {
+      const problemId = req.params.id;
+      const problem = await storage.resolveMaintenanceProblem(problemId, req.user.id);
+      
+      if (!problem) {
+        return res.status(404).json({ message: "Maintenance problem not found" });
+      }
+
+      res.json(problem);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to resolve maintenance problem" });
+    }
+  });
+
+  // Settings API
+  app.get("/api/settings", authenticateToken, async (req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.get("/api/settings/:key", authenticateToken, async (req, res) => {
+    try {
+      const setting = await storage.getSetting(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch setting" });
+    }
+  });
+
+  app.post("/api/settings", authenticateToken, async (req, res) => {
+    try {
+      const validatedData = insertSettingSchema.parse(req.body);
+      const setting = await storage.setSetting(validatedData);
+      res.json(setting);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update setting" });
+    }
+  });
+
+  // Notifications API
+  app.get("/api/notifications", authenticateToken, async (req: any, res) => {
+    try {
+      const notifications = await storage.getNotifications(req.user.id);
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications", authenticateToken, async (req, res) => {
+    try {
+      const validatedData = insertNotificationSchema.parse(req.body);
+      const notification = await storage.createNotification(validatedData);
+      res.status(201).json(notification);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create notification" });
+    }
+  });
+
+  app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
+    try {
+      const success = await storage.markNotificationAsRead(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Guest Self-Check-in API
+  app.post("/api/guest-links", authenticateToken, async (req: any, res) => {
+    try {
+      const { capsuleNumber, expiryHours } = req.body;
+      
+      if (!capsuleNumber) {
+        return res.status(400).json({ message: "Capsule number is required" });
+      }
+
+      const { token, expiryTime } = await storage.createGuestLink(capsuleNumber, expiryHours);
+      
+      // Create notification for staff
+      await storage.createNotification({
+        type: 'self_checkin',
+        title: 'Guest Link Created',
+        message: `Self-check-in link created for capsule ${capsuleNumber}`,
+        userId: req.user.id,
+      });
+
+      res.json({
+        token,
+        expiryTime,
+        link: `${req.protocol}://${req.get('host')}/guest-checkin/${token}`,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create guest link" });
+    }
+  });
+
+  app.get("/api/guest-links/:token/validate", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const validation = await storage.validateGuestLink(token);
+      
+      if (!validation.valid) {
+        return res.status(404).json({ message: "Invalid or expired link" });
+      }
+
+      const guest = await storage.getGuestByToken(token);
+      res.json({ valid: true, capsuleNumber: validation.capsuleNumber, guest });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to validate guest link" });
+    }
+  });
+
+  app.post("/api/guest-links/:token/checkin", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const validatedData = selfCheckinSchema.parse(req.body);
+      
+      const guest = await storage.selfCheckinGuest(token, validatedData);
+      
+      if (!guest) {
+        return res.status(400).json({ message: "Invalid token or check-in failed" });
+      }
+
+      // Create notification for staff
+      await storage.createNotification({
+        type: 'self_checkin',
+        title: 'Guest Self-Check-in',
+        message: `${guest.name} completed self-check-in for capsule ${guest.capsuleNumber}`,
+      });
+
+      res.json(guest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to complete self-check-in" });
+    }
+  });
+
+  app.get("/api/guest-links/:token/guest", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const guest = await storage.getGuestByToken(token);
+      
+      if (!guest) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+
+      // Check if guest can still edit (within 1 hour)
+      const canEdit = guest.canEditUntil && new Date() < new Date(guest.canEditUntil);
+      
+      res.json({ ...guest, canEdit });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch guest data" });
+    }
+  });
+
+  app.put("/api/guest-links/:token/guest", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const guest = await storage.getGuestByToken(token);
+      
+      if (!guest) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+
+      // Check if guest can still edit (within 1 hour)
+      const canEdit = guest.canEditUntil && new Date() < new Date(guest.canEditUntil);
+      if (!canEdit) {
+        return res.status(403).json({ message: "Edit window has expired" });
+      }
+
+      const validatedData = selfCheckinSchema.parse(req.body);
+      const updatedGuest = await storage.updateGuest(guest.id, validatedData);
+      
+      res.json(updatedGuest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update guest data" });
     }
   });
 

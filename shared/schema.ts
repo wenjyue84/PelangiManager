@@ -34,6 +34,14 @@ export const guests = pgTable("guests", {
   notes: text("notes"),
   gender: text("gender"), // Optional field
   nationality: text("nationality"), // Optional field
+  icNumber: text("ic_number"),
+  passportNumber: text("passport_number"),
+  icPhotoUrl: text("ic_photo_url"),
+  passportPhotoUrl: text("passport_photo_url"),
+  checkinSource: text("checkin_source").default("staff"), // 'staff' or 'self'
+  guestLinkToken: text("guest_link_token"),
+  guestLinkExpiry: timestamp("guest_link_expiry"),
+  canEditUntil: timestamp("can_edit_until")
 });
 
 export const capsules = pgTable("capsules", {
@@ -46,6 +54,35 @@ export const capsules = pgTable("capsules", {
   problemResolvedAt: timestamp("problem_resolved_at"),
 });
 
+export const maintenanceProblems = pgTable("maintenance_problems", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  capsuleId: varchar("capsule_id").references(() => capsules.id),
+  description: text("description").notNull(),
+  reportedBy: varchar("reported_by").references(() => users.id),
+  reportedAt: timestamp("reported_at").defaultNow(),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  status: text("status").default("active"), // 'active' or 'resolved'
+});
+
+export const settings = pgTable("settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").unique().notNull(),
+  value: text("value"),
+  category: text("category").default("general"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // 'self_checkin', 'maintenance', 'checkout_reminder'
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("is_read").default(false),
+  userId: varchar("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -56,6 +93,9 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
   checkinTime: true,
   checkoutTime: true,
   isCheckedIn: true,
+  guestLinkToken: true,
+  guestLinkExpiry: true,
+  canEditUntil: true,
 }).extend({
   name: z.string().min(1, "Guest name is required"),
   capsuleNumber: z.string().min(1, "Capsule number is required"),
@@ -67,6 +107,51 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
   expectedCheckoutDate: z.string().optional(),
   gender: z.string().optional(),
   nationality: z.string().optional(),
+  icNumber: z.string().optional(),
+  passportNumber: z.string().optional(),
+  icPhotoUrl: z.string().optional(),
+  passportPhotoUrl: z.string().optional(),
+  checkinSource: z.enum(["staff", "self"]).optional().default("staff"),
+});
+
+export const insertMaintenanceProblemSchema = createInsertSchema(maintenanceProblems).omit({
+  id: true,
+  reportedAt: true,
+  resolvedAt: true,
+}).extend({
+  capsuleId: z.string().min(1, "Capsule is required"),
+  description: z.string().min(1, "Problem description is required"),
+  reportedBy: z.string().min(1, "Reporter is required"),
+});
+
+export const insertSettingSchema = createInsertSchema(settings).omit({
+  id: true,
+  updatedAt: true,
+}).extend({
+  key: z.string().min(1, "Setting key is required"),
+  value: z.string().optional(),
+  category: z.string().optional().default("general"),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  type: z.enum(["self_checkin", "maintenance", "checkout_reminder"]),
+  title: z.string().min(1, "Title is required"),
+  message: z.string().min(1, "Message is required"),
+  userId: z.string().optional(),
+});
+
+export const selfCheckinSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  nationality: z.string().min(1, "Nationality is required"),
+  gender: z.enum(["male", "female", "other"]).optional(),
+  icNumber: z.string().optional(),
+  passportNumber: z.string().optional(),
+  icPhotoUrl: z.string().optional(),
+  passportPhotoUrl: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export const insertCapsuleSchema = createInsertSchema(capsules).omit({
@@ -113,3 +198,10 @@ export type Session = typeof sessions.$inferSelect;
 export type LoginRequest = z.infer<typeof loginSchema>;
 export type UpdateCapsuleProblem = z.infer<typeof updateCapsuleProblemSchema>;
 export type BulkGuestImport = z.infer<typeof bulkGuestImportSchema>;
+export type MaintenanceProblem = typeof maintenanceProblems.$inferSelect;
+export type InsertMaintenanceProblem = z.infer<typeof insertMaintenanceProblemSchema>;
+export type Setting = typeof settings.$inferSelect;
+export type InsertSetting = z.infer<typeof insertSettingSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type SelfCheckin = z.infer<typeof selfCheckinSchema>;
