@@ -13,10 +13,27 @@ function formatDuration(checkinTime: string): string {
   const now = new Date();
   const diff = now.getTime() - checkin.getTime();
   
-  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const totalHours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   
-  return `${hours}h ${minutes}m`;
+  // If stay is 24 hours or more, show days and hours
+  if (totalHours >= 24) {
+    const days = Math.floor(totalHours / 24);
+    const remainingHours = totalHours % 24;
+    
+    if (remainingHours === 0) {
+      return `${days} day${days > 1 ? 's' : ''}`;
+    } else {
+      return `${days} day${days > 1 ? 's' : ''} ${remainingHours}h`;
+    }
+  }
+  
+  // For stays less than 24 hours, show hours and minutes
+  if (totalHours === 0) {
+    return `${minutes}m`;
+  }
+  
+  return `${totalHours}h ${minutes}m`;
 }
 
 function getInitials(name: string): string {
