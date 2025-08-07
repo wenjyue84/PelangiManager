@@ -542,6 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethod: validatedGuestData.paymentMethod,
         paymentCollector: "Self Check-in",
         isPaid: false,
+        selfCheckinToken: token, // Store the token for edit access
         notes: `IC: ${validatedGuestData.icNumber || 'N/A'}, Passport: ${validatedGuestData.passportNumber || 'N/A'}${validatedGuestData.icDocumentUrl ? `, IC Doc: ${validatedGuestData.icDocumentUrl}` : ''}${validatedGuestData.passportDocumentUrl ? `, Passport Doc: ${validatedGuestData.passportDocumentUrl}` : ''}`,
       });
 
@@ -552,10 +553,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Check-in successful",
         guest: guest,
         capsuleNumber: guestToken.capsuleNumber,
+        editToken: token, // Provide token for editing within 1 hour
+        editExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
       });
     } catch (error: any) {
       console.error("Error processing guest check-in:", error);
       res.status(400).json({ message: error.message || "Failed to complete check-in" });
+    }
+  });
+
+  // Guest self-edit route (within 1 hour of check-in)
+  app.get("/api/guest-edit/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const guestToken = await storage.getGuestToken(token);
+
+      if (!guestToken) {
+        return res.status(404).json({ message: "Invalid edit link" });
+      }
+
+      if (!guestToken.isUsed) {
+        return res.status(400).json({ message: "Check-in not completed yet" });
+      }
+
+      // Check if edit window has expired (1 hour after check-in)
+      const oneHourAfterUsed = new Date(guestToken.usedAt!.getTime() + 60 * 60 * 1000);
+      if (new Date() > oneHourAfterUsed) {
+        return res.status(400).json({ message: "Edit window has expired" });
+      }
+
+      // Find the guest associated with this token
+      const guests = await storage.getAllGuests();
+      const guest = guests.find(g => g.selfCheckinToken === token);
+
+      if (!guest) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+
+      res.json({
+        guest: guest,
+        capsuleNumber: guestToken.capsuleNumber,
+        editExpiresAt: oneHourAfterUsed,
+      });
+    } catch (error: any) {
+      console.error("Error validating edit token:", error);
+      res.status(500).json({ message: "Failed to validate edit token" });
+    }
+  });
+
+  // Update guest information (within 1 hour of check-in)
+  app.put("/api/guest-edit/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const guestToken = await storage.getGuestToken(token);
+
+      if (!guestToken) {
+        return res.status(404).json({ message: "Invalid edit link" });
+      }
+
+      if (!guestToken.isUsed) {
+        return res.status(400).json({ message: "Check-in not completed yet" });
+      }
+
+      // Check if edit window has expired (1 hour after check-in)
+      const oneHourAfterUsed = new Date(guestToken.usedAt!.getTime() + 60 * 60 * 1000);
+      if (new Date() > oneHourAfterUsed) {
+        return res.status(400).json({ message: "Edit window has expired" });
+      }
+
+      // Find the guest associated with this token
+      const guests = await storage.getAllGuests();
+      const guest = guests.find(g => g.selfCheckinToken === token);
+
+      if (!guest) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+
+      const validatedGuestData = guestSelfCheckinSchema.parse(req.body);
+
+      // Update guest information
+      const updatedGuest = await storage.updateGuest(guest.id, {
+        name: validatedGuestData.nameAsInDocument,
+        gender: validatedGuestData.gender,
+        nationality: validatedGuestData.nationality,
+        idNumber: validatedGuestData.icNumber || validatedGuestData.passportNumber || undefined,
+        paymentMethod: validatedGuestData.paymentMethod,
+        notes: `IC: ${validatedGuestData.icNumber || 'N/A'}, Passport: ${validatedGuestData.passportNumber || 'N/A'}${validatedGuestData.icDocumentUrl ? `, IC Doc: ${validatedGuestData.icDocumentUrl}` : ''}${validatedGuestData.passportDocumentUrl ? `, Passport Doc: ${validatedGuestData.passportDocumentUrl}` : ''}`,
+      });
+
+      res.json({
+        message: "Information updated successfully",
+        guest: updatedGuest,
+      });
+    } catch (error: any) {
+      console.error("Error updating guest information:", error);
+      res.status(400).json({ message: error.message || "Failed to update information" });
     }
   });
 

@@ -27,6 +27,9 @@ export default function GuestCheckin() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [editToken, setEditToken] = useState<string>("");
+  const [editExpiresAt, setEditExpiresAt] = useState<Date | null>(null);
+  const [canEdit, setCanEdit] = useState(false);
 
   const form = useForm<GuestSelfCheckin>({
     resolver: zodResolver(guestSelfCheckinSchema),
@@ -111,7 +114,11 @@ export default function GuestCheckin() {
       });
 
       if (response.ok) {
+        const result = await response.json();
         setIsSuccess(true);
+        setEditToken(result.editToken);
+        setEditExpiresAt(new Date(result.editExpiresAt));
+        setCanEdit(true);
         toast({
           title: "Check-in Successful!",
           description: `Welcome to Pelangi Capsule Hostel! You've been assigned to ${guestInfo?.capsuleNumber}.`,
@@ -231,6 +238,29 @@ export default function GuestCheckin() {
                     <li>• 🎥 CCTV monitored – Violation (e.g., smoking) may result in RM300 penalty</li>
                   </ul>
                 </div>
+
+                {canEdit && editExpiresAt && new Date() < editExpiresAt && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-yellow-800">Information Editable</span>
+                    </div>
+                    <p className="text-xs text-yellow-700">
+                      You can edit your check-in information until {editExpiresAt.toLocaleTimeString()}.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => {
+                        // Navigate back to edit form
+                        window.location.href = `/guest-edit?token=${editToken}`;
+                      }}
+                    >
+                      Edit My Information
+                    </Button>
+                  </div>
+                )}
 
                 <div className="text-center text-gray-600 text-sm">
                   For any assistance, please contact reception. <br />

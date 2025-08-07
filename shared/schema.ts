@@ -47,6 +47,7 @@ export const guests = pgTable("guests", {
   emergencyContact: text("emergency_contact"),
   emergencyPhone: text("emergency_phone"),
   age: text("age"),
+  selfCheckinToken: text("self_checkin_token"), // Link back to the token used for self check-in
 });
 
 export const capsules = pgTable("capsules", {

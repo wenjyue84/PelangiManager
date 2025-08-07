@@ -14,6 +14,7 @@ import CheckOut from "./pages/check-out";
 import History from "./pages/history";
 import Settings from "./pages/settings";
 import GuestCheckin from "./pages/guest-checkin";
+import GuestEdit from "./pages/guest-edit";
 import Header from "./components/header";
 import Navigation from "./components/navigation";
 
@@ -37,6 +38,7 @@ function Router() {
           </Route>
           <Route path="/history" component={History} />
           <Route path="/guest-checkin" component={GuestCheckin} />
+          <Route path="/guest-edit" component={GuestEdit} />
           <Route path="/settings">
             <ProtectedRoute requireAuth={true}>
               <Settings />
