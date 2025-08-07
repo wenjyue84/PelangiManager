@@ -162,8 +162,11 @@ export default function CheckIn() {
             <div>
               <Label htmlFor="capsuleNumber" className="flex items-center text-sm font-medium text-hostel-text mb-2">
                 <Bed className="mr-2 h-4 w-4" />
-                Capsule Number
+                Capsule Assignment
               </Label>
+              <p className="text-xs text-gray-600 mb-2">
+                💡 Tip: Even numbers (C2, C4, C6...) are bottom capsules - customers prefer these!
+              </p>
               {capsulesLoading ? (
                 <Skeleton className="w-full h-10" />
               ) : (
@@ -172,17 +175,46 @@ export default function CheckIn() {
                   onValueChange={(value) => form.setValue("capsuleNumber", value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select available capsule" />
+                    <SelectValue placeholder="Select capsule (⭐ = bottom/preferred)" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableCapsules.length === 0 ? (
                       <SelectItem value="no-capsules" disabled>No capsules available</SelectItem>
                     ) : (
-                      availableCapsules.map((capsule) => (
-                        <SelectItem key={capsule.number} value={capsule.number}>
-                          {capsule.number} ({capsule.section} section)
-                        </SelectItem>
-                      ))
+                      // Sort capsules: bottom (even numbers) first, then top (odd numbers)
+                      availableCapsules
+                        .sort((a, b) => {
+                          const aNum = parseInt(a.number.replace('C', ''));
+                          const bNum = parseInt(b.number.replace('C', ''));
+                          const aIsBottom = aNum % 2 === 0;
+                          const bIsBottom = bNum % 2 === 0;
+                          
+                          // Bottom capsules first
+                          if (aIsBottom && !bIsBottom) return -1;
+                          if (!aIsBottom && bIsBottom) return 1;
+                          
+                          // Within same position, sort by number
+                          return aNum - bNum;
+                        })
+                        .map((capsule) => {
+                          const capsuleNum = parseInt(capsule.number.replace('C', ''));
+                          const isBottom = capsuleNum % 2 === 0;
+                          const position = isBottom ? "Bottom" : "Top";
+                          const preference = isBottom ? "⭐ Preferred" : "";
+                          
+                          return (
+                            <SelectItem key={capsule.number} value={capsule.number}>
+                              <div className="flex items-center justify-between w-full">
+                                <span>
+                                  {capsule.number} - {position} {preference}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {capsule.section}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
                     )}
                   </SelectContent>
                 </Select>
