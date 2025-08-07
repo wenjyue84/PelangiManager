@@ -51,9 +51,10 @@ export class MemStorage implements IStorage {
     this.capsules = new Map();
     this.sessions = new Map();
     
-    // Initialize capsules and admin user
+    // Initialize capsules, admin user, and sample guests
     this.initializeCapsules();
     this.initializeDefaultUsers();
+    this.initializeSampleGuests();
   }
 
   private initializeDefaultUsers() {
@@ -73,6 +74,61 @@ export class MemStorage implements IStorage {
     };
     this.users.set(adminUser.id, adminUser);
     console.log("Initialized default admin user with email:", adminUser.email);
+  }
+
+  private initializeSampleGuests() {
+    const sampleGuests = [
+      { name: "Keong", capsule: "C1", phone: "017-6632979", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
+      { name: "Prem", capsule: "C4", phone: "019-7418889", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
+      { name: "Jeevan", capsule: "C5", phone: "010-5218906", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
+      { name: "Ahmad", capsule: "C25", phone: "012-3456789", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
+      { name: "Wei Ming", capsule: "C26", phone: "011-9876543", checkin: "2025-08-07T15:00:00", checkout: "2025-08-09", nights: 2 },
+      { name: "Raj", capsule: "C11", phone: "013-2468135", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
+      { name: "Hassan", capsule: "C12", phone: "014-3579246", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
+      { name: "Li Wei", capsule: "C13", phone: "015-4681357", checkin: "2025-08-07T15:00:00", checkout: "2025-08-10", nights: 3 },
+      { name: "Muthu", capsule: "C14", phone: "016-5792468", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
+      { name: "Chen", capsule: "C15", phone: "017-6813579", checkin: "2025-08-06T15:00:00", checkout: "2025-08-09", nights: 3 },
+      { name: "Kumar", capsule: "C17", phone: "018-8135792", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
+      { name: "Farid", capsule: "C18", phone: "019-9246813", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
+      { name: "Ibrahim", capsule: "C21", phone: "012-3579135", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
+      { name: "Wong", capsule: "C22", phone: "013-4681246", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
+    ];
+
+    sampleGuests.forEach(guest => {
+      const guestRecord: Guest = {
+        id: randomUUID(),
+        name: guest.name,
+        capsuleNumber: guest.capsule,
+        checkinTime: new Date(guest.checkin),
+        checkoutTime: null,
+        expectedCheckoutDate: guest.checkout,
+        isCheckedIn: true,
+        paymentAmount: `${guest.nights * 35}`, // RM35 per night
+        paymentMethod: "cash",
+        paymentCollector: "Alston",
+        isPaid: true,
+        notes: null,
+        gender: null,
+        nationality: null,
+        phoneNumber: guest.phone,
+        email: null,
+        idNumber: null,
+        emergencyContact: null,
+        emergencyPhone: null,
+        age: null,
+      };
+      
+      this.guests.set(guestRecord.id, guestRecord);
+      
+      // Mark capsule as occupied
+      const capsule = this.capsules.get(guest.capsule);
+      if (capsule) {
+        capsule.isAvailable = false;
+        this.capsules.set(guest.capsule, capsule);
+      }
+    });
+
+    console.log(`Initialized ${sampleGuests.length} sample guests`);
   }
 
   private initializeCapsules() {

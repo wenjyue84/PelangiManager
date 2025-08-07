@@ -108,9 +108,5 @@ async function populateAllData() {
   console.log('Login credentials: admin / admin123');
 }
 
-// Run if called directly
-if (require.main === module) {
-  populateAllData();
-}
-
-module.exports = { populateAllData };
+// Auto-run when script is executed directly
+populateAllData();
