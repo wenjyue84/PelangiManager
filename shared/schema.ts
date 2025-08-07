@@ -39,8 +39,14 @@ export const guests = pgTable("guests", {
   paymentCollector: text("payment_collector"),
   isPaid: boolean("is_paid").notNull().default(false),
   notes: text("notes"),
-  gender: text("gender"), // Optional field
-  nationality: text("nationality"), // Optional field
+  gender: text("gender"),
+  nationality: text("nationality"),
+  phoneNumber: text("phone_number"),
+  email: text("email"),
+  idNumber: text("id_number"), // Passport/IC number
+  emergencyContact: text("emergency_contact"),
+  emergencyPhone: text("emergency_phone"),
+  age: text("age"),
 });
 
 export const capsules = pgTable("capsules", {
@@ -83,6 +89,12 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
   expectedCheckoutDate: z.string().optional(),
   gender: z.string().optional(),
   nationality: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  idNumber: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  emergencyPhone: z.string().optional(),
+  age: z.string().optional(),
 });
 
 export const insertCapsuleSchema = createInsertSchema(capsules).omit({

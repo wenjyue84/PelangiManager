@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, User, Bed } from "lucide-react";
+import { UserPlus, User, Bed, Phone, Mail, CreditCard, Calendar, Users } from "lucide-react";
 import { insertGuestSchema, type InsertGuest, type Capsule } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +31,13 @@ export default function CheckIn() {
       paymentCollector: "",
       gender: "",
       nationality: "",
+      phoneNumber: "",
+      email: "",
+      idNumber: "",
+      emergencyContact: "",
+      emergencyPhone: "",
+      age: "",
+      expectedCheckoutDate: "",
     },
   });
 
@@ -216,10 +223,144 @@ export default function CheckIn() {
               </div>
             </div>
 
-            {/* Optional Guest Information */}
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <h3 className="text-sm font-medium text-hostel-text mb-3">Additional Information (Optional)</h3>
+            {/* Contact Information */}
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
+                <Phone className="mr-2 h-4 w-4" />
+                Contact Information
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="phoneNumber" className="text-sm font-medium text-hostel-text">
+                    Phone Number
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            id="phoneNumber"
+                            type="tel"
+                            placeholder="e.g., +60123456789"
+                            className="mt-1"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium text-hostel-text">
+                    Email Address
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="guest@example.com"
+                            className="mt-1"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Identification & Personal Details */}
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+              <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Identification & Personal Details
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="idNumber" className="text-sm font-medium text-hostel-text">
+                    ID/Passport Number
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="idNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            id="idNumber"
+                            type="text"
+                            placeholder="IC or Passport No."
+                            className="mt-1"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="age" className="text-sm font-medium text-hostel-text">
+                    Age
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="age"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            id="age"
+                            type="number"
+                            min="16"
+                            max="120"
+                            placeholder="Age"
+                            className="mt-1"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
+                    Nationality
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="nationality"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            id="nationality"
+                            type="text"
+                            placeholder="e.g., Malaysian"
+                            className="mt-1"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <div>
                   <Label htmlFor="gender" className="text-sm font-medium text-hostel-text">
                     Gender
@@ -248,21 +389,54 @@ export default function CheckIn() {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
-                    Nationality
+                <div className="sm:col-span-2">
+                  <Label htmlFor="expectedCheckoutDate" className="text-sm font-medium text-hostel-text flex items-center">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Expected Checkout Date
                   </Label>
                   <FormField
                     control={form.control}
-                    name="nationality"
+                    name="expectedCheckoutDate"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <input
-                            id="nationality"
+                          <Input
+                            id="expectedCheckoutDate"
+                            type="date"
+                            className="mt-1"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+              <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
+                <Users className="mr-2 h-4 w-4" />
+                Emergency Contact (Optional)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="emergencyContact" className="text-sm font-medium text-hostel-text">
+                    Emergency Contact Name
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="emergencyContact"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            id="emergencyContact"
                             type="text"
-                            placeholder="e.g., Malaysian, Singaporean"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hostel-primary focus:ring-hostel-primary sm:text-sm"
+                            placeholder="Full name of emergency contact"
+                            className="mt-1"
                             {...field}
                           />
                         </FormControl>
@@ -272,21 +446,21 @@ export default function CheckIn() {
                   />
                 </div>
 
-                <div className="sm:col-span-2">
-                  <Label htmlFor="notes" className="text-sm font-medium text-hostel-text">
-                    Notes (Optional)
+                <div>
+                  <Label htmlFor="emergencyPhone" className="text-sm font-medium text-hostel-text">
+                    Emergency Contact Phone
                   </Label>
                   <FormField
                     control={form.control}
-                    name="notes"
+                    name="emergencyPhone"
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <textarea
-                            id="notes"
-                            rows={2}
-                            placeholder="Any additional notes about the guest..."
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hostel-primary focus:ring-hostel-primary sm:text-sm"
+                          <Input
+                            id="emergencyPhone"
+                            type="tel"
+                            placeholder="Emergency contact phone number"
+                            className="mt-1"
                             {...field}
                           />
                         </FormControl>
@@ -295,6 +469,34 @@ export default function CheckIn() {
                     )}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Additional Notes */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <h3 className="text-sm font-medium text-hostel-text mb-3">Additional Notes (Optional)</h3>
+              <div>
+                <Label htmlFor="notes" className="text-sm font-medium text-hostel-text">
+                  Special Requirements or Notes
+                </Label>
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <textarea
+                          id="notes"
+                          rows={3}
+                          placeholder="Any special requirements, allergies, accessibility needs, or additional notes..."
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hostel-primary focus:ring-hostel-primary sm:text-sm"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
