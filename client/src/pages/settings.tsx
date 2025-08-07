@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Users, Key, Database } from "lucide-react";
+import { Settings as SettingsIcon, Users, Key, Database, AlertTriangle } from "lucide-react";
 import UserManagement from "../components/user-management";
+import Maintenance from "./maintenance";
 
 const settingsSections = [
   {
@@ -10,6 +11,12 @@ const settingsSections = [
     title: "User Management",
     description: "Manage user accounts and permissions",
     icon: Users,
+  },
+  {
+    id: "maintenance",
+    title: "Maintenance",
+    description: "Manage capsule problems and maintenance issues",
+    icon: AlertTriangle,
   },
   {
     id: "security",
@@ -32,6 +39,8 @@ export default function Settings() {
     switch (activeSection) {
       case "users":
         return <UserManagement />;
+      case "maintenance":
+        return <Maintenance />;
       case "security":
         return (
           <Card>
