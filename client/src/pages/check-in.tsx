@@ -96,7 +96,8 @@ export default function CheckIn() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
             <div>
               <Label htmlFor="name" className="flex items-center text-sm font-medium text-hostel-text mb-2">
                 <User className="mr-2 h-4 w-4" />
@@ -340,6 +341,7 @@ export default function CheckIn() {
               </Button>
             </div>
           </form>
+          </Form>
         </CardContent>
       </Card>
     </div>

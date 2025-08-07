@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserMinus, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { UserMinus, ArrowUpDown, ArrowUp, ArrowDown, ToggleLeft, ToggleRight } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guest } from "@shared/schema";
@@ -17,7 +18,11 @@ function getInitials(name: string): string {
 }
 
 function truncateName(name: string): string {
-  return name.length > 5 ? name.slice(0, 5) : name;
+  return name.length > 5 ? name.slice(0, 5) + '...' : name;
+}
+
+function getFirstInitial(name: string): string {
+  return name.charAt(0).toUpperCase();
 }
 
 function getGenderIcon(gender?: string) {
@@ -26,7 +31,8 @@ function getGenderIcon(gender?: string) {
   } else if (gender === 'male') {
     return { icon: '♂', bgColor: 'bg-blue-100', textColor: 'text-blue-600' };
   }
-  return { icon: null, bgColor: 'bg-hostel-primary bg-opacity-10', textColor: 'text-hostel-primary' };
+  // For other/unspecified/no gender - use purple
+  return { icon: null, bgColor: 'bg-purple-100', textColor: 'text-purple-600' };
 }
 
 function formatShortDateTime(dateString: string): string {
@@ -76,6 +82,7 @@ function SortButton({ field, currentSort, onSort }: {
 
 export default function SortableGuestTable() {
   const queryClient = useQueryClient();
+  const [isCondensedView, setIsCondensedView] = useState(false);
   const { toast } = useToast();
   const [sortConfig, setSortConfig] = useState<{ field: SortField; order: SortOrder }>({
     field: 'capsuleNumber',
@@ -187,13 +194,22 @@ export default function SortableGuestTable() {
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-hostel-text">Currently Checked In</CardTitle>
-          <Badge variant="secondary" className="bg-hostel-secondary bg-opacity-10 text-hostel-secondary">
-            <div className="w-2 h-2 bg-hostel-secondary rounded-full mr-1.5"></div>
-            {guests.length} Active
-          </Badge>
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-bold text-hostel-text flex items-center">
+            Dashboard
+            <span className="ml-2 text-sm font-normal text-gray-600">
+              ({guests.length})
+            </span>
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600">Condensed</span>
+            <Switch 
+              checked={!isCondensedView}
+              onCheckedChange={(checked) => setIsCondensedView(!checked)}
+            />
+            <span className="text-xs text-gray-600">Detailed</span>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -206,21 +222,31 @@ export default function SortableGuestTable() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
                     <div className="flex items-center gap-1">
-                      Capsule/Checkout
+                      Capsule
                       <SortButton field="capsuleNumber" currentSort={sortConfig} onSort={handleSort} />
                     </div>
                   </th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest</th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
-                      Check-in
+                      {isCondensedView ? 'In' : 'Check-in'}
                       <SortButton field="checkinTime" currentSort={sortConfig} onSort={handleSort} />
                     </div>
                   </th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center gap-1">
+                      {isCondensedView ? 'Out' : 'Expected Checkout'}
+                      <SortButton field="expectedCheckoutDate" currentSort={sortConfig} onSort={handleSort} />
+                    </div>
+                  </th>
+                  {!isCondensedView && (
+                    <>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </>
+                  )}
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -229,48 +255,67 @@ export default function SortableGuestTable() {
                   const genderIcon = getGenderIcon(guest.gender);
                   return (
                     <tr key={guest.id} className="hover:bg-gray-50">
+                      {/* Capsule column - sticky first column */}
+                      <td className="px-2 py-3 whitespace-nowrap sticky left-0 bg-white z-10">
+                        <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
+                          {guest.capsuleNumber}
+                        </Badge>
+                      </td>
+                      {/* Guest column */}
                       <td className="px-2 py-3 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className={`w-7 h-7 ${genderIcon.bgColor} rounded-full flex items-center justify-center mr-2`}>
-                            {genderIcon.icon ? (
+                          <div className={`w-6 h-6 ${genderIcon.bgColor} rounded-full flex items-center justify-center mr-2`}>
+                            {isCondensedView ? (
+                              <span className={`${genderIcon.textColor} font-bold text-xs`}>
+                                {getFirstInitial(guest.name)}
+                              </span>
+                            ) : genderIcon.icon ? (
                               <span className={`${genderIcon.textColor} font-bold text-sm`}>{genderIcon.icon}</span>
                             ) : (
                               <span className={`${genderIcon.textColor} font-medium text-xs`}>{getInitials(guest.name)}</span>
                             )}
                           </div>
-                          <span className="text-sm font-medium text-hostel-text">{truncateName(guest.name)}</span>
+                          {!isCondensedView && (
+                            <span className="text-sm font-medium text-hostel-text">{truncateName(guest.name)}</span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap">
-                        <div>
-                          <div className="flex items-center gap-1 mb-1">
-                            <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
-                              {guest.capsuleNumber}
-                            </Badge>
-                            {guest.expectedCheckoutDate && (
-                              <span className="text-xs text-gray-600 font-medium">
-                                ({formatShortDate(guest.expectedCheckoutDate)})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
+                      {/* Check-in column */}
                       <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
-                        {formatShortDateTime(guest.checkinTime.toString())}
+                        {isCondensedView 
+                          ? formatShortDate(guest.checkinTime.toString())
+                          : formatShortDateTime(guest.checkinTime.toString())
+                        }
                       </td>
+                      {/* Checkout column */}
                       <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
-                        {guest.paymentAmount ? (
-                          <div>
-                            <div className="font-medium">RM {guest.paymentAmount}</div>
-                            <div className="text-xs text-gray-500">{guest.paymentCollector || 'N/A'}</div>
-                          </div>
+                        {guest.expectedCheckoutDate ? (
+                          <span className="font-medium">
+                            {formatShortDate(guest.expectedCheckoutDate)}
+                          </span>
                         ) : (
-                          <span className="text-gray-400">No payment</span>
+                          <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-2 py-3 whitespace-nowrap">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      </td>
+                      {/* Payment and Status columns - only in detailed view */}
+                      {!isCondensedView && (
+                        <>
+                          <td className="px-2 py-3 whitespace-nowrap text-xs text-gray-600">
+                            {guest.paymentAmount ? (
+                              <div>
+                                <div className="font-medium">RM {guest.paymentAmount}</div>
+                                <div className="text-xs text-gray-500">{guest.paymentCollector || 'N/A'}</div>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">No payment</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-3 whitespace-nowrap">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          </td>
+                        </>
+                      )}
+                      {/* Actions column */}
                       <td className="px-2 py-3 whitespace-nowrap">
                         <Button 
                           variant="ghost" 
