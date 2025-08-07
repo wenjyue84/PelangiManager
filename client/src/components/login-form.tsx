@@ -65,10 +65,10 @@ export function LoginForm() {
     
     if (success) {
       toast({
-        title: "✅ Login Successful!",
+        title: "🎉 Login Successful!",
         description: "Welcome back! You have been logged in successfully.",
         duration: 5000,
-        className: "border-green-500 bg-green-50 text-green-800"
+        className: "border-green-500 bg-green-50 text-green-800 shadow-lg text-base font-semibold"
       });
     } else {
       toast({
@@ -88,10 +88,10 @@ export function LoginForm() {
     
     if (success) {
       toast({
-        title: "✅ Google Login Successful!",
+        title: "🎉 Google Login Successful!",
         description: "Welcome! You have been logged in with Google successfully.",
         duration: 5000,
-        className: "border-green-500 bg-green-50 text-green-800"
+        className: "border-green-500 bg-green-50 text-green-800 shadow-lg text-base font-semibold"
       });
     } else {
       toast({
