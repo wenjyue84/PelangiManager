@@ -17,7 +17,7 @@ export default function OccupancyCards() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
@@ -69,7 +69,7 @@ export default function OccupancyCards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
       {cards.map((card) => {
         const Icon = card.icon;
         return (

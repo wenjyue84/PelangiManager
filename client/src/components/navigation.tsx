@@ -18,7 +18,7 @@ export default function Navigation() {
   const isAuthenticated = authContext?.isAuthenticated || false;
 
   return (
-    <nav className="flex space-x-1 mb-6 bg-white p-2 rounded-lg shadow-sm">
+    <nav className="flex space-x-1 mb-4 bg-white p-2 rounded-lg shadow-sm overflow-x-auto">
       {navigationItems.map((item) => {
         const isActive = location === item.path;
         const canAccess = !item.requireAuth || isAuthenticated;
@@ -30,14 +30,14 @@ export default function Navigation() {
             <Button
               variant={isActive ? "default" : "ghost"}
               size="sm"
-              className={`flex items-center gap-2 ${
+              className={`flex items-center gap-1 text-xs px-2 py-1 whitespace-nowrap ${
                 isActive 
                   ? "bg-orange-600 text-white hover:bg-orange-700" 
                   : "text-gray-700 hover:text-orange-600"
               }`}
             >
-              <item.icon className="h-4 w-4" />
-              {item.label}
+              <item.icon className="h-3 w-3" />
+              <span className="hidden sm:inline">{item.label}</span>
             </Button>
           </Link>
         );

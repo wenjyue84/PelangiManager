@@ -17,8 +17,7 @@ import Navigation from "./components/navigation";
 function Router() {
   return (
     <div className="min-h-screen bg-hostel-background">
-      <Header />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <Navigation />
         <Switch>
           <Route path="/" component={Dashboard} />

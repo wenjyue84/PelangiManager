@@ -11,6 +11,7 @@ import { insertGuestSchema, type InsertGuest, type Capsule } from "@shared/schem
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 
 export default function CheckIn() {
   const queryClient = useQueryClient();
@@ -28,6 +29,8 @@ export default function CheckIn() {
       paymentAmount: "0",
       paymentMethod: "cash" as const,
       paymentCollector: "",
+      gender: "",
+      nationality: "",
     },
   });
 
@@ -208,6 +211,88 @@ export default function CheckIn() {
                   {form.formState.errors.paymentCollector && (
                     <p className="text-hostel-error text-sm mt-1">{form.formState.errors.paymentCollector.message}</p>
                   )}
+                </div>
+              </div>
+            </div>
+
+            {/* Optional Guest Information */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <h3 className="text-sm font-medium text-hostel-text mb-3">Additional Information (Optional)</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="gender" className="text-sm font-medium text-hostel-text">
+                    Gender
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                              <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
+                    Nationality
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="nationality"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <input
+                            id="nationality"
+                            type="text"
+                            placeholder="e.g., Malaysian, Singaporean"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hostel-primary focus:ring-hostel-primary sm:text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <Label htmlFor="notes" className="text-sm font-medium text-hostel-text">
+                    Notes (Optional)
+                  </Label>
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <textarea
+                            id="notes"
+                            rows={2}
+                            placeholder="Any additional notes about the guest..."
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hostel-primary focus:ring-hostel-primary sm:text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
             </div>
