@@ -28,27 +28,31 @@ export function LoginForm() {
     document.body.appendChild(script);
 
     script.onload = () => {
-      if (window.google) {
+      if (window.google && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
         window.google.accounts.id.initialize({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           callback: handleGoogleSignIn,
         });
 
-        window.google.accounts.id.renderButton(
-          document.getElementById("google-signin-button"),
-          { 
-            theme: "outline", 
-            size: "large", 
-            width: "100%",
-            text: "signin_with",
-            shape: "rectangular"
+        // Delay rendering to ensure DOM element exists
+        setTimeout(() => {
+          const element = document.getElementById("google-signin-button");
+          if (element) {
+            window.google.accounts.id.renderButton(element, { 
+              theme: "outline", 
+              size: "large", 
+              text: "signin_with",
+              shape: "rectangular"
+            });
           }
-        );
+        }, 100);
       }
     };
 
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
 
