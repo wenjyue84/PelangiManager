@@ -70,7 +70,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Login attempt:", req.body);
       const { email, password } = loginSchema.parse(req.body);
       
-      const user = await storage.getUserByEmail(email);
+      // Try to find user by email first, then by username
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        user = await storage.getUserByUsername(email); // Allow login with username in email field
+      }
       console.log("User found:", user ? "Yes" : "No");
       
       if (!user || user.password !== password) {

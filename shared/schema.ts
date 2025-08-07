@@ -114,7 +114,7 @@ export const checkoutGuestSchema = z.object({
 
 // Authentication schemas
 export const loginSchema = z.object({
-  email: z.string().email("Valid email is required"),
+  email: z.string().min(1, "Username or email is required"), // Allow username or email
   password: z.string().min(1, "Password is required"),
 });
 

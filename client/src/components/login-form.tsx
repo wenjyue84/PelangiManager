@@ -96,17 +96,20 @@ export function LoginForm() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-orange-700">Pelangi Capsule Hostel</CardTitle>
           <CardDescription>Management System Login</CardDescription>
+          <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-gray-600">
+            <strong>Demo Login:</strong> admin / admin123
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Username or Email</Label>
               <Input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                placeholder="admin"
                 required
               />
             </div>
@@ -117,7 +120,7 @@ export function LoginForm() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="admin123"
                 required
               />
             </div>
