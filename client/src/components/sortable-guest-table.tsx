@@ -8,6 +8,7 @@ import { UserMinus, ArrowUpDown, ArrowUp, ArrowDown, ToggleLeft, ToggleRight } f
 import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import GuestDetailsModal from "./guest-details-modal";
 import type { Guest } from "@shared/schema";
 
 type SortField = 'name' | 'capsuleNumber' | 'checkinTime' | 'expectedCheckoutDate';
@@ -83,6 +84,8 @@ function SortButton({ field, currentSort, onSort }: {
 export default function SortableGuestTable() {
   const queryClient = useQueryClient();
   const [isCondensedView, setIsCondensedView] = useState(false);
+  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { toast } = useToast();
   const [sortConfig, setSortConfig] = useState<{ field: SortField; order: SortOrder }>({
     field: 'capsuleNumber',
@@ -161,6 +164,16 @@ export default function SortableGuestTable() {
 
   const handleCheckout = (guestId: string) => {
     checkoutMutation.mutate(guestId);
+  };
+
+  const handleGuestClick = (guest: Guest) => {
+    setSelectedGuest(guest);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedGuest(null);
   };
 
   if (isLoading) {
@@ -276,7 +289,12 @@ export default function SortableGuestTable() {
                             )}
                           </div>
                           {!isCondensedView && (
-                            <span className="text-sm font-medium text-hostel-text">***</span>
+                            <button 
+                              onClick={() => handleGuestClick(guest)}
+                              className="text-sm font-medium text-hostel-text hover:text-orange-700 hover:underline cursor-pointer transition-colors"
+                            >
+                              {truncateName(guest.name)}
+                            </button>
                           )}
                         </div>
                       </td>
@@ -335,6 +353,12 @@ export default function SortableGuestTable() {
           </div>
         )}
       </CardContent>
+      
+      <GuestDetailsModal 
+        guest={selectedGuest}
+        isOpen={isDetailsModalOpen}
+        onClose={handleCloseModal}
+      />
     </Card>
   );
 }
