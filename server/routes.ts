@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema } from "@shared/schema";
+import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema, updateSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
@@ -398,6 +398,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Settings routes
+  app.get("/api/settings", authenticateToken, async (req, res) => {
+    try {
+      const guestTokenExpirationHours = await storage.getGuestTokenExpirationHours();
+      res.json({
+        guestTokenExpirationHours,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.patch("/api/settings", authenticateToken, async (req: any, res) => {
+    try {
+      const validatedData = updateSettingsSchema.parse(req.body);
+      const updatedBy = req.user.username || req.user.email || "Unknown";
+      
+      // Update guest token expiration setting
+      await storage.setSetting(
+        'guestTokenExpirationHours',
+        validatedData.guestTokenExpirationHours.toString(),
+        'Hours before guest check-in tokens expire',
+        updatedBy
+      );
+
+      res.json({
+        message: "Settings updated successfully",
+        guestTokenExpirationHours: validatedData.guestTokenExpirationHours,
+      });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
   // Check-in a guest
   app.post("/api/guests/checkin", authenticateToken, async (req: any, res) => {
     try {
@@ -531,7 +568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate unique token
       const tokenValue = randomUUID();
       const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + validatedData.expiresInHours);
+      const expirationHours = await storage.getGuestTokenExpirationHours();
+      expiresAt.setHours(expiresAt.getHours() + expirationHours);
 
       const token = await storage.createGuestToken({
         token: tokenValue,

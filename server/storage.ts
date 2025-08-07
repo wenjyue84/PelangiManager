@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, type AdminNotification, type InsertAdminNotification, users, guests, capsules, sessions, guestTokens, capsuleProblems, adminNotifications } from "@shared/schema";
+import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, type AdminNotification, type InsertAdminNotification, type AppSetting, type InsertAppSetting, users, guests, capsules, sessions, guestTokens, capsuleProblems, adminNotifications, appSettings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -58,6 +58,12 @@ export interface IStorage {
   getUnreadAdminNotifications(): Promise<AdminNotification[]>;
   markNotificationAsRead(id: string): Promise<AdminNotification | undefined>;
   markAllNotificationsAsRead(): Promise<void>;
+
+  // App settings methods
+  getSetting(key: string): Promise<AppSetting | undefined>;
+  setSetting(key: string, value: string, description?: string, updatedBy?: string): Promise<AppSetting>;
+  getAllSettings(): Promise<AppSetting[]>;
+  getGuestTokenExpirationHours(): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -68,6 +74,7 @@ export class MemStorage implements IStorage {
   private guestTokens: Map<string, GuestToken>;
   private capsuleProblems: Map<string, CapsuleProblem>;
   private adminNotifications: Map<string, AdminNotification>;
+  private appSettings: Map<string, AppSetting>;
   private totalCapsules = 22; // C1-C6 (6) + C25-C26 (2) + C11-C24 (14)
 
   constructor() {
@@ -78,10 +85,12 @@ export class MemStorage implements IStorage {
     this.guestTokens = new Map();
     this.capsuleProblems = new Map();
     this.adminNotifications = new Map();
+    this.appSettings = new Map();
     
     // Initialize capsules, admin user, and sample guests
     this.initializeCapsules();
     this.initializeDefaultUsers();
+    this.initializeDefaultSettings();
     this.initializeSampleGuests();
   }
 
@@ -599,6 +608,38 @@ export class MemStorage implements IStorage {
       }
     }
   }
+
+  // App settings methods
+  async getSetting(key: string): Promise<AppSetting | undefined> {
+    return this.appSettings.get(key);
+  }
+
+  async setSetting(key: string, value: string, description?: string, updatedBy?: string): Promise<AppSetting> {
+    const setting: AppSetting = {
+      id: randomUUID(),
+      key,
+      value,
+      description: description || null,
+      updatedBy: updatedBy || null,
+      updatedAt: new Date(),
+    };
+    this.appSettings.set(key, setting);
+    return setting;
+  }
+
+  async getAllSettings(): Promise<AppSetting[]> {
+    return Array.from(this.appSettings.values());
+  }
+
+  async getGuestTokenExpirationHours(): Promise<number> {
+    const setting = await this.getSetting('guestTokenExpirationHours');
+    return setting ? parseInt(setting.value) : 24; // Default to 24 hours
+  }
+
+  private initializeDefaultSettings(): void {
+    // Initialize default settings
+    this.setSetting('guestTokenExpirationHours', '24', 'Hours before guest check-in tokens expire');
+  }
 }
 
 // Database Storage Implementation
@@ -889,6 +930,41 @@ class DatabaseStorage implements IStorage {
       .update(adminNotifications)
       .set({ isRead: true })
       .where(eq(adminNotifications.isRead, false));
+  }
+
+  // App settings methods for DatabaseStorage
+  async getSetting(key: string): Promise<AppSetting | undefined> {
+    const result = await this.db.select().from(appSettings).where(eq(appSettings.key, key)).limit(1);
+    return result[0];
+  }
+
+  async setSetting(key: string, value: string, description?: string, updatedBy?: string): Promise<AppSetting> {
+    // First try to update existing setting
+    const existing = await this.getSetting(key);
+    if (existing) {
+      const result = await this.db
+        .update(appSettings)
+        .set({ value, description: description || existing.description, updatedBy, updatedAt: new Date() })
+        .where(eq(appSettings.key, key))
+        .returning();
+      return result[0];
+    } else {
+      // Create new setting
+      const result = await this.db
+        .insert(appSettings)
+        .values({ key, value, description: description || null, updatedBy: updatedBy || null })
+        .returning();
+      return result[0];
+    }
+  }
+
+  async getAllSettings(): Promise<AppSetting[]> {
+    return await this.db.select().from(appSettings);
+  }
+
+  async getGuestTokenExpirationHours(): Promise<number> {
+    const setting = await this.getSetting('guestTokenExpirationHours');
+    return setting ? parseInt(setting.value) : 24; // Default to 24 hours
   }
 }
 

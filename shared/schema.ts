@@ -237,3 +237,23 @@ export const insertAdminNotificationSchema = createInsertSchema(adminNotificatio
   id: true, 
   createdAt: true 
 });
+
+// App settings table
+export const appSettings = pgTable("app_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedBy: varchar("updated_by"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = typeof appSettings.$inferInsert;
+
+// Settings schemas
+export const updateSettingsSchema = z.object({
+  guestTokenExpirationHours: z.number().min(1).max(168, "Maximum 168 hours (7 days)").default(24),
+});
+
+export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
