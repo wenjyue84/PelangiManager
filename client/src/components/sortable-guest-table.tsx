@@ -8,6 +8,7 @@ import { UserMinus, ArrowUpDown, ArrowUp, ArrowDown, ToggleLeft, ToggleRight, Ch
 import { Switch } from "@/components/ui/switch";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
 import GuestDetailsModal from "./guest-details-modal";
 import type { Guest } from "@shared/schema";
 
@@ -233,6 +234,7 @@ export default function SortableGuestTable() {
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
   const [sortConfig, setSortConfig] = useState<{ field: SortField; order: SortOrder }>({
     field: 'capsuleNumber',
     order: 'asc'
@@ -309,6 +311,22 @@ export default function SortableGuestTable() {
   });
 
   const handleCheckout = (guestId: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to check out guests. Redirecting to login page...",
+        variant: "destructive",
+        duration: 3000,
+      });
+      
+      // Redirect to login page after a brief delay
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1000);
+      
+      return;
+    }
+    
     checkoutMutation.mutate(guestId);
   };
 
