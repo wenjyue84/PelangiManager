@@ -1,8 +1,8 @@
-import { type User, type InsertUser, type Guest, type InsertGuest, users, guests } from "@shared/schema";
+import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, users, guests, capsules } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -17,17 +17,66 @@ export interface IStorage {
   getGuestHistory(): Promise<Guest[]>;
   checkoutGuest(id: string): Promise<Guest | undefined>;
   getCapsuleOccupancy(): Promise<{ total: number; occupied: number; available: number; occupancyRate: number }>;
-  getAvailableCapsules(): Promise<string[]>;
+  getAvailableCapsules(): Promise<Capsule[]>;
+  
+  // Capsule management methods
+  getAllCapsules(): Promise<Capsule[]>;
+  getCapsule(number: string): Promise<Capsule | undefined>;
+  updateCapsule(number: string, updates: Partial<Capsule>): Promise<Capsule | undefined>;
+  createCapsule(capsule: InsertCapsule): Promise<Capsule>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private guests: Map<string, Guest>;
-  private totalCapsules = 24; // A-01 to A-08, B-01 to B-08, C-01 to C-08
+  private capsules: Map<string, Capsule>;
+  private totalCapsules = 22; // C1-C6 (6) + C25-C26 (2) + C11-C24 (14)
 
   constructor() {
     this.users = new Map();
     this.guests = new Map();
+    this.capsules = new Map();
+    
+    // Initialize capsules
+    this.initializeCapsules();
+  }
+
+  private initializeCapsules() {
+    // Back section: C1-C6
+    for (let i = 1; i <= 6; i++) {
+      const capsule: Capsule = {
+        id: randomUUID(),
+        number: `C${i}`,
+        section: 'back',
+        isAvailable: true,
+        problemDescription: null,
+      };
+      this.capsules.set(capsule.number, capsule);
+    }
+    
+    // Middle section: C25, C26
+    for (const num of [25, 26]) {
+      const capsule: Capsule = {
+        id: randomUUID(),
+        number: `C${num}`,
+        section: 'middle',
+        isAvailable: true,
+        problemDescription: null,
+      };
+      this.capsules.set(capsule.number, capsule);
+    }
+    
+    // Front section: C11-C24
+    for (let i = 11; i <= 24; i++) {
+      const capsule: Capsule = {
+        id: randomUUID(),
+        number: `C${i}`,
+        section: 'front',
+        isAvailable: true,
+        problemDescription: null,
+      };
+      this.capsules.set(capsule.number, capsule);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -104,20 +153,38 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getAvailableCapsules(): Promise<string[]> {
-    const allCapsules = [];
-    
-    // Generate capsule numbers A-01 to A-08, B-01 to B-08, C-01 to C-08
-    for (const section of ['A', 'B', 'C']) {
-      for (let i = 1; i <= 8; i++) {
-        allCapsules.push(`${section}-${i.toString().padStart(2, '0')}`);
-      }
-    }
-
+  async getAvailableCapsules(): Promise<Capsule[]> {
     const checkedInGuests = await this.getCheckedInGuests();
     const occupiedCapsules = new Set(checkedInGuests.map(guest => guest.capsuleNumber));
+    
+    return Array.from(this.capsules.values()).filter(
+      capsule => capsule.isAvailable && !occupiedCapsules.has(capsule.number)
+    );
+  }
 
-    return allCapsules.filter(capsule => !occupiedCapsules.has(capsule));
+  async getAllCapsules(): Promise<Capsule[]> {
+    return Array.from(this.capsules.values());
+  }
+
+  async getCapsule(number: string): Promise<Capsule | undefined> {
+    return this.capsules.get(number);
+  }
+
+  async updateCapsule(number: string, updates: Partial<Capsule>): Promise<Capsule | undefined> {
+    const capsule = this.capsules.get(number);
+    if (capsule) {
+      const updatedCapsule = { ...capsule, ...updates };
+      this.capsules.set(number, updatedCapsule);
+      return updatedCapsule;
+    }
+    return undefined;
+  }
+
+  async createCapsule(insertCapsule: InsertCapsule): Promise<Capsule> {
+    const id = randomUUID();
+    const capsule: Capsule = { ...insertCapsule, id };
+    this.capsules.set(capsule.number, capsule);
+    return capsule;
   }
 }
 
@@ -186,7 +253,7 @@ class DatabaseStorage implements IStorage {
   async getCapsuleOccupancy(): Promise<{ total: number; occupied: number; available: number; occupancyRate: number }> {
     const checkedInGuests = await this.getCheckedInGuests();
     const occupied = checkedInGuests.length;
-    const totalCapsules = 24;
+    const totalCapsules = 22; // C1-C6 (6) + C25-C26 (2) + C11-C24 (14) = 22 total
     const available = totalCapsules - occupied;
     const occupancyRate = Math.round((occupied / totalCapsules) * 100);
 
@@ -198,20 +265,40 @@ class DatabaseStorage implements IStorage {
     };
   }
 
-  async getAvailableCapsules(): Promise<string[]> {
-    const allCapsules = [];
-    
-    // Generate capsule numbers A-01 to A-08, B-01 to B-08, C-01 to C-08
-    for (const section of ['A', 'B', 'C']) {
-      for (let i = 1; i <= 8; i++) {
-        allCapsules.push(`${section}-${i.toString().padStart(2, '0')}`);
-      }
-    }
-
+  async getAvailableCapsules(): Promise<Capsule[]> {
     const checkedInGuests = await this.getCheckedInGuests();
     const occupiedCapsules = new Set(checkedInGuests.map(guest => guest.capsuleNumber));
+    
+    const availableCapsules = await this.db
+      .select()
+      .from(capsules)
+      .where(eq(capsules.isAvailable, true));
+    
+    return availableCapsules.filter(capsule => !occupiedCapsules.has(capsule.number));
+  }
 
-    return allCapsules.filter(capsule => !occupiedCapsules.has(capsule));
+  async getAllCapsules(): Promise<Capsule[]> {
+    return await this.db.select().from(capsules);
+  }
+
+  async getCapsule(number: string): Promise<Capsule | undefined> {
+    const result = await this.db.select().from(capsules).where(eq(capsules.number, number)).limit(1);
+    return result[0];
+  }
+
+  async updateCapsule(number: string, updates: Partial<Capsule>): Promise<Capsule | undefined> {
+    const result = await this.db
+      .update(capsules)
+      .set(updates)
+      .where(eq(capsules.number, number))
+      .returning();
+    
+    return result[0];
+  }
+
+  async createCapsule(capsule: InsertCapsule): Promise<Capsule> {
+    const result = await this.db.insert(capsules).values(capsule).returning();
+    return result[0];
   }
 }
 

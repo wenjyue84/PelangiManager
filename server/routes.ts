@@ -46,6 +46,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all capsules with their status
+  app.get("/api/capsules", async (_req, res) => {
+    try {
+      const capsules = await storage.getAllCapsules();
+      res.json(capsules);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get capsules" });
+    }
+  });
+
+  // Update capsule status (for maintenance/problems)
+  app.patch("/api/capsules/:number", async (req, res) => {
+    try {
+      const { number } = req.params;
+      const updates = req.body;
+      const capsule = await storage.updateCapsule(number, updates);
+      
+      if (!capsule) {
+        return res.status(404).json({ message: "Capsule not found" });
+      }
+
+      res.json(capsule);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update capsule" });
+    }
+  });
+
   // Check-in a guest
   app.post("/api/guests/checkin", async (req, res) => {
     try {
@@ -53,7 +80,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if capsule is available
       const availableCapsules = await storage.getAvailableCapsules();
-      if (!availableCapsules.includes(validatedData.capsuleNumber)) {
+      const availableCapsuleNumbers = availableCapsules.map(c => c.number);
+      if (!availableCapsuleNumbers.includes(validatedData.capsuleNumber)) {
         return res.status(400).json({ message: "Capsule is not available" });
       }
 

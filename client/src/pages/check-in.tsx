@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, User, Bed } from "lucide-react";
-import { insertGuestSchema, type InsertGuest } from "@shared/schema";
+import { insertGuestSchema, type InsertGuest, type Capsule } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +16,7 @@ export default function CheckIn() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const { data: availableCapsules = [], isLoading: capsulesLoading } = useQuery<string[]>({
+  const { data: availableCapsules = [], isLoading: capsulesLoading } = useQuery<Capsule[]>({
     queryKey: ["/api/capsules/available"],
   });
 
@@ -25,6 +25,8 @@ export default function CheckIn() {
     defaultValues: {
       name: "",
       capsuleNumber: "",
+      paymentAmount: "0",
+      paymentMethod: "cash" as const,
     },
   });
 
@@ -90,7 +92,7 @@ export default function CheckIn() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
             <div>
               <Label htmlFor="name" className="flex items-center text-sm font-medium text-hostel-text mb-2">
                 <User className="mr-2 h-4 w-4" />
@@ -128,8 +130,8 @@ export default function CheckIn() {
                       <SelectItem value="" disabled>No capsules available</SelectItem>
                     ) : (
                       availableCapsules.map((capsule) => (
-                        <SelectItem key={capsule} value={capsule}>
-                          {capsule} (Available)
+                        <SelectItem key={capsule.number} value={capsule.number}>
+                          {capsule.number} ({capsule.section} section)
                         </SelectItem>
                       ))
                     )}
@@ -139,6 +141,52 @@ export default function CheckIn() {
               {form.formState.errors.capsuleNumber && (
                 <p className="text-hostel-error text-sm mt-1">{form.formState.errors.capsuleNumber.message}</p>
               )}
+            </div>
+
+            {/* Payment Information */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <h3 className="text-sm font-medium text-hostel-text mb-3">Payment Information</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="paymentAmount" className="text-sm font-medium text-hostel-text">
+                    Amount (RM)
+                  </Label>
+                  <Input
+                    id="paymentAmount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    className="w-full"
+                    {...form.register("paymentAmount")}
+                  />
+                  {form.formState.errors.paymentAmount && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.paymentAmount.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="paymentMethod" className="text-sm font-medium text-hostel-text">
+                    Payment Method
+                  </Label>
+                  <Select
+                    value={form.watch("paymentMethod")}
+                    onValueChange={(value) => form.setValue("paymentMethod", value as "cash" | "tng" | "bank" | "platform")}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="tng">Touch 'n Go</SelectItem>
+                      <SelectItem value="bank">Bank Transfer</SelectItem>
+                      <SelectItem value="platform">Online Platform</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.paymentMethod && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.paymentMethod.message}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 border">
