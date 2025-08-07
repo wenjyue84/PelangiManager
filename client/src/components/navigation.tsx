@@ -6,7 +6,7 @@ import { AuthContext } from "../lib/auth";
 import { useQuery } from "@tanstack/react-query";
 
 const navigationItems = [
-  { path: "/", label: "Dashboard", icon: Home, showOccupancy: true },
+  { path: "/", label: "Dashboard", icon: Home },
   { path: "/check-in", label: "Check In", icon: UserPlus, requireAuth: true },
   { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: true },
   { path: "/history", label: "History", icon: History },
@@ -72,11 +72,6 @@ export default function Navigation() {
               <item.icon className="h-3 w-3" />
               <span className="hidden sm:inline">
                 {item.label}
-                {item.showOccupancy && occupancy && (
-                  <span className="ml-1 text-xs opacity-75">
-                    ({occupancy.available}/{occupancy.total})
-                  </span>
-                )}
               </span>
             </Button>
           </Link>

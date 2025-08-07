@@ -244,6 +244,10 @@ export default function SortableGuestTable() {
     queryKey: ["/api/guests/checked-in"],
   });
 
+  const { data: occupancy } = useQuery<{total: number; occupied: number; available: number}>({
+    queryKey: ["/api/occupancy"],
+  });
+
   const sortedGuests = useMemo(() => {
     if (!guests.length) return [];
     
@@ -375,9 +379,11 @@ export default function SortableGuestTable() {
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg font-bold text-hostel-text flex items-center">
             Dashboard
-            <span className="ml-2 text-sm font-normal text-gray-600">
-              ({guests.length})
-            </span>
+            {occupancy && (
+              <span className="ml-2 text-sm font-normal text-gray-600">
+                ({occupancy.available}/{occupancy.total})
+              </span>
+            )}
           </CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-600">Condensed</span>
