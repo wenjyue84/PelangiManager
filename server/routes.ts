@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, updateCapsuleProblemSchema, googleAuthSchema } from "@shared/schema";
+import { insertGuestSchema, checkoutGuestSchema, loginSchema, updateCapsuleProblemSchema, googleAuthSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
@@ -355,6 +355,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to check-out guest" });
+    }
+  });
+
+  // User Management API endpoints
+  // Get all users
+  app.get("/api/users", authenticateToken, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  // Create new user
+  app.post("/api/users", authenticateToken, async (req: any, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if user with email already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+      
+      // Check if user with username already exists
+      if (userData.username) {
+        const existingUsername = await storage.getUserByUsername(userData.username);
+        if (existingUsername) {
+          return res.status(409).json({ message: "User with this username already exists" });
+        }
+      }
+
+      const user = await storage.createUser(userData);
+      res.json(user);
+    } catch (error) {
+      console.error("Create user error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Update user
+  app.patch("/api/users/:id", authenticateToken, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      // Remove empty password field
+      if (updates.password === "") {
+        delete updates.password;
+      }
+      
+      const user = await storage.updateUser(id, updates);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Delete user
+  app.delete("/api/users/:id", authenticateToken, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteUser(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 

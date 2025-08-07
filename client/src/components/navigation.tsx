@@ -11,6 +11,7 @@ const navigationItems = [
   { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: true },
   { path: "/history", label: "History", icon: History },
   { path: "/maintenance", label: "Maintenance", icon: AlertTriangle, requireAuth: true },
+  { path: "/settings", label: "Settings", icon: Settings, requireAuth: true },
 ];
 
 export default function Navigation() {
