@@ -93,6 +93,8 @@ export const loginSchema = z.object({
 export const updateCapsuleProblemSchema = z.object({
   problemDescription: z.string().optional(),
   isAvailable: z.boolean().optional(),
+  problemReportedAt: z.date().optional(),
+  problemResolvedAt: z.date().optional(),
 });
 
 export const bulkGuestImportSchema = z.array(

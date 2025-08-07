@@ -19,11 +19,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.createUser({
-        id: randomUUID(),
         username,
         password, // In production, this should be hashed
-        role: role || 'admin',
-        createdAt: new Date()
       });
 
       res.json({ message: "Admin user created successfully", userId: user.id });
@@ -213,10 +210,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add timestamps for problem reporting/resolution
       if (updates.problemDescription && updates.problemDescription.trim() !== '') {
         updates.problemReportedAt = new Date();
-        updates.problemResolvedAt = null;
-      } else if (updates.problemDescription === null || updates.problemDescription === '') {
+        updates.problemResolvedAt = undefined;
+      } else if (updates.problemDescription === '' || updates.problemDescription === undefined) {
         updates.problemResolvedAt = new Date();
-        updates.problemDescription = null;
+        updates.problemDescription = undefined;
       }
       
       const capsule = await storage.updateCapsule(number, updates);

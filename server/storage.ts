@@ -2,7 +2,7 @@ import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule,
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, ne, and, lte } from "drizzle-orm";
+import { eq, ne, and, lte, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // User management methods
@@ -171,6 +171,8 @@ export class MemStorage implements IStorage {
       paymentCollector: insertGuest.paymentCollector || null,
       isPaid: insertGuest.isPaid || false,
       notes: insertGuest.notes || null,
+      gender: insertGuest.gender || null,
+      nationality: insertGuest.nationality || null,
     };
     this.guests.set(id, guest);
     return guest;
@@ -447,7 +449,7 @@ class DatabaseStorage implements IStorage {
     return await this.db
       .select()
       .from(capsules)
-      .where(ne(capsules.problemDescription, null));
+      .where(isNotNull(capsules.problemDescription));
   }
 }
 
