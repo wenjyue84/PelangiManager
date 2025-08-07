@@ -86,6 +86,18 @@ export const guestTokens = pgTable("guest_tokens", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Admin notifications for various events
+export const adminNotifications = pgTable("admin_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // 'self_checkin', 'checkout', 'maintenance', etc.
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  guestId: varchar("guest_id"), // Optional reference to guest
+  capsuleNumber: text("capsule_number"), // Optional capsule reference
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
@@ -215,5 +227,13 @@ export type InsertCapsuleProblem = typeof capsuleProblems.$inferInsert;
 export type BulkGuestImport = z.infer<typeof bulkGuestImportSchema>;
 export type GuestToken = typeof guestTokens.$inferSelect;
 export type InsertGuestToken = typeof guestTokens.$inferInsert;
+export type AdminNotification = typeof adminNotifications.$inferSelect;
+export type InsertAdminNotification = typeof adminNotifications.$inferInsert;
 export type GuestSelfCheckin = z.infer<typeof guestSelfCheckinSchema>;
 export type CreateToken = z.infer<typeof createTokenSchema>;
+
+// Admin notification schema for validation
+export const insertAdminNotificationSchema = createInsertSchema(adminNotifications).omit({ 
+  id: true, 
+  createdAt: true 
+});

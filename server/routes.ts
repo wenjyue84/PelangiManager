@@ -355,6 +355,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin notification routes
+  app.get("/api/admin/notifications", authenticateToken, async (req, res) => {
+    try {
+      const notifications = await storage.getAdminNotifications();
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/admin/notifications/unread", authenticateToken, async (req, res) => {
+    try {
+      const notifications = await storage.getUnreadAdminNotifications();
+      res.json(notifications);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch unread notifications" });
+    }
+  });
+
+  app.patch("/api/admin/notifications/:id/read", authenticateToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id);
+      
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+
+      res.json(notification);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.patch("/api/admin/notifications/read-all", authenticateToken, async (req, res) => {
+    try {
+      await storage.markAllNotificationsAsRead();
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
   // Check-in a guest
   app.post("/api/guests/checkin", authenticateToken, async (req: any, res) => {
     try {
@@ -586,6 +629,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Mark token as used
       await storage.markTokenAsUsed(token);
+
+      // Create admin notification for self-check-in
+      await storage.createAdminNotification({
+        type: "self_checkin",
+        title: "New Self Check-In",
+        message: `${validatedGuestData.nameAsInDocument} has completed self check-in to capsule ${guestToken.capsuleNumber}. Payment method: ${validatedGuestData.paymentMethod}`,
+        guestId: guest.id,
+        capsuleNumber: guestToken.capsuleNumber,
+        isRead: false,
+      });
 
       res.json({
         message: "Check-in successful",

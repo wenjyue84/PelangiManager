@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, users, guests, capsules, sessions, guestTokens, capsuleProblems } from "@shared/schema";
+import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, type AdminNotification, type InsertAdminNotification, users, guests, capsules, sessions, guestTokens, capsuleProblems, adminNotifications } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -51,6 +51,13 @@ export interface IStorage {
   getGuestToken(token: string): Promise<GuestToken | undefined>;
   markTokenAsUsed(token: string): Promise<GuestToken | undefined>;
   cleanExpiredTokens(): Promise<void>;
+
+  // Admin notification methods
+  createAdminNotification(notification: InsertAdminNotification): Promise<AdminNotification>;
+  getAdminNotifications(): Promise<AdminNotification[]>;
+  getUnreadAdminNotifications(): Promise<AdminNotification[]>;
+  markNotificationAsRead(id: string): Promise<AdminNotification | undefined>;
+  markAllNotificationsAsRead(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -60,6 +67,7 @@ export class MemStorage implements IStorage {
   private sessions: Map<string, Session>;
   private guestTokens: Map<string, GuestToken>;
   private capsuleProblems: Map<string, CapsuleProblem>;
+  private adminNotifications: Map<string, AdminNotification>;
   private totalCapsules = 22; // C1-C6 (6) + C25-C26 (2) + C11-C24 (14)
 
   constructor() {
@@ -69,6 +77,7 @@ export class MemStorage implements IStorage {
     this.sessions = new Map();
     this.guestTokens = new Map();
     this.capsuleProblems = new Map();
+    this.adminNotifications = new Map();
     
     // Initialize capsules, admin user, and sample guests
     this.initializeCapsules();
@@ -543,6 +552,53 @@ export class MemStorage implements IStorage {
       }
     }
   }
+
+  // Admin notification methods
+  async createAdminNotification(notification: InsertAdminNotification): Promise<AdminNotification> {
+    const id = randomUUID();
+    const adminNotification: AdminNotification = {
+      id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      guestId: notification.guestId || null,
+      capsuleNumber: notification.capsuleNumber || null,
+      isRead: false,
+      createdAt: new Date(),
+    };
+    this.adminNotifications.set(id, adminNotification);
+    return adminNotification;
+  }
+
+  async getAdminNotifications(): Promise<AdminNotification[]> {
+    return Array.from(this.adminNotifications.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getUnreadAdminNotifications(): Promise<AdminNotification[]> {
+    return Array.from(this.adminNotifications.values())
+      .filter(n => !n.isRead)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async markNotificationAsRead(id: string): Promise<AdminNotification | undefined> {
+    const notification = this.adminNotifications.get(id);
+    if (notification) {
+      const updatedNotification = { ...notification, isRead: true };
+      this.adminNotifications.set(id, updatedNotification);
+      return updatedNotification;
+    }
+    return undefined;
+  }
+
+  async markAllNotificationsAsRead(): Promise<void> {
+    for (const [id, notification] of this.adminNotifications) {
+      if (!notification.isRead) {
+        notification.isRead = true;
+        this.adminNotifications.set(id, notification);
+      }
+    }
+  }
 }
 
 // Database Storage Implementation
@@ -727,11 +783,112 @@ class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getCapsulesWithProblems(): Promise<Capsule[]> {
+  // Capsule problem methods for DatabaseStorage
+  async createCapsuleProblem(problem: InsertCapsuleProblem): Promise<CapsuleProblem> {
+    const result = await this.db.insert(capsuleProblems).values(problem).returning();
+    return result[0];
+  }
+
+  async getCapsuleProblems(capsuleNumber: string): Promise<CapsuleProblem[]> {
     return await this.db
       .select()
-      .from(capsules)
-      .where(isNotNull(capsules.problemDescription));
+      .from(capsuleProblems)
+      .where(eq(capsuleProblems.capsuleNumber, capsuleNumber))
+      .orderBy(capsuleProblems.reportedAt);
+  }
+
+  async getActiveProblems(): Promise<CapsuleProblem[]> {
+    return await this.db
+      .select()
+      .from(capsuleProblems)
+      .where(eq(capsuleProblems.isResolved, false))
+      .orderBy(capsuleProblems.reportedAt);
+  }
+
+  async getAllProblems(): Promise<CapsuleProblem[]> {
+    return await this.db
+      .select()
+      .from(capsuleProblems)
+      .orderBy(capsuleProblems.reportedAt);
+  }
+
+  async resolveProblem(problemId: string, resolvedBy: string, notes?: string): Promise<CapsuleProblem | undefined> {
+    const result = await this.db
+      .update(capsuleProblems)
+      .set({ 
+        isResolved: true, 
+        resolvedBy, 
+        resolvedAt: new Date(), 
+        notes: notes || null 
+      })
+      .where(eq(capsuleProblems.id, problemId))
+      .returning();
+    
+    return result[0];
+  }
+
+  // Guest token methods for DatabaseStorage
+  async createGuestToken(token: InsertGuestToken): Promise<GuestToken> {
+    const result = await this.db.insert(guestTokens).values(token).returning();
+    return result[0];
+  }
+
+  async getGuestToken(token: string): Promise<GuestToken | undefined> {
+    const result = await this.db.select().from(guestTokens).where(eq(guestTokens.token, token)).limit(1);
+    return result[0];
+  }
+
+  async markTokenAsUsed(token: string): Promise<GuestToken | undefined> {
+    const result = await this.db
+      .update(guestTokens)
+      .set({ isUsed: true, usedAt: new Date() })
+      .where(eq(guestTokens.token, token))
+      .returning();
+    
+    return result[0];
+  }
+
+  async cleanExpiredTokens(): Promise<void> {
+    const now = new Date();
+    await this.db.delete(guestTokens).where(lte(guestTokens.expiresAt, now));
+  }
+
+  // Admin notification methods for DatabaseStorage
+  async createAdminNotification(notification: InsertAdminNotification): Promise<AdminNotification> {
+    const result = await this.db.insert(adminNotifications).values(notification).returning();
+    return result[0];
+  }
+
+  async getAdminNotifications(): Promise<AdminNotification[]> {
+    return await this.db
+      .select()
+      .from(adminNotifications)
+      .orderBy(adminNotifications.createdAt);
+  }
+
+  async getUnreadAdminNotifications(): Promise<AdminNotification[]> {
+    return await this.db
+      .select()
+      .from(adminNotifications)
+      .where(eq(adminNotifications.isRead, false))
+      .orderBy(adminNotifications.createdAt);
+  }
+
+  async markNotificationAsRead(id: string): Promise<AdminNotification | undefined> {
+    const result = await this.db
+      .update(adminNotifications)
+      .set({ isRead: true })
+      .where(eq(adminNotifications.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async markAllNotificationsAsRead(): Promise<void> {
+    await this.db
+      .update(adminNotifications)
+      .set({ isRead: true })
+      .where(eq(adminNotifications.isRead, false));
   }
 }
 
