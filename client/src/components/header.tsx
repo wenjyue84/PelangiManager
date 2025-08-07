@@ -1,11 +1,13 @@
+import { useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { User, LogOut } from "lucide-react";
+import { AuthContext } from "../lib/auth";
 
 export default function Header() {
-  // Initialize as null - authentication will be added later
-  const user = null;
-  const logout = () => {};
-  const isAuthenticated = false;
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user || null;
+  const logout = authContext?.logout || (() => {});
+  const isAuthenticated = authContext?.isAuthenticated || false;
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">

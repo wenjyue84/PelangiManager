@@ -112,7 +112,7 @@ export default function GuestTable() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guest Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capsule</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check-in Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -129,7 +129,7 @@ export default function GuestTable() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant="outline" className="bg-hostel-primary bg-opacity-10 text-hostel-primary border-hostel-primary">
+                      <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
                         {guest.capsuleNumber}
                       </Badge>
                     </td>
@@ -144,11 +144,18 @@ export default function GuestTable() {
                       })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatDuration(guest.checkinTime.toString())}
+                      {guest.paymentAmount ? (
+                        <div>
+                          <div className="font-medium">RM {guest.paymentAmount}</div>
+                          <div className="text-xs text-gray-500">{guest.paymentCollector || 'N/A'}</div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">No payment</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className="bg-hostel-secondary bg-opacity-10 text-hostel-secondary">
-                        <div className="w-1.5 h-1.5 bg-hostel-secondary rounded-full mr-1.5"></div>
+                      <Badge className="bg-green-600 text-white">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full mr-1.5"></div>
                         Checked In
                       </Badge>
                     </td>

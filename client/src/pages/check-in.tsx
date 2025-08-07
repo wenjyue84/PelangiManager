@@ -27,6 +27,7 @@ export default function CheckIn() {
       capsuleNumber: "",
       paymentAmount: "0",
       paymentMethod: "cash" as const,
+      paymentCollector: "",
     },
   });
 
@@ -127,7 +128,7 @@ export default function CheckIn() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableCapsules.length === 0 ? (
-                      <SelectItem value="" disabled>No capsules available</SelectItem>
+                      <SelectItem value="no-capsules" disabled>No capsules available</SelectItem>
                     ) : (
                       availableCapsules.map((capsule) => (
                         <SelectItem key={capsule.number} value={capsule.number}>
@@ -146,7 +147,7 @@ export default function CheckIn() {
             {/* Payment Information */}
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <h3 className="text-sm font-medium text-hostel-text mb-3">Payment Information</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="paymentAmount" className="text-sm font-medium text-hostel-text">
                     Amount (RM)
@@ -184,6 +185,28 @@ export default function CheckIn() {
                   </Select>
                   {form.formState.errors.paymentMethod && (
                     <p className="text-hostel-error text-sm mt-1">{form.formState.errors.paymentMethod.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="paymentCollector" className="text-sm font-medium text-hostel-text">
+                    Payment Collector
+                  </Label>
+                  <Select
+                    value={form.watch("paymentCollector")}
+                    onValueChange={(value) => form.setValue("paymentCollector", value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select payment collector" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Alston">Alston</SelectItem>
+                      <SelectItem value="Jay">Jay</SelectItem>
+                      <SelectItem value="Le">Le</SelectItem>
+                      <SelectItem value="Kakar">Kakar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.paymentCollector && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.paymentCollector.message}</p>
                   )}
                 </div>
               </div>

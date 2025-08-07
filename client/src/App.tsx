@@ -10,6 +10,7 @@ import Dashboard from "./pages/dashboard";
 import CheckIn from "./pages/check-in";
 import CheckOut from "./pages/check-out";
 import History from "./pages/history";
+import Maintenance from "./pages/maintenance";
 import Header from "./components/header";
 import Navigation from "./components/navigation";
 
@@ -33,6 +34,7 @@ function Router() {
             </ProtectedRoute>
           </Route>
           <Route path="/history" component={History} />
+          <Route path="/maintenance" component={Maintenance} />
           <Route component={NotFound} />
         </Switch>
       </div>

@@ -1,18 +1,21 @@
+import { useContext } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Home, UserPlus, UserX, History, AlertTriangle, Settings } from "lucide-react";
+import { AuthContext } from "../lib/auth";
 
 const navigationItems = [
   { path: "/", label: "Dashboard", icon: Home },
-  { path: "/check-in", label: "Check In", icon: UserPlus, requireAuth: false },
-  { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: false },
+  { path: "/check-in", label: "Check In", icon: UserPlus, requireAuth: true },
+  { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: true },
   { path: "/history", label: "History", icon: History },
   { path: "/maintenance", label: "Maintenance", icon: AlertTriangle },
 ];
 
 export default function Navigation() {
   const [location] = useLocation();
-  const isAuthenticated = true; // For now, treat as always authenticated
+  const authContext = useContext(AuthContext);
+  const isAuthenticated = authContext?.isAuthenticated || false;
 
   return (
     <nav className="flex space-x-1 mb-6 bg-white p-2 rounded-lg shadow-sm">
