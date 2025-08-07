@@ -8,6 +8,8 @@ export interface IStorage {
   // User management methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Session management methods
@@ -58,9 +60,16 @@ export class MemStorage implements IStorage {
     // Create default admin user
     const adminUser: User = {
       id: randomUUID(),
+      email: "admin@pelangi.com",
       username: "admin",
       password: "admin123", // In production, this should be hashed
+      googleId: null,
+      firstName: "Admin",
+      lastName: "User",
+      profileImage: null,
       role: "staff",
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
     this.users.set(adminUser.id, adminUser);
   }
@@ -119,9 +128,34 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.googleId === googleId,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id, role: "staff" };
+    const now = new Date();
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      role: insertUser.role || "staff",
+      username: insertUser.username || null,
+      password: insertUser.password || null,
+      googleId: insertUser.googleId || null,
+      firstName: insertUser.firstName || null,
+      lastName: insertUser.lastName || null,
+      profileImage: insertUser.profileImage || null,
+      createdAt: now,
+      updatedAt: now,
+    };
     this.users.set(id, user);
     return user;
   }
@@ -306,6 +340,16 @@ class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
     return result[0];
   }
 

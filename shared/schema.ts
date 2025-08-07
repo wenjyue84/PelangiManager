@@ -5,9 +5,16 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  email: text("email").notNull().unique(),
+  username: text("username"),
+  password: text("password"), // nullable for OAuth users
+  googleId: text("google_id").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImage: text("profile_image"),
   role: text("role").notNull().default("staff"), // 'admin' or 'staff'
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Sessions table for authentication
@@ -46,9 +53,18 @@ export const capsules = pgTable("capsules", {
   problemResolvedAt: timestamp("problem_resolved_at"),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  email: z.string().email("Valid email is required"),
+  username: z.string().optional(),
+  password: z.string().optional(),
+  googleId: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  profileImage: z.string().optional(),
 });
 
 export const insertGuestSchema = createInsertSchema(guests).omit({
@@ -86,8 +102,12 @@ export const checkoutGuestSchema = z.object({
 
 // Authentication schemas
 export const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Valid email is required"),
   password: z.string().min(1, "Password is required"),
+});
+
+export const googleAuthSchema = z.object({
+  token: z.string().min(1, "Google token is required"),
 });
 
 export const updateCapsuleProblemSchema = z.object({

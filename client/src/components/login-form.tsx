@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,23 +6,78 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 export function LoginForm() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Load Google Sign-In script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleGoogleSignIn,
+        });
+
+        window.google.accounts.id.renderButton(
+          document.getElementById("google-signin-button"),
+          { 
+            theme: "outline", 
+            size: "large", 
+            width: "100%",
+            text: "signin_with",
+            shape: "rectangular"
+          }
+        );
+      }
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const success = await login(username, password);
+    const success = await login(email, password);
     
     if (!success) {
       toast({
         title: "Login Failed",
-        description: "Invalid username or password",
+        description: "Invalid email or password",
+        variant: "destructive"
+      });
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleGoogleSignIn = async (response: any) => {
+    setIsLoading(true);
+    
+    const success = await loginWithGoogle(response.credential);
+    
+    if (!success) {
+      toast({
+        title: "Google Login Failed",
+        description: "Unable to sign in with Google",
         variant: "destructive"
       });
     }
@@ -40,13 +95,13 @@ export function LoginForm() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
                 required
               />
             </div>
@@ -65,8 +120,17 @@ export function LoginForm() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
+          
+          <div className="my-4 flex items-center">
+            <hr className="flex-1 border-gray-300" />
+            <span className="px-3 text-sm text-gray-500">or</span>
+            <hr className="flex-1 border-gray-300" />
+          </div>
+          
+          <div id="google-signin-button" className="w-full"></div>
+          
           <div className="mt-4 text-sm text-gray-600 text-center">
-            <p>Demo Login: admin / admin123</p>
+            <p>Demo Login: admin@pelangi.com / admin123</p>
           </div>
         </CardContent>
       </Card>

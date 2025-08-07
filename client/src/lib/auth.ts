@@ -2,14 +2,18 @@ import { createContext, useContext } from 'react';
 
 export interface User {
   id: string;
-  username: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  profileImage?: string;
   role: 'admin' | 'staff';
 }
 
 export interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: (googleToken: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
 }

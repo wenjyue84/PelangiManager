@@ -16,6 +16,7 @@ export default function Navigation() {
   const [location] = useLocation();
   const authContext = useContext(AuthContext);
   const isAuthenticated = authContext?.isAuthenticated || false;
+  const user = authContext?.user;
 
   return (
     <nav className="flex space-x-1 mb-4 bg-white p-2 rounded-lg shadow-sm overflow-x-auto">
@@ -42,6 +43,21 @@ export default function Navigation() {
           </Link>
         );
       })}
+      {isAuthenticated && user && (
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-gray-600 hidden sm:inline">
+            Welcome, {user.firstName || user.email}
+          </span>
+          <Button 
+            onClick={authContext?.logout} 
+            variant="outline" 
+            size="sm"
+            className="text-xs px-2 py-1"
+          >
+            Logout
+          </Button>
+        </div>
+      )}
     </nav>
   );
 }
