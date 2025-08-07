@@ -87,7 +87,7 @@ export default function GuestDetailsModal({ guest, isOpen, onClose }: GuestDetai
     });
   };
 
-  const formatDuration = (checkinTime: string): string => {
+  const formatDuration = (checkinTime: string | Date): string => {
     const checkin = new Date(checkinTime);
     const now = new Date();
     const diff = now.getTime() - checkin.getTime();

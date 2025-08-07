@@ -108,7 +108,7 @@ export class MemStorage implements IStorage {
         isCheckedIn: true,
         paymentAmount: `${guest.nights * 35}`, // RM35 per night
         paymentMethod: "cash",
-        paymentCollector: "Alston",
+        paymentCollector: "Admin",
         isPaid: true,
         notes: null,
         gender: null,

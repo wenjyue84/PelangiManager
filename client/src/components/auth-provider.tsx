@@ -1,11 +1,19 @@
-import { useState, useEffect, ReactNode } from "react";
+import React, { useState, useEffect, ReactNode } from "react";
 import { AuthContext, type User, type AuthContextType, getStoredToken, setStoredToken, removeStoredToken } from "../lib/auth";
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function useAuth() {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+export default function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);

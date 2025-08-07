@@ -1,3 +1,4 @@
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,14 +13,28 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { useAuth } from "@/components/auth-provider";
 
 export default function CheckIn() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const { data: availableCapsules = [], isLoading: capsulesLoading } = useQuery<Capsule[]>({
     queryKey: ["/api/capsules/available"],
   });
+
+  // Get the default collector name
+  const getDefaultCollector = React.useCallback(() => {
+    if (!user) return "";
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user.username) {
+      return user.username === "admin" ? "Admin" : user.username;
+    }
+    return user.email || "";
+  }, [user]);
 
   const form = useForm<InsertGuest>({
     resolver: zodResolver(insertGuestSchema),
@@ -40,6 +55,13 @@ export default function CheckIn() {
       expectedCheckoutDate: "",
     },
   });
+
+  // Set default collector when user is available
+  React.useEffect(() => {
+    if (user && !form.getValues("paymentCollector")) {
+      form.setValue("paymentCollector", getDefaultCollector());
+    }
+  }, [user, form, getDefaultCollector]);
 
   const checkinMutation = useMutation({
     mutationFn: async (data: InsertGuest) => {
@@ -70,7 +92,22 @@ export default function CheckIn() {
   };
 
   const handleClear = () => {
-    form.reset();
+    form.reset({
+      name: "",
+      capsuleNumber: "",
+      paymentAmount: "0",
+      paymentMethod: "cash" as const,
+      paymentCollector: getDefaultCollector(),
+      gender: "",
+      nationality: "",
+      phoneNumber: "",
+      email: "",
+      idNumber: "",
+      emergencyContact: "",
+      emergencyPhone: "",
+      age: "",
+      expectedCheckoutDate: "",
+    });
   };
 
   const getCurrentDateTime = () => {
