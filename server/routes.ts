@@ -455,6 +455,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = await storage.createGuestToken({
         token: tokenValue,
         capsuleNumber: validatedData.capsuleNumber,
+        guestName: validatedData.guestName,
+        phoneNumber: validatedData.phoneNumber,
+        email: validatedData.email,
+        expectedCheckoutDate: validatedData.expectedCheckoutDate,
         createdBy: userId,
         expiresAt,
       });
@@ -463,6 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         token: token.token,
         link: `${req.protocol}://${req.get('host')}/guest-checkin?token=${token.token}`,
         capsuleNumber: token.capsuleNumber,
+        guestName: token.guestName,
         expiresAt: token.expiresAt,
       });
     } catch (error: any) {
@@ -491,6 +496,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         capsuleNumber: guestToken.capsuleNumber,
+        guestName: guestToken.guestName,
+        phoneNumber: guestToken.phoneNumber,
+        email: guestToken.email,
+        expectedCheckoutDate: guestToken.expectedCheckoutDate,
         expiresAt: guestToken.expiresAt,
       });
     } catch (error: any) {
@@ -519,24 +528,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedGuestData = guestSelfCheckinSchema.parse(req.body);
 
-      // Create guest with token's capsule
+      // Create guest with token's capsule and self-check-in data
       const guest = await storage.createGuest({
-        name: validatedGuestData.name,
+        name: validatedGuestData.nameAsInDocument,
         capsuleNumber: guestToken.capsuleNumber,
-        phoneNumber: validatedGuestData.phoneNumber,
-        email: validatedGuestData.email || undefined,
-        gender: validatedGuestData.gender || undefined,
-        nationality: validatedGuestData.nationality || undefined,
-        age: validatedGuestData.age || undefined,
-        idNumber: validatedGuestData.idNumber || undefined,
-        emergencyContact: validatedGuestData.emergencyContact || undefined,
-        emergencyPhone: validatedGuestData.emergencyPhone || undefined,
-        expectedCheckoutDate: validatedGuestData.expectedCheckoutDate || undefined,
-        notes: validatedGuestData.notes || undefined,
+        phoneNumber: guestToken.phoneNumber,
+        email: guestToken.email || undefined,
+        gender: validatedGuestData.gender,
+        nationality: validatedGuestData.nationality,
+        idNumber: validatedGuestData.icNumber || validatedGuestData.passportNumber || undefined,
+        expectedCheckoutDate: guestToken.expectedCheckoutDate || undefined,
         paymentAmount: "0", // Will be updated at front desk
-        paymentMethod: "cash",
+        paymentMethod: validatedGuestData.paymentMethod,
         paymentCollector: "Self Check-in",
         isPaid: false,
+        notes: `IC: ${validatedGuestData.icNumber || 'N/A'}, Passport: ${validatedGuestData.passportNumber || 'N/A'}${validatedGuestData.icDocumentUrl ? `, IC Doc: ${validatedGuestData.icDocumentUrl}` : ''}${validatedGuestData.passportDocumentUrl ? `, Passport Doc: ${validatedGuestData.passportDocumentUrl}` : ''}`,
       });
 
       // Mark token as used

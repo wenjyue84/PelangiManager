@@ -6,17 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle } from "lucide-react";
+import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle, Upload, Camera, Globe, Video } from "lucide-react";
 import { guestSelfCheckinSchema, type GuestSelfCheckin } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { ObjectUploader } from "@/components/ObjectUploader";
 
 export default function GuestCheckin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [token, setToken] = useState<string>("");
-  const [capsuleInfo, setCapsuleInfo] = useState<{ capsuleNumber: string; position: string } | null>(null);
+  const [guestInfo, setGuestInfo] = useState<{
+    capsuleNumber: string;
+    guestName: string;
+    phoneNumber: string;
+    email?: string;
+    expectedCheckoutDate?: string;
+    position: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -24,17 +31,14 @@ export default function GuestCheckin() {
   const form = useForm<GuestSelfCheckin>({
     resolver: zodResolver(guestSelfCheckinSchema),
     defaultValues: {
-      name: "",
-      phoneNumber: "",
-      email: "",
+      nameAsInDocument: "",
       gender: undefined,
       nationality: "",
-      age: "",
-      idNumber: "",
-      emergencyContact: "",
-      emergencyPhone: "",
-      expectedCheckoutDate: "",
-      notes: "",
+      icNumber: "",
+      passportNumber: "",
+      icDocumentUrl: "",
+      passportDocumentUrl: "",
+      paymentMethod: undefined,
     },
   });
 
@@ -65,10 +69,17 @@ export default function GuestCheckin() {
         const capsuleNum = parseInt(data.capsuleNumber.replace('C', ''));
         const position = capsuleNum % 2 === 0 ? 'Bottom (Preferred)' : 'Top';
         
-        setCapsuleInfo({
+        setGuestInfo({
           capsuleNumber: data.capsuleNumber,
+          guestName: data.guestName,
+          phoneNumber: data.phoneNumber,
+          email: data.email,
+          expectedCheckoutDate: data.expectedCheckoutDate,
           position: position
         });
+
+        // Pre-fill the form with guest name as placeholder
+        form.setValue("nameAsInDocument", "");
       } else {
         toast({
           title: "Invalid or Expired Link",
@@ -103,7 +114,7 @@ export default function GuestCheckin() {
         setIsSuccess(true);
         toast({
           title: "Check-in Successful!",
-          description: `Welcome to Pelangi Capsule Hostel! You've been assigned to ${capsuleInfo?.capsuleNumber}.`,
+          description: `Welcome to Pelangi Capsule Hostel! You've been assigned to ${guestInfo?.capsuleNumber}.`,
         });
       } else {
         const errorData = await response.json();
@@ -140,30 +151,95 @@ export default function GuestCheckin() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-hostel-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Check-in Complete!</h2>
-              <p className="text-gray-600 mb-4">
-                Welcome to Pelangi Capsule Hostel! You've been successfully assigned to capsule {capsuleInfo?.capsuleNumber}.
-              </p>
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">Your Capsule:</span>
-                  <span className="flex items-center">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {capsuleInfo?.capsuleNumber} - {capsuleInfo?.position}
-                  </span>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 py-8">
+        <div className="max-w-2xl mx-auto px-4">
+          <Card className="shadow-xl">
+            <CardContent className="p-8">
+              <div className="text-center mb-6">
+                <div className="text-4xl mb-4">🎉</div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Good Day, Our Honorable Guest!</h1>
+                <div className="text-2xl mb-4">🎉</div>
+              </div>
+
+              <div className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-xl p-6 mb-6 text-center">
+                <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
+                  Welcome to Pelangi Capsule Hostel <span className="text-2xl">🌈</span>
+                </h2>
+                <div className="space-y-2 text-gray-700">
+                  <div className="flex items-center justify-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    <span className="font-medium">Address:</span>
+                    <span>26A, Jalan Perang, Taman Pelangi, 80400 Johor Bahru</span>
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-500">
-                Please proceed to the front desk to collect your key and complete payment if needed.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <Button variant="outline" className="flex items-center gap-2 h-auto py-3 px-4" onClick={() => window.open('#', '_blank')}>
+                  <Camera className="h-4 w-4" />
+                  <span className="text-sm">📸 Hostel Photos</span>
+                </Button>
+                <Button variant="outline" className="flex items-center gap-2 h-auto py-3 px-4" onClick={() => window.open('https://maps.google.com/?q=26A+Jalan+Perang+Taman+Pelangi+80400+Johor+Bahru', '_blank')}>
+                  <Globe className="h-4 w-4" />
+                  <span className="text-sm">📍 Google Maps</span>
+                </Button>
+                <Button variant="outline" className="flex items-center gap-2 h-auto py-3 px-4" onClick={() => window.open('#', '_blank')}>
+                  <Video className="h-4 w-4" />
+                  <span className="text-sm">🎥 Check-in Video</span>
+                </Button>
+              </div>
+
+              <div className="border-t border-gray-200 py-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span>🕒</span>
+                    <span className="font-medium">Check-in:</span>
+                    <span>From 3:00 PM</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🕛</span>
+                    <span className="font-medium">Check-out:</span>
+                    <span>Before 12:00 PM</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span>🔐</span>
+                    <span className="font-medium">Door Password:</span>
+                    <span className="font-mono text-lg font-bold text-blue-600">1270#</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🛌</span>
+                    <span className="font-medium">Your Capsule No.:</span>
+                    <span className="font-bold text-lg text-orange-600">{guestInfo?.capsuleNumber} ({guestInfo?.position})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🃏</span>
+                    <span className="font-medium">Capsule Access Card:</span>
+                    <span>Placed on your pillow</span>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 border-l-4 border-red-400 p-4">
+                  <h3 className="font-bold text-red-800 mb-2 flex items-center gap-2">
+                    <span>⚠</span> Important Reminders:
+                  </h3>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    <li>• 🚫 Do not leave your card inside the capsule and close the door</li>
+                    <li>• 🚭 No Smoking in hostel area</li>
+                    <li>• 🎥 CCTV monitored – Violation (e.g., smoking) may result in RM300 penalty</li>
+                  </ul>
+                </div>
+
+                <div className="text-center text-gray-600 text-sm">
+                  For any assistance, please contact reception. <br />
+                  Enjoy your stay at Pelangi Capsule Hostel! 💼🌟
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -179,11 +255,19 @@ export default function GuestCheckin() {
               </div>
               <CardTitle className="text-2xl font-bold text-hostel-text">Welcome to Pelangi Capsule Hostel</CardTitle>
               <p className="text-gray-600 mt-2">Complete your check-in information</p>
-              {capsuleInfo && (
-                <div className="mt-4 bg-orange-50 rounded-lg p-3">
-                  <div className="flex items-center justify-center text-sm font-medium text-orange-800">
-                    <MapPin className="h-4 w-4 mr-2" />
-                    Your assigned capsule: {capsuleInfo.capsuleNumber} - {capsuleInfo.position}
+              {guestInfo && (
+                <div className="mt-4 space-y-2">
+                  <div className="bg-orange-50 rounded-lg p-3">
+                    <div className="flex items-center justify-center text-sm font-medium text-orange-800">
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Your assigned capsule: {guestInfo.capsuleNumber} - {guestInfo.position}
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
+                    <div className="font-medium">Pre-filled Information:</div>
+                    <div>Name: {guestInfo.guestName}</div>
+                    <div>Phone: {guestInfo.phoneNumber}</div>
+                    {guestInfo.email && <div>Email: {guestInfo.email}</div>}
                   </div>
                 </div>
               )}
@@ -199,28 +283,28 @@ export default function GuestCheckin() {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
-                    <Label htmlFor="name" className="text-sm font-medium text-hostel-text">
-                      Full Name *
+                    <Label htmlFor="nameAsInDocument" className="text-sm font-medium text-hostel-text">
+                      Full Name as in IC/Passport *
                     </Label>
                     <Input
-                      id="name"
+                      id="nameAsInDocument"
                       type="text"
-                      placeholder="Enter your full name"
+                      placeholder={`Enter your name as shown in ID (Expected: ${guestInfo?.guestName || 'Full Name'})`}
                       className="w-full mt-1"
-                      {...form.register("name")}
+                      {...form.register("nameAsInDocument")}
                     />
-                    {form.formState.errors.name && (
-                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>
+                    {form.formState.errors.nameAsInDocument && (
+                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.nameAsInDocument.message}</p>
                     )}
                   </div>
                   
                   <div>
                     <Label htmlFor="gender" className="text-sm font-medium text-hostel-text">
-                      Gender
+                      Gender *
                     </Label>
                     <Select
                       value={form.watch("gender") || ""}
-                      onValueChange={(value) => form.setValue("gender", value as "male" | "female" | "other")}
+                      onValueChange={(value) => form.setValue("gender", value as "male" | "female")}
                     >
                       <SelectTrigger className="w-full mt-1">
                         <SelectValue placeholder="Select gender" />
@@ -228,150 +312,134 @@ export default function GuestCheckin() {
                       <SelectContent>
                         <SelectItem value="male">Male</SelectItem>
                         <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="age" className="text-sm font-medium text-hostel-text">
-                      Age
-                    </Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      placeholder="Age"
-                      className="w-full mt-1"
-                      {...form.register("age")}
-                    />
+                    {form.formState.errors.gender && (
+                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.gender.message}</p>
+                    )}
                   </div>
                   
                   <div>
                     <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
-                      Nationality
+                      Nationality *
                     </Label>
                     <Input
                       id="nationality"
                       type="text"
-                      placeholder="e.g., Malaysian"
+                      placeholder="e.g., Malaysian, Singaporean"
                       className="w-full mt-1"
                       {...form.register("nationality")}
                     />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="idNumber" className="text-sm font-medium text-hostel-text">
-                      ID/Passport Number
-                    </Label>
-                    <Input
-                      id="idNumber"
-                      type="text"
-                      placeholder="IC or Passport Number"
-                      className="w-full mt-1"
-                      {...form.register("idNumber")}
-                    />
+                    {form.formState.errors.nationality && (
+                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.nationality.message}</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Contact Information */}
+              {/* Identity Documents */}
               <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
-                  <Phone className="mr-2 h-4 w-4" />
-                  Contact Information
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Identity Documents *
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="phoneNumber" className="text-sm font-medium text-hostel-text">
-                      Phone Number *
-                    </Label>
-                    <Input
-                      id="phoneNumber"
-                      type="tel"
-                      placeholder="e.g., +60123456789"
-                      className="w-full mt-1"
-                      {...form.register("phoneNumber")}
-                    />
-                    {form.formState.errors.phoneNumber && (
-                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.phoneNumber.message}</p>
-                    )}
-                  </div>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">Please provide either IC or Passport information with document photo:</p>
                   
-                  <div>
-                    <Label htmlFor="email" className="text-sm font-medium text-hostel-text">
-                      Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your.email@example.com"
-                      className="w-full mt-1"
-                      {...form.register("email")}
-                    />
-                    {form.formState.errors.email && (
-                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.email.message}</p>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="icNumber" className="text-sm font-medium text-hostel-text">
+                        IC Number (for Malaysians)
+                      </Label>
+                      <Input
+                        id="icNumber"
+                        type="text"
+                        placeholder="e.g., 950101-01-1234"
+                        className="w-full mt-1"
+                        {...form.register("icNumber")}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="passportNumber" className="text-sm font-medium text-hostel-text">
+                        Passport Number (for Foreigners)
+                      </Label>
+                      <Input
+                        id="passportNumber"
+                        type="text"
+                        placeholder="e.g., A12345678"
+                        className="w-full mt-1"
+                        {...form.register("passportNumber")}
+                      />
+                    </div>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="emergencyContact" className="text-sm font-medium text-hostel-text">
-                      Emergency Contact Name
-                    </Label>
-                    <Input
-                      id="emergencyContact"
-                      type="text"
-                      placeholder="Emergency contact person"
-                      className="w-full mt-1"
-                      {...form.register("emergencyContact")}
-                    />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        IC Document Photo
+                      </Label>
+                      <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 mb-2">Upload photo of your IC</p>
+                        <Button type="button" variant="outline" size="sm" onClick={() => {
+                          // This would trigger file upload - simplified for demo
+                          toast({ title: "Photo Upload", description: "IC photo upload feature would be implemented here" });
+                        }}>
+                          Choose File
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Passport Document Photo
+                      </Label>
+                      <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 mb-2">Upload photo of your passport</p>
+                        <Button type="button" variant="outline" size="sm" onClick={() => {
+                          // This would trigger file upload - simplified for demo
+                          toast({ title: "Photo Upload", description: "Passport photo upload feature would be implemented here" });
+                        }}>
+                          Choose File
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <Label htmlFor="emergencyPhone" className="text-sm font-medium text-hostel-text">
-                      Emergency Contact Phone
-                    </Label>
-                    <Input
-                      id="emergencyPhone"
-                      type="tel"
-                      placeholder="Emergency contact number"
-                      className="w-full mt-1"
-                      {...form.register("emergencyPhone")}
-                    />
-                  </div>
+
+                  {form.formState.errors.icNumber && (
+                    <p className="text-red-500 text-sm">{form.formState.errors.icNumber.message}</p>
+                  )}
                 </div>
               </div>
 
-              {/* Stay Information */}
+              {/* Payment Method */}
               <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Stay Information
+                  <Mail className="mr-2 h-4 w-4" />
+                  Payment Method *
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="expectedCheckoutDate" className="text-sm font-medium text-hostel-text">
-                      Expected Checkout Date
-                    </Label>
-                    <Input
-                      id="expectedCheckoutDate"
-                      type="date"
-                      className="w-full mt-1"
-                      {...form.register("expectedCheckoutDate")}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="notes" className="text-sm font-medium text-hostel-text">
-                      Additional Notes
-                    </Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Any special requests or notes..."
-                      className="w-full mt-1"
-                      rows={3}
-                      {...form.register("notes")}
-                    />
-                  </div>
+                <div>
+                  <Select
+                    value={form.watch("paymentMethod") || ""}
+                    onValueChange={(value) => form.setValue("paymentMethod", value as "cash" | "card" | "online_transfer")}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select preferred payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="card">Credit/Debit Card</SelectItem>
+                      <SelectItem value="online_transfer">Online Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.paymentMethod && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.paymentMethod.message}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Payment will be collected at the front desk upon arrival</p>
                 </div>
               </div>
 

@@ -64,6 +64,10 @@ export const guestTokens = pgTable("guest_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   token: text("token").notNull().unique(),
   capsuleNumber: text("capsule_number").notNull(),
+  guestName: text("guest_name").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  email: text("email"),
+  expectedCheckoutDate: text("expected_checkout_date"),
   createdBy: varchar("created_by").notNull().references(() => users.id),
   isUsed: boolean("is_used").notNull().default(false),
   usedAt: timestamp("used_at"),
@@ -149,22 +153,33 @@ export const bulkGuestImportSchema = z.array(
 
 // Guest self-check-in schema (simplified)
 export const guestSelfCheckinSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  email: z.string().email("Invalid email format").optional().or(z.literal("")),
-  gender: z.enum(["male", "female", "other"]).optional(),
-  nationality: z.string().optional(),
-  age: z.string().optional(),
-  idNumber: z.string().optional(),
-  emergencyContact: z.string().optional(),
-  emergencyPhone: z.string().optional(),
-  expectedCheckoutDate: z.string().optional(),
-  notes: z.string().optional(),
+  nameAsInDocument: z.string().min(1, "Full name as in IC/passport is required"),
+  gender: z.enum(["male", "female"], { required_error: "Gender is required" }),
+  nationality: z.string().min(1, "Nationality is required"),
+  icNumber: z.string().optional(),
+  passportNumber: z.string().optional(),
+  icDocumentUrl: z.string().optional(),
+  passportDocumentUrl: z.string().optional(),
+  paymentMethod: z.enum(["cash", "card", "online_transfer"], { required_error: "Payment method is required" }),
+}).refine((data) => data.icNumber || data.passportNumber, {
+  message: "Either IC number or passport number is required",
+  path: ["icNumber"],
+}).refine((data) => {
+  if (data.icNumber && !data.icDocumentUrl) return false;
+  if (data.passportNumber && !data.passportDocumentUrl) return false;
+  return true;
+}, {
+  message: "Document photo is required",
+  path: ["icDocumentUrl"],
 });
 
-// Token creation schema
+// Token creation schema with guest info
 export const createTokenSchema = z.object({
   capsuleNumber: z.string().min(1, "Capsule number is required"),
+  guestName: z.string().min(1, "Guest name is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  email: z.string().email().optional(),
+  expectedCheckoutDate: z.string().optional(),
   expiresInHours: z.number().min(1).max(168).default(24), // 1-168 hours (1 week max)
 });
 

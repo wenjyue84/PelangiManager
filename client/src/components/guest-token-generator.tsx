@@ -18,11 +18,16 @@ interface TokenGeneratorProps {
 
 export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorProps) {
   const [selectedCapsule, setSelectedCapsule] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [expectedCheckoutDate, setExpectedCheckoutDate] = useState("");
   const [expiresInHours, setExpiresInHours] = useState("24");
   const [generatedToken, setGeneratedToken] = useState<{
     token: string;
     link: string;
     capsuleNumber: string;
+    guestName: string;
     expiresAt: string;
   } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -33,7 +38,14 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
   });
 
   const createTokenMutation = useMutation({
-    mutationFn: async (data: { capsuleNumber: string; expiresInHours: number }) => {
+    mutationFn: async (data: { 
+      capsuleNumber: string; 
+      guestName: string;
+      phoneNumber: string;
+      email?: string;
+      expectedCheckoutDate?: string;
+      expiresInHours: number 
+    }) => {
       const response = await apiRequest("POST", "/api/guest-tokens", data);
       return response.json();
     },
@@ -64,9 +76,29 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
       });
       return;
     }
+    if (!guestName.trim()) {
+      toast({
+        title: "Validation Error", 
+        description: "Please enter guest name",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!phoneNumber.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter phone number", 
+        variant: "destructive",
+      });
+      return;
+    }
 
     createTokenMutation.mutate({
       capsuleNumber: selectedCapsule,
+      guestName: guestName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      email: email.trim() || undefined,
+      expectedCheckoutDate: expectedCheckoutDate || undefined,
       expiresInHours: parseInt(expiresInHours),
     });
   };
@@ -108,6 +140,53 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
 
         {!generatedToken ? (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Label htmlFor="guestName">Guest Name *</Label>
+                <Input
+                  id="guestName"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Enter guest's full name"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="phoneNumber">Phone Number *</Label>
+                <Input
+                  id="phoneNumber"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="e.g., +60123456789"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="guest@example.com"
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="expectedCheckout">Expected Checkout</Label>
+                <Input
+                  id="expectedCheckout"
+                  type="date"
+                  value={expectedCheckoutDate}
+                  onChange={(e) => setExpectedCheckoutDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            
             <div>
               <Label htmlFor="capsule" className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
@@ -220,6 +299,10 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
                 onClick={() => {
                   setGeneratedToken(null);
                   setSelectedCapsule("");
+                  setGuestName("");
+                  setPhoneNumber("");
+                  setEmail("");
+                  setExpectedCheckoutDate("");
                   setExpiresInHours("24");
                 }}
                 className="flex-1"
