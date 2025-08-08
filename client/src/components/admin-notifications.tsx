@@ -36,6 +36,11 @@ export default function AdminNotifications() {
   
   const unreadNotifications = unreadNotificationsResponse?.data || [];
 
+  // Don't show admin notifications if there are no unread notifications
+  if (unreadNotifications.length === 0) {
+    return null;
+  }
+
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       const response = await apiRequest("PATCH", `/api/admin/notifications/${notificationId}/read`, {});
