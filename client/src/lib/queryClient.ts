@@ -84,14 +84,15 @@ focusManager.setEventListener((handleFocus) => {
 const handleQueryError = (error: unknown) => {
   console.error('Query error:', error);
   
-  if (error instanceof Error) {
+  if (error instanceof Error && error.message) {
     // Handle specific error types
     if (error.message.includes('401:')) {
       // Don't show toast for 401 errors - let auth provider handle
       return;
     }
     
-    if (error.message.includes('Network Error') || error.message.includes('fetch')) {
+    // Only show connection error for actual network/fetch failures
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError') || error.name === 'NetworkError') {
       toast({
         title: "Connection Problem",
         description: "Please check your internet connection and try again.",
@@ -108,6 +109,9 @@ const handleQueryError = (error: unknown) => {
       });
       return;
     }
+    
+    // Don't show toast for other errors - they might be handled elsewhere
+    // or might be empty error objects
   }
 };
 
