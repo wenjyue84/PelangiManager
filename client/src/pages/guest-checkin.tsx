@@ -10,10 +10,13 @@ import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle, Upload, Cam
 import { guestSelfCheckinSchema, type GuestSelfCheckin } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useI18n } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function GuestCheckin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [token, setToken] = useState<string>("");
   const [guestInfo, setGuestInfo] = useState<{
     capsuleNumber: string;
@@ -52,8 +55,8 @@ export default function GuestCheckin() {
     
     if (!urlToken) {
       toast({
-        title: "Invalid Link",
-        description: "This check-in link is invalid or missing a token.",
+        title: t.invalidLink,
+        description: t.invalidLinkDesc,
         variant: "destructive",
       });
       setLocation('/');
@@ -85,8 +88,8 @@ export default function GuestCheckin() {
         form.setValue("nameAsInDocument", "");
       } else {
         toast({
-          title: "Invalid or Expired Link",
-          description: "This check-in link is invalid or has expired.",
+          title: t.expiredLink,
+          description: t.expiredLinkDesc,
           variant: "destructive",
         });
         setLocation('/');
@@ -94,8 +97,8 @@ export default function GuestCheckin() {
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to validate check-in link.",
+        title: t.error,
+        description: t.validationError,
         variant: "destructive",
       });
       setLocation('/');
@@ -120,20 +123,20 @@ export default function GuestCheckin() {
         setEditExpiresAt(new Date(result.editExpiresAt));
         setCanEdit(true);
         toast({
-          title: "Check-in Successful!",
-          description: `Welcome to Pelangi Capsule Hostel! You've been assigned to ${guestInfo?.capsuleNumber}.`,
+          title: t.checkInSuccess,
+          description: `${t.checkInSuccessDesc} ${guestInfo?.capsuleNumber}.`,
         });
       } else {
         const errorData = await response.json();
         toast({
-          title: "Check-in Failed",
+          title: t.checkInFailed,
           description: errorData.message || "Failed to complete check-in.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
-        title: "Error",
+        title: t.error,
         description: "Failed to submit check-in information.",
         variant: "destructive",
       });
@@ -148,7 +151,7 @@ export default function GuestCheckin() {
           <CardContent className="p-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Validating check-in link...</p>
+              <p className="mt-4 text-gray-600">{t.validatingLink}</p>
             </div>
           </CardContent>
         </Card>
@@ -164,18 +167,18 @@ export default function GuestCheckin() {
             <CardContent className="p-8">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-4">🎉</div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Good Day, Our Honorable Guest!</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.goodDay}</h1>
                 <div className="text-2xl mb-4">🎉</div>
               </div>
 
               <div className="bg-gradient-to-r from-orange-100 to-pink-100 rounded-xl p-6 mb-6 text-center">
                 <h2 className="text-xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
-                  Welcome to Pelangi Capsule Hostel <span className="text-2xl">🌈</span>
+                  {t.welcomeHostel} <span className="text-2xl">🌈</span>
                 </h2>
                 <div className="space-y-2 text-gray-700">
                   <div className="flex items-center justify-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    <span className="font-medium">Address:</span>
+                    <span className="font-medium">{t.address}</span>
                     <span>26A, Jalan Perang, Taman Pelangi, 80400 Johor Bahru</span>
                   </div>
                 </div>
@@ -184,15 +187,15 @@ export default function GuestCheckin() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <Button variant="outline" className="flex items-center gap-2 h-auto py-3 px-4" onClick={() => window.open('#', '_blank')}>
                   <Camera className="h-4 w-4" />
-                  <span className="text-sm">📸 Hostel Photos</span>
+                  <span className="text-sm">{t.hostelPhotos}</span>
                 </Button>
                 <Button variant="outline" className="flex items-center gap-2 h-auto py-3 px-4" onClick={() => window.open('https://maps.google.com/?q=26A+Jalan+Perang+Taman+Pelangi+80400+Johor+Bahru', '_blank')}>
                   <Globe className="h-4 w-4" />
-                  <span className="text-sm">📍 Google Maps</span>
+                  <span className="text-sm">{t.googleMaps}</span>
                 </Button>
                 <Button variant="outline" className="flex items-center gap-2 h-auto py-3 px-4" onClick={() => window.open('#', '_blank')}>
                   <Video className="h-4 w-4" />
-                  <span className="text-sm">🎥 Check-in Video</span>
+                  <span className="text-sm">{t.checkInVideo}</span>
                 </Button>
               </div>
 
@@ -201,41 +204,40 @@ export default function GuestCheckin() {
                   <div className="flex items-center gap-2">
                     <span>🕒</span>
                     <span className="font-medium">Check-in:</span>
-                    <span>From 3:00 PM</span>
+                    <span>{t.checkInTime}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span>🕛</span>
                     <span className="font-medium">Check-out:</span>
-                    <span>Before 12:00 PM</span>
+                    <span>{t.checkOutTime}</span>
                   </div>
                 </div>
 
                 <div className="bg-blue-50 rounded-lg p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <span>🔐</span>
-                    <span className="font-medium">Door Password:</span>
+                    <span className="font-medium">{t.doorPassword}</span>
                     <span className="font-mono text-lg font-bold text-blue-600">1270#</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span>🛌</span>
-                    <span className="font-medium">Your Capsule No.:</span>
+                    <span className="font-medium">{t.capsuleNumber}</span>
                     <span className="font-bold text-lg text-orange-600">{guestInfo?.capsuleNumber} ({guestInfo?.position})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span>🃏</span>
-                    <span className="font-medium">Capsule Access Card:</span>
-                    <span>Placed on your pillow</span>
+                    <span className="font-medium">{t.accessCard}</span>
                   </div>
                 </div>
 
                 <div className="bg-red-50 border-l-4 border-red-400 p-4">
                   <h3 className="font-bold text-red-800 mb-2 flex items-center gap-2">
-                    <span>⚠</span> Important Reminders:
+                    <span>⚠</span> {t.importantReminders}
                   </h3>
                   <ul className="text-sm text-red-700 space-y-1">
-                    <li>• 🚫 Do not leave your card inside the capsule and close the door</li>
-                    <li>• 🚭 No Smoking in hostel area</li>
-                    <li>• 🎥 CCTV monitored – Violation (e.g., smoking) may result in RM300 penalty</li>
+                    <li>• {t.noCardWarning}</li>
+                    <li>• {t.noSmoking}</li>
+                    <li>• {t.cctvWarning}</li>
                   </ul>
                 </div>
 
@@ -243,10 +245,10 @@ export default function GuestCheckin() {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-yellow-800">Information Editable</span>
+                      <span className="text-sm font-medium text-yellow-800">{t.infoEditable}</span>
                     </div>
                     <p className="text-xs text-yellow-700">
-                      You can edit your check-in information until {editExpiresAt.toLocaleTimeString()}.
+                      {t.editUntil} {editExpiresAt.toLocaleTimeString()}.
                     </p>
                     <Button 
                       variant="outline" 
@@ -257,14 +259,14 @@ export default function GuestCheckin() {
                         window.location.href = `/guest-edit?token=${editToken}`;
                       }}
                     >
-                      Edit My Information
+                      {t.editMyInfo}
                     </Button>
                   </div>
                 )}
 
                 <div className="text-center text-gray-600 text-sm">
-                  For any assistance, please contact reception. <br />
-                  Enjoy your stay at Pelangi Capsule Hostel! 💼🌟
+                  {t.assistance} <br />
+                  {t.enjoyStay}
                 </div>
               </div>
             </CardContent>
@@ -283,18 +285,21 @@ export default function GuestCheckin() {
               <div className="w-16 h-16 bg-hostel-secondary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <UserPlus className="text-hostel-secondary h-8 w-8" />
               </div>
-              <CardTitle className="text-2xl font-bold text-hostel-text">Welcome to Pelangi Capsule Hostel</CardTitle>
-              <p className="text-gray-600 mt-2">Complete your check-in information</p>
+              <CardTitle className="text-2xl font-bold text-hostel-text">{t.welcomeTitle}</CardTitle>
+              <p className="text-gray-600 mt-2">{t.completeCheckIn}</p>
+              <div className="mt-4">
+                <LanguageSwitcher variant="compact" className="mx-auto" />
+              </div>
               {guestInfo && (
                 <div className="mt-4 space-y-2">
                   <div className="bg-orange-50 rounded-lg p-3">
                     <div className="flex items-center justify-center text-sm font-medium text-orange-800">
                       <MapPin className="h-4 w-4 mr-2" />
-                      Your assigned capsule: {guestInfo.capsuleNumber} - {guestInfo.position}
+                      {t.assignedCapsule}: {guestInfo.capsuleNumber} - {guestInfo.position}
                     </div>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
-                    <div className="font-medium">Pre-filled Information:</div>
+                    <div className="font-medium">{t.prefilledInfo}</div>
                     <div>Name: {guestInfo.guestName}</div>
                     <div>Phone: {guestInfo.phoneNumber}</div>
                     {guestInfo.email && <div>Email: {guestInfo.email}</div>}
@@ -309,17 +314,17 @@ export default function GuestCheckin() {
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
                   <User className="mr-2 h-4 w-4" />
-                  Personal Information
+                  {t.personalInfo}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <Label htmlFor="nameAsInDocument" className="text-sm font-medium text-hostel-text">
-                      Full Name as in IC/Passport *
+                      {t.fullNameLabel}
                     </Label>
                     <Input
                       id="nameAsInDocument"
                       type="text"
-                      placeholder={`Enter your name as shown in ID (Expected: ${guestInfo?.guestName || 'Full Name'})`}
+                      placeholder={`${t.fullNamePlaceholder} (Expected: ${guestInfo?.guestName || 'Full Name'})`}
                       className="w-full mt-1"
                       {...form.register("nameAsInDocument")}
                     />
@@ -331,12 +336,12 @@ export default function GuestCheckin() {
                   <div className="sm:col-span-2">
                     <Label htmlFor="phoneNumber" className="text-sm font-medium text-hostel-text flex items-center gap-2">
                       <Phone className="h-4 w-4" />
-                      Contact Number *
+                      {t.contactNumberLabel}
                     </Label>
                     <Input
                       id="phoneNumber"
                       type="tel"
-                      placeholder={`Enter your contact number (Expected: ${guestInfo?.phoneNumber || 'e.g., +60123456789'})`}
+                      placeholder={`${t.contactNumberPlaceholder} (Expected: ${guestInfo?.phoneNumber || 'e.g., +60123456789'})`}
                       className="w-full mt-1"
                       {...form.register("phoneNumber")}
                     />
@@ -347,18 +352,18 @@ export default function GuestCheckin() {
                   
                   <div>
                     <Label htmlFor="gender" className="text-sm font-medium text-hostel-text">
-                      Gender *
+                      {t.genderLabel}
                     </Label>
                     <Select
                       value={form.watch("gender") || ""}
                       onValueChange={(value) => form.setValue("gender", value as "male" | "female")}
                     >
                       <SelectTrigger className="w-full mt-1">
-                        <SelectValue placeholder="Select gender" />
+                        <SelectValue placeholder={t.genderPlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="male">{t.male}</SelectItem>
+                        <SelectItem value="female">{t.female}</SelectItem>
                       </SelectContent>
                     </Select>
                     {form.formState.errors.gender && (
@@ -368,12 +373,12 @@ export default function GuestCheckin() {
                   
                   <div>
                     <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
-                      Nationality *
+                      {t.nationalityLabel}
                     </Label>
                     <Input
                       id="nationality"
                       type="text"
-                      placeholder="e.g., Malaysian, Singaporean"
+                      placeholder={t.nationalityPlaceholder}
                       className="w-full mt-1"
                       {...form.register("nationality")}
                     />
@@ -388,20 +393,20 @@ export default function GuestCheckin() {
               <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
                   <Calendar className="mr-2 h-4 w-4" />
-                  Identity Documents *
+                  {t.identityDocs}
                 </h3>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">Please provide either IC or Passport information with document photo:</p>
+                  <p className="text-sm text-gray-600">{t.identityDocsDesc}</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="icNumber" className="text-sm font-medium text-hostel-text">
-                        IC Number (for Malaysians)
+                        {t.icNumberLabel}
                       </Label>
                       <Input
                         id="icNumber"
                         type="text"
-                        placeholder="e.g., 950101-01-1234"
+                        placeholder={t.icNumberPlaceholder}
                         className="w-full mt-1"
                         {...form.register("icNumber")}
                       />
@@ -409,12 +414,12 @@ export default function GuestCheckin() {
                     
                     <div>
                       <Label htmlFor="passportNumber" className="text-sm font-medium text-hostel-text">
-                        Passport Number (for Foreigners)
+                        {t.passportNumberLabel}
                       </Label>
                       <Input
                         id="passportNumber"
                         type="text"
-                        placeholder="e.g., A12345678"
+                        placeholder={t.passportNumberPlaceholder}
                         className="w-full mt-1"
                         {...form.register("passportNumber")}
                       />
@@ -425,16 +430,16 @@ export default function GuestCheckin() {
                     <div>
                       <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
                         <Upload className="h-4 w-4" />
-                        IC Document Photo
+                        {t.icPhotoLabel}
                       </Label>
                       <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                         <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 mb-2">Upload photo of your IC</p>
+                        <p className="text-sm text-gray-500 mb-2">{t.icPhotoDesc}</p>
                         <Button type="button" variant="outline" size="sm" onClick={() => {
                           // This would trigger file upload - simplified for demo
                           toast({ title: "Photo Upload", description: "IC photo upload feature would be implemented here" });
                         }}>
-                          Choose File
+                          {t.chooseFile}
                         </Button>
                       </div>
                     </div>
@@ -442,16 +447,16 @@ export default function GuestCheckin() {
                     <div>
                       <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
                         <Upload className="h-4 w-4" />
-                        Passport Document Photo
+                        {t.passportPhotoLabel}
                       </Label>
                       <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                         <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 mb-2">Upload photo of your passport</p>
+                        <p className="text-sm text-gray-500 mb-2">{t.passportPhotoDesc}</p>
                         <Button type="button" variant="outline" size="sm" onClick={() => {
                           // This would trigger file upload - simplified for demo
                           toast({ title: "Photo Upload", description: "Passport photo upload feature would be implemented here" });
                         }}>
-                          Choose File
+                          {t.chooseFile}
                         </Button>
                       </div>
                     </div>
@@ -467,7 +472,7 @@ export default function GuestCheckin() {
               <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
                   <Mail className="mr-2 h-4 w-4" />
-                  Payment Method *
+                  {t.paymentMethod}
                 </h3>
                 <div>
                   <Select
@@ -475,18 +480,18 @@ export default function GuestCheckin() {
                     onValueChange={(value) => form.setValue("paymentMethod", value as "cash" | "card" | "online_transfer")}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select preferred payment method" />
+                      <SelectValue placeholder={t.paymentMethodPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cash">Cash</SelectItem>
-                      <SelectItem value="card">Credit/Debit Card</SelectItem>
-                      <SelectItem value="online_transfer">Online Transfer</SelectItem>
+                      <SelectItem value="cash">{t.cash}</SelectItem>
+                      <SelectItem value="card">{t.card}</SelectItem>
+                      <SelectItem value="online_transfer">{t.onlineTransfer}</SelectItem>
                     </SelectContent>
                   </Select>
                   {form.formState.errors.paymentMethod && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors.paymentMethod.message}</p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">Payment will be collected at the front desk upon arrival</p>
+                  <p className="text-xs text-gray-500 mt-1">{t.paymentNote}</p>
                 </div>
               </div>
 
@@ -495,7 +500,7 @@ export default function GuestCheckin() {
                 className="w-full bg-hostel-secondary hover:bg-orange-700 text-white py-3"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Completing Check-in..." : "Complete Check-in"}
+                {isSubmitting ? t.completingCheckIn : t.completeCheckInBtn}
               </Button>
             </form>
           </CardContent>

@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { GlobalErrorBoundary } from "./components/global-error-boundary";
 import AuthProvider from "./components/auth-provider";
 import { ProtectedRoute } from "./components/protected-route";
+import { createI18nProvider } from "./lib/i18n";
 import { LoginForm } from "./components/login-form";
 import { useAuth } from "./lib/auth";
 import NotFound from "./pages/not-found";
@@ -63,6 +64,9 @@ function Router() {
   );
 }
 
+// Create I18n provider instance
+const I18nProvider = createI18nProvider();
+
 function App() {
   const handleGlobalError = (error: Error) => {
     console.error('Global error caught:', error);
@@ -78,13 +82,15 @@ function App() {
   return (
     <GlobalErrorBoundary onError={handleGlobalError}>
       <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Router />
-            <Toaster />
-            <VisibilityIndicator />
-          </TooltipProvider>
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Router />
+              <Toaster />
+              <VisibilityIndicator />
+            </TooltipProvider>
+          </AuthProvider>
+        </I18nProvider>
       </QueryClientProvider>
     </GlobalErrorBoundary>
   );
