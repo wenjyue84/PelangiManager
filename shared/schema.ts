@@ -133,13 +133,40 @@ export const insertUserSchema = createInsertSchema(users).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  email: z.string().email("Valid email is required"),
-  username: z.string().optional(),
-  password: z.string().optional(),
+  email: z.string()
+    .email("Please enter a valid email address")
+    .min(5, "Email must be at least 5 characters long")
+    .max(254, "Email must not exceed 254 characters")
+    .toLowerCase()
+    .transform(val => val.trim()),
+  username: z.string()
+    .min(3, "Username must be at least 3 characters long")
+    .max(30, "Username must not exceed 30 characters")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, hyphens, and underscores")
+    .transform(val => val.trim())
+    .optional(),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters long")
+    .max(128, "Password must not exceed 128 characters")
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one lowercase letter, one uppercase letter, and one number")
+    .optional(),
   googleId: z.string().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  profileImage: z.string().optional(),
+  firstName: z.string()
+    .min(1, "First name is required")
+    .max(50, "First name must not exceed 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "First name can only contain letters, spaces, apostrophes, and hyphens")
+    .transform(val => val.trim())
+    .optional(),
+  lastName: z.string()
+    .min(1, "Last name is required")
+    .max(50, "Last name must not exceed 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "Last name can only contain letters, spaces, apostrophes, and hyphens")
+    .transform(val => val.trim())
+    .optional(),
+  profileImage: z.string().url("Profile image must be a valid URL").optional(),
+  role: z.enum(["admin", "staff"], {
+    required_error: "Role must be either 'admin' or 'staff'",
+  }).default("staff"),
 });
 
 export const insertGuestSchema = createInsertSchema(guests).omit({
@@ -148,33 +175,104 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
   checkoutTime: true,
   isCheckedIn: true,
 }).extend({
-  name: z.string().min(1, "Guest name is required"),
-  capsuleNumber: z.string().min(1, "Capsule number is required"),
-  paymentAmount: z.string().optional(),
-  paymentMethod: z.enum(["cash", "tng", "bank", "platform"]).optional().default("cash"),
-  paymentCollector: z.string().min(1, "Payment collector is required"),
+  name: z.string()
+    .min(2, "Guest name must be at least 2 characters long")
+    .max(100, "Guest name must not exceed 100 characters")
+    .regex(/^[a-zA-Z\s.'-]+$/, "Guest name can only contain letters, spaces, periods, apostrophes, and hyphens")
+    .transform(val => val.trim()),
+  capsuleNumber: z.string()
+    .min(1, "Capsule number is required")
+    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03"),
+  paymentAmount: z.string()
+    .regex(/^\d*\.?\d{0,2}$/, "Payment amount must be a valid monetary value")
+    .transform(val => val || "0")
+    .refine(val => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0 && num <= 9999.99;
+    }, "Payment amount must be between 0 and 9999.99")
+    .optional(),
+  paymentMethod: z.enum(["cash", "tng", "bank", "platform"], {
+    required_error: "Please select a payment method"
+  }).default("cash"),
+  paymentCollector: z.string()
+    .min(1, "Payment collector is required")
+    .max(50, "Payment collector name must not exceed 50 characters")
+    .regex(/^[a-zA-Z\s'-]+$/, "Payment collector name can only contain letters, spaces, apostrophes, and hyphens")
+    .transform(val => val.trim()),
   isPaid: z.boolean().default(false),
-  notes: z.string().optional(),
-  expectedCheckoutDate: z.string().optional(),
-  gender: z.string().optional(),
-  nationality: z.string().optional(),
-  phoneNumber: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
-  idNumber: z.string().optional(),
-  emergencyContact: z.string().optional(),
-  emergencyPhone: z.string().optional(),
-  age: z.string().optional(),
+  notes: z.string()
+    .max(500, "Notes must not exceed 500 characters")
+    .transform(val => val?.trim() || "")
+    .optional(),
+  expectedCheckoutDate: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected checkout date must be in YYYY-MM-DD format")
+    .refine(val => {
+      if (!val) return true; // Optional field
+      const date = new Date(val);
+      const today = new Date();
+      const maxDate = new Date();
+      maxDate.setFullYear(today.getFullYear() + 1); // Max 1 year from now
+      return date >= today && date <= maxDate;
+    }, "Expected checkout date must be between today and 1 year from now")
+    .optional(),
+  gender: z.enum(["male", "female", "other", "prefer-not-to-say"], {
+    required_error: "Please select a gender"
+  }).optional(),
+  nationality: z.string()
+    .min(2, "Nationality must be at least 2 characters long")
+    .max(50, "Nationality must not exceed 50 characters")
+    .regex(/^[a-zA-Z\s-]+$/, "Nationality can only contain letters, spaces, and hyphens")
+    .transform(val => val?.trim())
+    .optional(),
+  phoneNumber: z.string()
+    .regex(/^[+]?[\d\s\-\(\)]{7,20}$/, "Please enter a valid phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
+    .transform(val => val?.replace(/\s/g, ""))
+    .optional(),
+  email: z.union([
+    z.string().email("Please enter a valid email address").transform(val => val.toLowerCase().trim()),
+    z.literal("")
+  ]).optional(),
+  idNumber: z.string()
+    .min(6, "ID number must be at least 6 characters long")
+    .max(20, "ID number must not exceed 20 characters")
+    .regex(/^[A-Z0-9\-]+$/i, "ID number can only contain letters, numbers, and hyphens")
+    .transform(val => val?.toUpperCase())
+    .optional(),
+  emergencyContact: z.string()
+    .min(2, "Emergency contact name must be at least 2 characters long")
+    .max(100, "Emergency contact name must not exceed 100 characters")
+    .regex(/^[a-zA-Z\s.'-]+$/, "Emergency contact name can only contain letters, spaces, periods, apostrophes, and hyphens")
+    .transform(val => val?.trim())
+    .optional(),
+  emergencyPhone: z.string()
+    .regex(/^[+]?[\d\s\-\(\)]{7,20}$/, "Please enter a valid emergency phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
+    .transform(val => val?.replace(/\s/g, ""))
+    .optional(),
+  age: z.string()
+    .regex(/^\d{1,3}$/, "Age must be a number")
+    .refine(val => {
+      if (!val) return true; // Optional field
+      const age = parseInt(val);
+      return age >= 16 && age <= 120;
+    }, "Age must be between 16 and 120")
+    .optional(),
 });
 
 export const insertCapsuleSchema = createInsertSchema(capsules).omit({
   id: true,
 }).extend({
-  number: z.string().min(1, "Capsule number is required"),
+  number: z.string()
+    .min(1, "Capsule number is required")
+    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+    .transform(val => val.toUpperCase()),
   section: z.enum(["back", "middle", "front"], {
-    required_error: "Section is required",
+    required_error: "Section must be 'back', 'middle', or 'front'",
   }),
   isAvailable: z.boolean().default(true),
-  problemDescription: z.string().optional(),
+  problemDescription: z.string()
+    .max(500, "Problem description must not exceed 500 characters")
+    .transform(val => val?.trim())
+    .optional(),
 });
 
 export const checkoutGuestSchema = z.object({
@@ -183,8 +281,13 @@ export const checkoutGuestSchema = z.object({
 
 // Authentication schemas
 export const loginSchema = z.object({
-  email: z.string().min(1, "Username or email is required"), // Allow username or email
-  password: z.string().min(1, "Password is required"),
+  email: z.string()
+    .min(1, "Username or email is required")
+    .max(254, "Username or email must not exceed 254 characters")
+    .transform(val => val.trim().toLowerCase()),
+  password: z.string()
+    .min(1, "Password is required")
+    .max(128, "Password must not exceed 128 characters"),
 });
 
 export const googleAuthSchema = z.object({
@@ -192,14 +295,29 @@ export const googleAuthSchema = z.object({
 });
 
 export const createCapsuleProblemSchema = z.object({
-  capsuleNumber: z.string().min(1, "Capsule number is required"),
-  description: z.string().min(1, "Problem description is required"),
-  reportedBy: z.string().min(1, "Reporter is required"),
+  capsuleNumber: z.string()
+    .min(1, "Capsule number is required")
+    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+    .transform(val => val.toUpperCase()),
+  description: z.string()
+    .min(10, "Problem description must be at least 10 characters long")
+    .max(500, "Problem description must not exceed 500 characters")
+    .transform(val => val.trim()),
+  reportedBy: z.string()
+    .min(1, "Reporter name is required")
+    .max(50, "Reporter name must not exceed 50 characters")
+    .transform(val => val.trim()),
 });
 
 export const resolveProblemSchema = z.object({
-  resolvedBy: z.string().min(1, "Resolver is required"),
-  notes: z.string().optional(),
+  resolvedBy: z.string()
+    .min(1, "Resolver name is required")
+    .max(50, "Resolver name must not exceed 50 characters")
+    .transform(val => val.trim()),
+  notes: z.string()
+    .max(500, "Resolution notes must not exceed 500 characters")
+    .transform(val => val?.trim())
+    .optional(),
 });
 
 export const bulkGuestImportSchema = z.array(
@@ -208,37 +326,111 @@ export const bulkGuestImportSchema = z.array(
   })
 );
 
-// Guest self-check-in schema (simplified)
+// Guest self-check-in schema with comprehensive validation
 export const guestSelfCheckinSchema = z.object({
-  nameAsInDocument: z.string().min(1, "Full name as in IC/passport is required"),
-  phoneNumber: z.string().min(1, "Contact number is required").regex(/^[\d\s\-\+\(\)]+$/, "Please enter a valid phone number"),
-  gender: z.enum(["male", "female"], { required_error: "Gender is required" }),
-  nationality: z.string().min(1, "Nationality is required"),
-  icNumber: z.string().optional(),
-  passportNumber: z.string().optional(),
-  icDocumentUrl: z.string().optional(),
-  passportDocumentUrl: z.string().optional(),
-  paymentMethod: z.enum(["cash", "card", "online_transfer"], { required_error: "Payment method is required" }),
+  nameAsInDocument: z.string()
+    .min(2, "Full name must be at least 2 characters long")
+    .max(100, "Full name must not exceed 100 characters")
+    .regex(/^[a-zA-Z\s.'-]+$/, "Name can only contain letters, spaces, periods, apostrophes, and hyphens")
+    .transform(val => val.trim()),
+  phoneNumber: z.string()
+    .min(7, "Phone number must be at least 7 digits long")
+    .max(20, "Phone number must not exceed 20 characters")
+    .regex(/^[+]?[\d\s\-\(\)]+$/, "Please enter a valid phone number (may include +, spaces, dashes, parentheses)")
+    .transform(val => val.replace(/\s/g, "")),
+  gender: z.enum(["male", "female"], { 
+    required_error: "Please select your gender" 
+  }),
+  nationality: z.string()
+    .min(2, "Nationality must be at least 2 characters long")
+    .max(50, "Nationality must not exceed 50 characters")
+    .regex(/^[a-zA-Z\s-]+$/, "Nationality can only contain letters, spaces, and hyphens")
+    .transform(val => val.trim()),
+  icNumber: z.string()
+    .regex(/^\d{6}-\d{2}-\d{4}$/, "IC number must be in format XXXXXX-XX-XXXX")
+    .refine(val => {
+      if (!val) return true; // Optional when passport is provided
+      // Basic IC validation - check if first 6 digits form a valid date
+      const datePart = val.substring(0, 6);
+      const year = parseInt(datePart.substring(0, 2));
+      const month = parseInt(datePart.substring(2, 4));
+      const day = parseInt(datePart.substring(4, 6));
+      
+      // Convert 2-digit year to 4-digit (assume 1900-2099)
+      const fullYear = year < 30 ? 2000 + year : 1900 + year;
+      const date = new Date(fullYear, month - 1, day);
+      
+      return date.getFullYear() === fullYear && 
+             date.getMonth() === month - 1 && 
+             date.getDate() === day &&
+             month >= 1 && month <= 12 &&
+             day >= 1 && day <= 31;
+    }, "Please enter a valid IC number with a valid birth date")
+    .optional(),
+  passportNumber: z.string()
+    .min(6, "Passport number must be at least 6 characters long")
+    .max(15, "Passport number must not exceed 15 characters")
+    .regex(/^[A-Z0-9]+$/, "Passport number can only contain uppercase letters and numbers")
+    .transform(val => val?.toUpperCase())
+    .optional(),
+  icDocumentUrl: z.string()
+    .url("IC document must be a valid URL")
+    .optional(),
+  passportDocumentUrl: z.string()
+    .url("Passport document must be a valid URL")
+    .optional(),
+  paymentMethod: z.enum(["cash", "card", "online_transfer"], { 
+    required_error: "Please select a payment method" 
+  }),
 }).refine((data) => data.icNumber || data.passportNumber, {
   message: "Either IC number or passport number is required",
   path: ["icNumber"],
 }).refine((data) => {
+  // If IC number is provided, IC document photo should be provided
   if (data.icNumber && !data.icDocumentUrl) return false;
+  // If passport number is provided, passport document photo should be provided
   if (data.passportNumber && !data.passportDocumentUrl) return false;
   return true;
 }, {
-  message: "Document photo is required",
+  message: "Document photo is required for the provided ID type",
   path: ["icDocumentUrl"],
 });
 
-// Token creation schema with guest info
+// Token creation schema with comprehensive validation
 export const createTokenSchema = z.object({
-  capsuleNumber: z.string().min(1, "Capsule number is required"),
-  guestName: z.string().optional(), // Optional - guest fills it themselves
-  phoneNumber: z.string().optional(), // Optional - guest fills it themselves
-  email: z.string().email().optional(),
-  expectedCheckoutDate: z.string().optional(),
-  expiresInHours: z.number().min(1).max(168).default(24), // 1-168 hours (1 week max)
+  capsuleNumber: z.string()
+    .min(1, "Capsule number is required")
+    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+    .transform(val => val.toUpperCase()),
+  guestName: z.string()
+    .min(2, "Guest name must be at least 2 characters long")
+    .max(100, "Guest name must not exceed 100 characters")
+    .regex(/^[a-zA-Z\s.'-]+$/, "Guest name can only contain letters, spaces, periods, apostrophes, and hyphens")
+    .transform(val => val?.trim())
+    .optional(),
+  phoneNumber: z.string()
+    .regex(/^[+]?[\d\s\-\(\)]{7,20}$/, "Please enter a valid phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
+    .transform(val => val?.replace(/\s/g, ""))
+    .optional(),
+  email: z.string()
+    .email("Please enter a valid email address")
+    .transform(val => val?.toLowerCase().trim())
+    .optional(),
+  expectedCheckoutDate: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected checkout date must be in YYYY-MM-DD format")
+    .refine(val => {
+      if (!val) return true; // Optional field
+      const date = new Date(val);
+      const today = new Date();
+      const maxDate = new Date();
+      maxDate.setFullYear(today.getFullYear() + 1); // Max 1 year from now
+      return date >= today && date <= maxDate;
+    }, "Expected checkout date must be between today and 1 year from now")
+    .optional(),
+  expiresInHours: z.number()
+    .min(1, "Token must expire in at least 1 hour")
+    .max(168, "Token cannot expire later than 168 hours (7 days)")
+    .default(24),
 });
 
 // Type exports
@@ -256,6 +448,10 @@ export type ResolveProblem = z.infer<typeof resolveProblemSchema>;
 export type CapsuleProblem = typeof capsuleProblems.$inferSelect;
 export type InsertCapsuleProblem = typeof capsuleProblems.$inferInsert;
 export type BulkGuestImport = z.infer<typeof bulkGuestImportSchema>;
+export type UpdateGuest = z.infer<typeof updateGuestSchema>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type BulkAction = z.infer<typeof bulkActionSchema>;
+export type SearchQuery = z.infer<typeof searchQuerySchema>;
 export type GuestToken = typeof guestTokens.$inferSelect;
 export type InsertGuestToken = typeof guestTokens.$inferInsert;
 export type AdminNotification = typeof adminNotifications.$inferSelect;
@@ -284,12 +480,137 @@ export const appSettings = pgTable("app_settings", {
 export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
 
-// Settings schemas
+// Settings schemas with validation
 export const updateSettingsSchema = z.object({
-  guestTokenExpirationHours: z.number().min(1).max(168, "Maximum 168 hours (7 days)").default(24),
+  guestTokenExpirationHours: z.number()
+    .min(1, "Token expiration must be at least 1 hour")
+    .max(168, "Token expiration cannot exceed 168 hours (7 days)")
+    .int("Token expiration must be a whole number of hours")
+    .default(24),
 });
 
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
+
+// Additional validation schemas for specific use cases
+export const phoneNumberSchema = z.string()
+  .regex(/^[+]?[\d\s\-\(\)]{7,20}$/, "Please enter a valid phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
+  .transform(val => val.replace(/\s/g, ""));
+
+export const emailSchema = z.string()
+  .email("Please enter a valid email address")
+  .min(5, "Email must be at least 5 characters long")
+  .max(254, "Email must not exceed 254 characters")
+  .toLowerCase()
+  .transform(val => val.trim());
+
+export const capsuleNumberSchema = z.string()
+  .min(1, "Capsule number is required")
+  .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+  .transform(val => val.toUpperCase());
+
+export const nameSchema = z.string()
+  .min(2, "Name must be at least 2 characters long")
+  .max(100, "Name must not exceed 100 characters")
+  .regex(/^[a-zA-Z\s.'-]+$/, "Name can only contain letters, spaces, periods, apostrophes, and hyphens")
+  .transform(val => val.trim());
+
+export const passwordStrengthSchema = z.string()
+  .min(8, "Password must be at least 8 characters long")
+  .max(128, "Password must not exceed 128 characters")
+  .regex(/^(?=.*[a-z])/, "Password must contain at least one lowercase letter")
+  .regex(/^(?=.*[A-Z])/, "Password must contain at least one uppercase letter")
+  .regex(/^(?=.*\d)/, "Password must contain at least one number")
+  .regex(/^(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/, "Password must contain at least one special character");
+
+// Malaysian IC number validation
+export const malaysianICSchema = z.string()
+  .regex(/^\d{6}-\d{2}-\d{4}$/, "IC number must be in format XXXXXX-XX-XXXX")
+  .refine(val => {
+    // Basic IC validation - check if first 6 digits form a valid date
+    const datePart = val.substring(0, 6);
+    const year = parseInt(datePart.substring(0, 2));
+    const month = parseInt(datePart.substring(2, 4));
+    const day = parseInt(datePart.substring(4, 6));
+    
+    // Convert 2-digit year to 4-digit (assume 1900-2099)
+    const fullYear = year < 30 ? 2000 + year : 1900 + year;
+    const date = new Date(fullYear, month - 1, day);
+    
+    return date.getFullYear() === fullYear && 
+           date.getMonth() === month - 1 && 
+           date.getDate() === day &&
+           month >= 1 && month <= 12 &&
+           day >= 1 && day <= 31;
+  }, "Please enter a valid IC number with a valid birth date");
+
+// International passport number validation
+export const passportNumberSchema = z.string()
+  .min(6, "Passport number must be at least 6 characters long")
+  .max(15, "Passport number must not exceed 15 characters")
+  .regex(/^[A-Z0-9]+$/, "Passport number can only contain uppercase letters and numbers")
+  .transform(val => val.toUpperCase());
+
+// Age validation
+export const ageSchema = z.string()
+  .regex(/^\d{1,3}$/, "Age must be a number")
+  .refine(val => {
+    const age = parseInt(val);
+    return age >= 16 && age <= 120;
+  }, "Age must be between 16 and 120");
+
+// Date validation for checkout dates
+export const checkoutDateSchema = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+  .refine(val => {
+    const date = new Date(val);
+    const today = new Date();
+    const maxDate = new Date();
+    maxDate.setFullYear(today.getFullYear() + 1); // Max 1 year from now
+    return date >= today && date <= maxDate;
+  }, "Date must be between today and 1 year from now");
+
+// Payment amount validation
+export const paymentAmountSchema = z.string()
+  .regex(/^\d*\.?\d{0,2}$/, "Payment amount must be a valid monetary value")
+  .refine(val => {
+    const num = parseFloat(val || "0");
+    return !isNaN(num) && num >= 0 && num <= 9999.99;
+  }, "Payment amount must be between 0 and 9999.99");
+
+// Update guest schema for editing
+export const updateGuestSchema = insertGuestSchema.partial().extend({
+  id: z.string().min(1, "Guest ID is required"),
+});
+
+// Update user schema for editing
+export const updateUserSchema = insertUserSchema.partial().extend({
+  id: z.string().min(1, "User ID is required"),
+});
+
+// Bulk operations validation
+export const bulkActionSchema = z.object({
+  ids: z.array(z.string().min(1, "ID cannot be empty")).min(1, "At least one item must be selected"),
+  action: z.enum(["delete", "archive", "activate", "deactivate"], {
+    required_error: "Action is required"
+  }),
+});
+
+// Search and filter validation
+export const searchQuerySchema = z.object({
+  query: z.string().max(100, "Search query must not exceed 100 characters").optional(),
+  status: z.enum(["active", "inactive", "all"]).optional(),
+  dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  capsuleNumber: capsuleNumberSchema.optional(),
+}).refine((data) => {
+  if (data.dateFrom && data.dateTo) {
+    return new Date(data.dateFrom) <= new Date(data.dateTo);
+  }
+  return true;
+}, {
+  message: "From date must be before or equal to To date",
+  path: ["dateFrom"]
+});
 
 // Pagination types
 export interface PaginationParams {
@@ -307,3 +628,63 @@ export interface PaginatedResponse<T> {
     hasMore: boolean;
   };
 }
+
+// Validation utilities
+export const validationUtils = {
+  isValidEmail: (email: string): boolean => {
+    try {
+      emailSchema.parse(email);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  
+  isValidPhone: (phone: string): boolean => {
+    try {
+      phoneNumberSchema.parse(phone);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  
+  isValidCapsuleNumber: (capsuleNumber: string): boolean => {
+    try {
+      capsuleNumberSchema.parse(capsuleNumber);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  
+  isValidMalaysianIC: (ic: string): boolean => {
+    try {
+      malaysianICSchema.parse(ic);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  
+  isValidPassportNumber: (passport: string): boolean => {
+    try {
+      passportNumberSchema.parse(passport);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  
+  formatPhoneNumber: (phone: string): string => {
+    return phone.replace(/\s/g, "");
+  },
+  
+  formatName: (name: string): string => {
+    return name.trim().replace(/\s+/g, " ");
+  },
+  
+  sanitizeString: (str: string): string => {
+    return str.trim().replace(/[<>"'&]/g, "");
+  }
+};

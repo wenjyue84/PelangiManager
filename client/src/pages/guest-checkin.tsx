@@ -10,7 +10,6 @@ import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle, Upload, Cam
 import { guestSelfCheckinSchema, type GuestSelfCheckin } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { ObjectUploader } from "@/components/ObjectUploader";
 
 export default function GuestCheckin() {
   const [, setLocation] = useLocation();

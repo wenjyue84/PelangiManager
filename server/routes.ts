@@ -1,10 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema, updateSettingsSchema } from "@shared/schema";
+import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema, updateSettingsSchema, updateGuestSchema } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
+import { validateData, securityValidationMiddleware, sanitizers, validators } from "./validation";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -65,10 +66,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   // Login endpoint
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", 
+    securityValidationMiddleware,
+    validateData(loginSchema, 'body'),
+    async (req, res) => {
     try {
       console.log("Login attempt:", req.body);
-      const { email, password } = loginSchema.parse(req.body);
+      const { email, password } = req.body;
       
       // Try to find user by email first, then by username
       let user = await storage.getUserByEmail(email);
@@ -277,10 +281,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update guest information
-  app.patch("/api/guests/:id", authenticateToken, async (req: any, res) => {
+  app.patch("/api/guests/:id", 
+    securityValidationMiddleware,
+    authenticateToken,
+    async (req: any, res) => {
     try {
       const { id } = req.params;
       const updates = req.body;
+      
+      // Validate updates
+      if (updates.email && updates.email !== "" && !validators.isValidEmailDomain) {
+        return res.status(400).json({ message: "Invalid email domain" });
+      }
+      
+      if (updates.phoneNumber && !validators.isValidInternationalPhone(updates.phoneNumber)) {
+        return res.status(400).json({ message: "Invalid phone number format" });
+      }
       
       const guest = await storage.updateGuest(id, updates);
       if (!guest) {
@@ -329,9 +345,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Report new problem
-  app.post("/api/problems", authenticateToken, async (req: any, res) => {
+  app.post("/api/problems", 
+    securityValidationMiddleware,
+    authenticateToken, 
+    validateData(createCapsuleProblemSchema, 'body'),
+    async (req: any, res) => {
     try {
-      const validatedData = createCapsuleProblemSchema.parse(req.body);
+      const validatedData = req.body;
       
       // Check if capsule already has an active problem
       const existingProblems = await storage.getCapsuleProblems(validatedData.capsuleNumber);
@@ -434,9 +454,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/settings", authenticateToken, async (req: any, res) => {
+  app.patch("/api/settings", 
+    securityValidationMiddleware,
+    authenticateToken, 
+    validateData(updateSettingsSchema, 'body'),
+    async (req: any, res) => {
     try {
-      const validatedData = updateSettingsSchema.parse(req.body);
+      const validatedData = req.body;
       const updatedBy = req.user.username || req.user.email || "Unknown";
       
       // Update guest token expiration setting
@@ -460,9 +484,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check-in a guest
-  app.post("/api/guests/checkin", authenticateToken, async (req: any, res) => {
+  app.post("/api/guests/checkin", 
+    securityValidationMiddleware,
+    authenticateToken, 
+    validateData(insertGuestSchema, 'body'),
+    async (req: any, res) => {
     try {
-      const validatedData = insertGuestSchema.parse(req.body);
+      const validatedData = req.body;
       
       // Check if capsule is available
       const availableCapsules = await storage.getAvailableCapsules();
@@ -512,9 +540,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new user
-  app.post("/api/users", authenticateToken, async (req: any, res) => {
+  app.post("/api/users", 
+    securityValidationMiddleware,
+    authenticateToken, 
+    validateData(insertUserSchema, 'body'),
+    async (req: any, res) => {
     try {
-      const userData = insertUserSchema.parse(req.body);
+      const userData = req.body;
+      
+      // Additional password strength validation
+      if (userData.password) {
+        const passwordCheck = validators.isStrongPassword(userData.password);
+        if (!passwordCheck.isValid) {
+          return res.status(400).json({ 
+            message: "Password does not meet strength requirements",
+            issues: passwordCheck.issues
+          });
+        }
+      }
       
       // Check if user with email already exists
       const existingUser = await storage.getUserByEmail(userData.email);
@@ -580,9 +623,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Guest token management routes
-  app.post("/api/guest-tokens", authenticateToken, async (req: any, res) => {
+  app.post("/api/guest-tokens", 
+    securityValidationMiddleware,
+    authenticateToken, 
+    validateData(createTokenSchema, 'body'),
+    async (req: any, res) => {
     try {
-      const validatedData = createTokenSchema.parse(req.body);
+      const validatedData = req.body;
       const userId = req.user.id;
       
       if (!userId) {

@@ -4,6 +4,32 @@ This is a capsule hostel management system called "Pelangi Capsule Hostel" built
 
 ## Recent Updates (August 8, 2025)
 
+### Comprehensive Validation Rules Implementation
+- **Enhanced Data Validation**: Added robust validation rules across all input fields with proper error messaging
+- **Schema-Level Validation**: Comprehensive validation in `shared/schema.ts` including:
+  - User validation: Password strength, email format, username constraints, name formatting
+  - Guest validation: Name formatting, phone numbers, email, age limits, ID number formats
+  - Payment validation: Amount formatting, valid payment methods, collector names
+  - Date validation: Proper date ranges for checkout dates with business rule constraints
+  - Contact validation: Emergency contacts, phone number international formatting
+  - Identity validation: Malaysian IC and international passport number formats
+- **Server-Side Security**: Added comprehensive server-side validation middleware including:
+  - SQL injection prevention
+  - XSS attack prevention 
+  - Input sanitization and security validation
+  - Rate limiting validation utilities
+  - Password strength enforcement
+- **Client-Side Validation**: Created real-time validation utilities for better UX:
+  - Live validation feedback as users type
+  - Input formatters for phone numbers, IC numbers, names
+  - Password strength indicators
+  - Custom validation hooks for forms
+- **Enhanced API Security**: All API endpoints now include:
+  - Input validation middleware
+  - Security validation checks
+  - Proper error handling with detailed validation messages
+  - Sanitized data processing
+
 ### Pagination Implementation
 - Added comprehensive pagination support for all data-heavy endpoints to improve performance with large datasets
 - Implemented pagination types (PaginationParams, PaginatedResponse) in shared schema
@@ -47,6 +73,7 @@ The client-side is built with React 18 using TypeScript and follows a component-
 - **State Management**: TanStack Query (React Query) for server state management and caching
 - **Routing**: Wouter for lightweight client-side routing
 - **Form Handling**: React Hook Form with Zod validation for type-safe form management
+- **Data Validation**: Comprehensive client-side validation with real-time feedback, input formatters, and security checks
 - **Build Tool**: Vite for fast development and optimized production builds
 
 ## Backend Architecture
@@ -55,8 +82,14 @@ The server-side uses Node.js with Express in a RESTful API pattern:
 - **Framework**: Express.js with TypeScript for type safety
 - **API Design**: RESTful endpoints under `/api` prefix for guest and occupancy management
 - **Database Layer**: Currently uses in-memory storage (MemStorage) with interface abstraction for easy database migration
+- **Data Validation**: Comprehensive server-side validation including:
+  - Zod schema validation middleware
+  - Security validation (SQL injection, XSS prevention)
+  - Input sanitization and data formatting
+  - Business rule validation
+  - Rate limiting and abuse prevention
 - **Development**: Hot-reload development server with comprehensive request logging
-- **Error Handling**: Centralized error handling middleware with proper HTTP status codes
+- **Error Handling**: Centralized error handling middleware with detailed validation error responses
 
 ## Data Storage Solutions
 The application uses a flexible storage abstraction pattern:
@@ -64,7 +97,12 @@ The application uses a flexible storage abstraction pattern:
 - **Current Implementation**: In-memory storage for development/demonstration
 - **Database Schema**: Designed for PostgreSQL using Drizzle ORM with defined tables for users and guests
 - **Migration Ready**: Drizzle configuration is set up for PostgreSQL migration when database is provisioned
-- **Type Safety**: Full TypeScript integration with Zod schemas for runtime validation
+- **Type Safety**: Full TypeScript integration with comprehensive Zod schemas including:
+  - Runtime validation with detailed error messages
+  - Input sanitization and formatting
+  - Business rule enforcement
+  - Security validation patterns
+  - International format support (phone numbers, IDs, etc.)
 
 ## Authentication and Authorization
 Google OAuth authentication system implemented with traditional email/password fallback:
@@ -95,8 +133,15 @@ Google OAuth authentication system implemented with traditional email/password f
 
 ## Data Management and Validation
 - **Drizzle ORM**: Type-safe SQL toolkit for database operations
-- **Zod**: Schema validation library for runtime type checking and form validation
+- **Zod**: Comprehensive schema validation library with:
+  - Runtime type checking and form validation
+  - Input sanitization and formatting
+  - Security validation patterns
+  - International format support
+  - Business rule enforcement
+  - Real-time validation feedback
 - **TanStack Query**: Server state management with caching, background updates, and optimistic updates
+- **Validation Utilities**: Custom validation helpers for common patterns like phone numbers, emails, IDs, and names
 
 ## External Authentication Services
 - **Google OAuth 2.0**: OAuth authentication provider for secure user sign-in
