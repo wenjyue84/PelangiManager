@@ -939,6 +939,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Calendar API - Get occupancy data for calendar visualization
+  app.get("/api/calendar/occupancy/:year/:month", async (req, res) => {
+    try {
+      const { year, month } = req.params;
+      const yearInt = parseInt(year);
+      const monthInt = parseInt(month); // 0-based month (0 = January)
+      
+      // Get first and last day of the month
+      const firstDay = new Date(yearInt, monthInt, 1);
+      const lastDay = new Date(yearInt, monthInt + 1, 0);
+      
+      // Get all guests for the month
+      const allGuests = await storage.getAllGuests();
+      
+      // Build calendar data object
+      const calendarData: { [dateString: string]: any } = {};
+      
+      // Initialize all days of the month
+      for (let day = 1; day <= lastDay.getDate(); day++) {
+        const date = new Date(yearInt, monthInt, day);
+        const dateString = date.toISOString().split('T')[0];
+        calendarData[dateString] = {
+          date: dateString,
+          checkins: [],
+          checkouts: [],
+          expectedCheckouts: [],
+          occupancy: 0,
+          totalCapsules: 22
+        };
+      }
+      
+      // Process guests to populate calendar data
+      allGuests.data.forEach(guest => {
+        const checkinDate = new Date(guest.checkinTime).toISOString().split('T')[0];
+        const checkoutDate = guest.checkoutTime ? new Date(guest.checkoutTime).toISOString().split('T')[0] : null;
+        const expectedCheckoutDate = guest.expectedCheckoutDate || null;
+        
+        // Add check-ins
+        if (calendarData[checkinDate]) {
+          calendarData[checkinDate].checkins.push(guest);
+        }
+        
+        // Add check-outs
+        if (checkoutDate && calendarData[checkoutDate]) {
+          calendarData[checkoutDate].checkouts.push(guest);
+        }
+        
+        // Add expected check-outs
+        if (expectedCheckoutDate && calendarData[expectedCheckoutDate]) {
+          calendarData[expectedCheckoutDate].expectedCheckouts.push(guest);
+        }
+        
+        // Calculate occupancy for each day guest was present
+        const checkinDateObj = new Date(guest.checkinTime);
+        const checkoutDateObj = guest.checkoutTime ? new Date(guest.checkoutTime) : new Date();
+        
+        // Iterate through each day the guest was present
+        let currentDate = new Date(checkinDateObj);
+        while (currentDate <= checkoutDateObj) {
+          const currentDateString = currentDate.toISOString().split('T')[0];
+          if (calendarData[currentDateString] && guest.isCheckedIn) {
+            calendarData[currentDateString].occupancy++;
+          }
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      });
+      
+      res.json(calendarData);
+    } catch (error) {
+      console.error("Error fetching calendar data:", error);
+      res.status(500).json({ message: "Failed to fetch calendar data" });
+    }
+  });
+
   // Object Storage Routes for Profile Photos
   
   // Get upload URL for profile photos
