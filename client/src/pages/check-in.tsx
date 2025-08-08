@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, User, Bed, Phone, Mail, CreditCard, Calendar, Users } from "lucide-react";
-import { insertGuestSchema, type InsertGuest, type Capsule } from "@shared/schema";
+import { insertGuestSchema, type InsertGuest, type Capsule, type Guest } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,26 +31,95 @@ export default function CheckIn() {
   });
 
   // Get the default collector name
-  const getDefaultCollector = React.useCallback(() => {
+  const getDefaultCollector = useCallback(() => {
     if (!user) return "";
     if (user.firstName && user.lastName) {
       return `${user.firstName} ${user.lastName}`;
     }
-    if (user.username) {
-      return user.username === "admin" ? "Admin" : user.username;
+    if (user.email === "admin@pelangi.com") {
+      return "Admin";
     }
     return user.email || "";
   }, [user]);
+
+  // Fetch current guest count for auto-incrementing names
+  const { data: guestData = { data: [] } } = useVisibilityQuery<{ data: Guest[] }>({
+    queryKey: ["/api/guests/checked-in"],
+  });
+
+  // Get the next guest number
+  const getNextGuestNumber = useCallback(() => {
+    const existingGuests = guestData.data || [];
+    const guestNumbers = existingGuests
+      .map(guest => {
+        const match = guest.name.match(/^Guest(\d+)$/);
+        return match ? parseInt(match[1]) : 0;
+      })
+      .filter(num => num > 0);
+    
+    const maxNumber = guestNumbers.length > 0 ? Math.max(...guestNumbers) : 0;
+    return `Guest${maxNumber + 1}`;
+  }, [guestData]);
+
+  // Gender-based capsule assignment logic
+  const getRecommendedCapsule = useCallback((gender: string) => {
+    if (!availableCapsules || availableCapsules.length === 0) return "";
+    
+    // Parse capsule numbers for sorting
+    const capsulesWithNumbers = availableCapsules.map(capsule => {
+      const match = capsule.number.match(/([A-Z])(\d+)/);
+      const section = match ? match[1] : "";
+      const number = match ? parseInt(match[2]) : 0;
+      return { ...capsule, section, number };
+    });
+
+    if (gender === "female") {
+      // For females: back capsules with lowest number first, prefer bottom (even numbers)
+      const backCapsules = capsulesWithNumbers
+        .filter(c => c.section === "C") // Back section
+        .sort((a, b) => {
+          const aIsBottom = a.number % 2 === 0;
+          const bIsBottom = b.number % 2 === 0;
+          if (aIsBottom && !bIsBottom) return -1;
+          if (!aIsBottom && bIsBottom) return 1;
+          return a.number - b.number;
+        });
+      
+      if (backCapsules.length > 0) {
+        return backCapsules[0].number;
+      }
+    } else {
+      // For non-females: front bottom capsules with lowest number first
+      const frontBottomCapsules = capsulesWithNumbers
+        .filter(c => c.section === "A" && c.number % 2 === 0) // Front section, bottom (even numbers)
+        .sort((a, b) => a.number - b.number);
+      
+      if (frontBottomCapsules.length > 0) {
+        return frontBottomCapsules[0].number;
+      }
+    }
+
+    // Fallback: any available capsule, prefer bottom (even numbers)
+    const sortedCapsules = capsulesWithNumbers.sort((a, b) => {
+      const aIsBottom = a.number % 2 === 0;
+      const bIsBottom = b.number % 2 === 0;
+      if (aIsBottom && !bIsBottom) return -1;
+      if (!aIsBottom && bIsBottom) return 1;
+      return a.number - b.number;
+    });
+
+    return sortedCapsules[0]?.number || "";
+  }, [availableCapsules]);
 
   const form = useForm<InsertGuest>({
     resolver: zodResolver(insertGuestSchema),
     defaultValues: {
       name: "",
       capsuleNumber: "",
-      paymentAmount: "0",
+      paymentAmount: "45", // Default to RM45
       paymentMethod: "cash" as const,
       paymentCollector: "",
-      gender: "",
+      gender: undefined,
       nationality: "",
       phoneNumber: "",
       email: "",
@@ -62,12 +131,28 @@ export default function CheckIn() {
     },
   });
 
-  // Set default collector when user is available
-  React.useEffect(() => {
+  // Set defaults when user is available
+  useEffect(() => {
     if (user && !form.getValues("paymentCollector")) {
       form.setValue("paymentCollector", getDefaultCollector());
     }
-  }, [user, form, getDefaultCollector]);
+    if (!form.getValues("name")) {
+      form.setValue("name", getNextGuestNumber());
+    }
+  }, [user, form, getDefaultCollector, getNextGuestNumber]);
+
+  // Auto-assign capsule based on gender
+  useEffect(() => {
+    const currentGender = form.watch("gender");
+    const currentCapsule = form.watch("capsuleNumber");
+    
+    if (currentGender && !currentCapsule && availableCapsules.length > 0) {
+      const recommendedCapsule = getRecommendedCapsule(currentGender);
+      if (recommendedCapsule) {
+        form.setValue("capsuleNumber", recommendedCapsule);
+      }
+    }
+  }, [form.watch("gender"), availableCapsules, getRecommendedCapsule]);
 
   const checkinMutation = useMutation({
     mutationFn: async (data: InsertGuest) => {
@@ -108,12 +193,12 @@ export default function CheckIn() {
 
   const handleClear = () => {
     form.reset({
-      name: "",
+      name: getNextGuestNumber(),
       capsuleNumber: "",
-      paymentAmount: "0",
+      paymentAmount: "45", // Reset to default RM45
       paymentMethod: "cash" as const,
       paymentCollector: getDefaultCollector(),
-      gender: "",
+      gender: undefined,
       nationality: "",
       phoneNumber: "",
       email: "",
@@ -123,6 +208,11 @@ export default function CheckIn() {
       age: "",
       expectedCheckoutDate: "",
     });
+  };
+
+  // Handle payment amount preset selection
+  const handlePaymentPreset = (amount: string) => {
+    form.setValue("paymentAmount", amount);
   };
 
   const getCurrentDateTime = () => {
@@ -151,7 +241,16 @@ export default function CheckIn() {
               <UserPlus className="text-hostel-secondary h-8 w-8" />
             </div>
             <CardTitle className="text-2xl font-bold text-hostel-text">Guest Check-In</CardTitle>
-            <p className="text-gray-600 mt-2">Enter guest information to complete check-in process</p>
+            <p className="text-gray-600 mt-2">Smart check-in with auto-assignment and preset payment options</p>
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">✨ Smart Features:</h4>
+              <ul className="text-xs text-blue-700 space-y-1">
+                <li>• Auto-incrementing guest names (Guest1, Guest2...)</li>
+                <li>• Gender-based capsule assignment (Front for males, Back for females)</li>
+                <li>• Quick payment presets: RM45, RM48, RM650 (Monthly)</li>
+                <li>• Admin form: Only name, capsule & payment required</li>
+              </ul>
+            </div>
             <div className="flex justify-center mt-4">
               <GuestTokenGenerator onTokenCreated={() => queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] })} />
             </div>
@@ -159,19 +258,32 @@ export default function CheckIn() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4 sm:space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
             <div>
               <Label htmlFor="name" className="flex items-center text-sm font-medium text-hostel-text mb-2">
                 <User className="mr-2 h-4 w-4" />
-                Guest Name
+                Guest Name *
               </Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Enter guest full name"
-                className="w-full"
-                {...form.register("name")}
-              />
+              <div className="space-y-2">
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Guest name (auto-generated, editable)"
+                  className="w-full"
+                  {...form.register("name")}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => form.setValue("name", getNextGuestNumber())}
+                    className="text-xs"
+                  >
+                    Reset to {getNextGuestNumber()}
+                  </Button>
+                </div>
+              </div>
               {form.formState.errors.name && (
                 <p className="text-hostel-error text-sm mt-1">{form.formState.errors.name.message}</p>
               )}
@@ -180,10 +292,10 @@ export default function CheckIn() {
             <div>
               <Label htmlFor="capsuleNumber" className="flex items-center text-sm font-medium text-hostel-text mb-2">
                 <Bed className="mr-2 h-4 w-4" />
-                Capsule Assignment
+                Capsule Assignment *
               </Label>
               <p className="text-xs text-gray-600 mb-2">
-                💡 Tip: Even numbers (C2, C4, C6...) are bottom capsules - customers prefer these!
+                💡 Smart Assignment: Select gender first for automatic capsule recommendation!
               </p>
               {capsulesLoading ? (
                 <Skeleton className="w-full h-10" />
@@ -215,18 +327,26 @@ export default function CheckIn() {
                           return aNum - bNum;
                         })
                         .map((capsule) => {
-                          const capsuleNum = parseInt(capsule.number.replace('C', ''));
+                          const capsuleNum = parseInt(capsule.number.replace(/[A-Z]/, ''));
                           const isBottom = capsuleNum % 2 === 0;
                           const position = isBottom ? "Bottom" : "Top";
                           const preference = isBottom ? "⭐ Preferred" : "";
+                          const genderMatch = form.watch("gender");
+                          let suitability = "";
+                          
+                          if (genderMatch === "female" && capsule.section === "back") {
+                            suitability = " 🎯 Recommended";
+                          } else if (genderMatch !== "female" && capsule.section === "front" && isBottom) {
+                            suitability = " 🎯 Recommended";
+                          }
                           
                           return (
                             <SelectItem key={capsule.number} value={capsule.number}>
                               <div className="flex items-center justify-between w-full">
                                 <span>
-                                  {capsule.number} - {position} {preference}
+                                  {capsule.number} - {position} {preference}{suitability}
                                 </span>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-500 capitalize">
                                   {capsule.section}
                                 </span>
                               </div>
@@ -250,15 +370,46 @@ export default function CheckIn() {
                   <Label htmlFor="paymentAmount" className="text-sm font-medium text-hostel-text">
                     Amount (RM)
                   </Label>
-                  <Input
-                    id="paymentAmount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    className="w-full"
-                    {...form.register("paymentAmount")}
-                  />
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={form.watch("paymentAmount") === "45" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePaymentPreset("45")}
+                        className="text-xs"
+                      >
+                        RM45
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={form.watch("paymentAmount") === "48" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePaymentPreset("48")}
+                        className="text-xs"
+                      >
+                        RM48
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={form.watch("paymentAmount") === "650" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePaymentPreset("650")}
+                        className="text-xs"
+                      >
+                        RM650 (Monthly)
+                      </Button>
+                    </div>
+                    <Input
+                      id="paymentAmount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="45.00"
+                      className="w-full"
+                      {...form.register("paymentAmount")}
+                    />
+                  </div>
                   {form.formState.errors.paymentAmount && (
                     <p className="text-hostel-error text-sm mt-1">{form.formState.errors.paymentAmount.message}</p>
                   )}
@@ -297,6 +448,7 @@ export default function CheckIn() {
                       <SelectValue placeholder="Select payment collector" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={getDefaultCollector()}>{getDefaultCollector()} (Current User)</SelectItem>
                       <SelectItem value="Alston">Alston</SelectItem>
                       <SelectItem value="Jay">Jay</SelectItem>
                       <SelectItem value="Le">Le</SelectItem>
@@ -314,55 +466,39 @@ export default function CheckIn() {
             <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
               <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
                 <Phone className="mr-2 h-4 w-4" />
-                Contact Information
+                Contact Information <span className="text-gray-500 text-xs ml-2">(Optional for admin)</span>
               </h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div>
                   <Label htmlFor="phoneNumber" className="text-sm font-medium text-hostel-text">
                     Phone Number
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="phoneNumber"
-                            type="tel"
-                            placeholder="e.g., +60123456789"
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="e.g., +60123456789"
+                    className="mt-1"
+                    {...form.register("phoneNumber")}
                   />
+                  {form.formState.errors.phoneNumber && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.phoneNumber.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="email" className="text-sm font-medium text-hostel-text">
                     Email Address
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="guest@example.com"
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="guest@example.com"
+                    className="mt-1"
+                    {...form.register("email")}
                   />
+                  {form.formState.errors.email && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.email.message}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -371,109 +507,80 @@ export default function CheckIn() {
             <div className="bg-orange-50 rounded-lg p-3 sm:p-4 border border-orange-200">
               <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
                 <CreditCard className="mr-2 h-4 w-4" />
-                Identification & Personal Details
+                Identification & Personal Details <span className="text-gray-500 text-xs ml-2">(Optional for admin)</span>
               </h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div>
                   <Label htmlFor="idNumber" className="text-sm font-medium text-hostel-text">
                     ID/Passport Number
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="idNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="idNumber"
-                            type="text"
-                            placeholder="IC or Passport No."
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="idNumber"
+                    type="text"
+                    placeholder="IC or Passport No."
+                    className="mt-1"
+                    {...form.register("idNumber")}
                   />
+                  {form.formState.errors.idNumber && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.idNumber.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="age" className="text-sm font-medium text-hostel-text">
                     Age
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="age"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="age"
-                            type="number"
-                            min="16"
-                            max="120"
-                            placeholder="Age"
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="age"
+                    type="number"
+                    min="16"
+                    max="120"
+                    placeholder="Age"
+                    className="mt-1"
+                    {...form.register("age")}
                   />
+                  {form.formState.errors.age && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.age.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
                     Nationality
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="nationality"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="nationality"
-                            type="text"
-                            placeholder="e.g., Malaysian"
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="nationality"
+                    type="text"
+                    placeholder="e.g., Malaysian"
+                    className="mt-1"
+                    {...form.register("nationality")}
                   />
+                  {form.formState.errors.nationality && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.nationality.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="gender" className="text-sm font-medium text-hostel-text">
-                    Gender
+                    Gender <span className="text-gray-500 text-xs">(for smart capsule assignment)</span>
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="gender"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select gender" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="male">Male</SelectItem>
-                              <SelectItem value="female">Female</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
-                              <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <Select
+                    value={form.watch("gender") || ""}
+                    onValueChange={(value) => form.setValue("gender", value as "male" | "female" | "other" | "prefer-not-to-say")}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select gender for capsule recommendation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.gender && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.gender.message}</p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -481,23 +588,15 @@ export default function CheckIn() {
                     <Calendar className="mr-2 h-4 w-4" />
                     Expected Checkout Date
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="expectedCheckoutDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="expectedCheckoutDate"
-                            type="date"
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="expectedCheckoutDate"
+                    type="date"
+                    className="mt-1"
+                    {...form.register("expectedCheckoutDate")}
                   />
+                  {form.formState.errors.expectedCheckoutDate && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.expectedCheckoutDate.message}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -513,48 +612,32 @@ export default function CheckIn() {
                   <Label htmlFor="emergencyContact" className="text-sm font-medium text-hostel-text">
                     Emergency Contact Name
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="emergencyContact"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="emergencyContact"
-                            type="text"
-                            placeholder="Full name of emergency contact"
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="emergencyContact"
+                    type="text"
+                    placeholder="Full name of emergency contact"
+                    className="mt-1"
+                    {...form.register("emergencyContact")}
                   />
+                  {form.formState.errors.emergencyContact && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.emergencyContact.message}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="emergencyPhone" className="text-sm font-medium text-hostel-text">
                     Emergency Contact Phone
                   </Label>
-                  <FormField
-                    control={form.control}
-                    name="emergencyPhone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            id="emergencyPhone"
-                            type="tel"
-                            placeholder="Emergency contact phone number"
-                            className="mt-1"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <Input
+                    id="emergencyPhone"
+                    type="tel"
+                    placeholder="Emergency contact phone number"
+                    className="mt-1"
+                    {...form.register("emergencyPhone")}
                   />
+                  {form.formState.errors.emergencyPhone && (
+                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.emergencyPhone.message}</p>
+                  )}
                 </div>
               </div>
             </div>
