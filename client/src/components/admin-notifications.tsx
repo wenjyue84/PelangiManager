@@ -8,12 +8,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bell, BellRing, Check, CheckCircle2, User, MapPin, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/components/auth-provider";
 import type { AdminNotification, PaginatedResponse } from "@shared/schema";
 
 export default function AdminNotifications() {
   const [showAll, setShowAll] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
+
+  // Don't show notifications if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const { data: allNotificationsResponse } = useVisibilityQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications"],

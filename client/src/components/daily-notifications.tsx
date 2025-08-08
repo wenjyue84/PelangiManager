@@ -4,15 +4,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bell, Calendar, Clock, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/components/auth-provider";
 import type { Guest, PaginatedResponse } from "@shared/schema";
 
 export default function DailyNotifications() {
+  const { isAuthenticated } = useAuth();
+  
   const { data: guestsResponse, isLoading } = useVisibilityQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
     // Uses smart config: realtime (10s stale, 30s refetch)
   });
   
   const guests = guestsResponse?.data || [];
+
+  // Don't show notifications if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   // Check for guests checking out today (expected checkout date is today)
   const today = new Date().toISOString().split('T')[0];
