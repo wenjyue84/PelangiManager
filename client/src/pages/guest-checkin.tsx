@@ -256,6 +256,29 @@ export default function GuestCheckin() {
   const watchedPaymentMethod = form.watch("paymentMethod");
   const watchedIcNumber = form.watch("icNumber");
   const watchedPassportNumber = form.watch("passportNumber");
+  
+  // Determine which fields should be disabled based on mutual exclusivity
+  const isIcFieldDisabled = !!(watchedPassportNumber && watchedPassportNumber.trim().length > 0);
+  const isPassportFieldDisabled = !!(watchedIcNumber && watchedIcNumber.trim().length > 0);
+
+  // Clear the disabled field when the other field is filled
+  useEffect(() => {
+    if (watchedIcNumber && watchedIcNumber.trim().length > 0) {
+      // Clear passport fields when IC is filled
+      form.setValue("passportNumber", "");
+      form.setValue("passportDocumentUrl", "");
+      setPassportDocumentUrl("");
+    }
+  }, [watchedIcNumber]);
+
+  useEffect(() => {
+    if (watchedPassportNumber && watchedPassportNumber.trim().length > 0) {
+      // Clear IC fields when passport is filled
+      form.setValue("icNumber", "");
+      form.setValue("icDocumentUrl", "");
+      setIcDocumentUrl("");
+    }
+  }, [watchedPassportNumber]);
 
   // Filter nationalities based on search input
   const filteredNationalities = NATIONALITIES.filter(nationality =>
@@ -709,18 +732,23 @@ export default function GuestCheckin() {
                   {t.identityDocs}
                 </h3>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">Provide either IC number OR passport number (only one required)</p>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium mb-1">📋 Document Selection Rule</p>
+                    <p className="text-sm text-gray-600">Provide either IC number OR passport number (only one required). When you enter one, the other field will be automatically disabled.</p>
+                  </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="icNumber" className="text-sm font-medium text-hostel-text">
                         IC Number (e.g., 840816015291) {!watchedPassportNumber && <span className="text-red-500">*</span>}
+                        {isIcFieldDisabled && <span className="text-gray-500 text-xs ml-2">(Disabled - passport entered)</span>}
                       </Label>
                       <Input
                         id="icNumber"
                         type="text"
-                        placeholder="840816015291"
-                        className="w-full mt-1"
+                        placeholder={isIcFieldDisabled ? "Disabled - clear passport to enable" : "840816015291"}
+                        className={`w-full mt-1 ${isIcFieldDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                        disabled={isIcFieldDisabled}
                         {...form.register("icNumber")}
                       />
                       {form.formState.errors.icNumber && (
@@ -731,12 +759,14 @@ export default function GuestCheckin() {
                     <div>
                       <Label htmlFor="passportNumber" className="text-sm font-medium text-hostel-text">
                         {t.passportNumberLabel} {!watchedIcNumber && <span className="text-red-500">*</span>}
+                        {isPassportFieldDisabled && <span className="text-gray-500 text-xs ml-2">(Disabled - IC entered)</span>}
                       </Label>
                       <Input
                         id="passportNumber"
                         type="text"
-                        placeholder={t.passportNumberPlaceholder}
-                        className="w-full mt-1"
+                        placeholder={isPassportFieldDisabled ? "Disabled - clear IC to enable" : t.passportNumberPlaceholder}
+                        className={`w-full mt-1 ${isPassportFieldDisabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                        disabled={isPassportFieldDisabled}
                         {...form.register("passportNumber")}
                       />
                       {form.formState.errors.passportNumber && (
