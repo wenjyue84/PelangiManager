@@ -722,88 +722,60 @@ export default function GuestCheckin() {
                     </div>
                   </div>
 
-                  {/* Document Upload Section */}
+                  {/* Combined Document Upload Section */}
                   {(watchedIcNumber || watchedPassportNumber) && (
-                    <div className="space-y-4">
-                      {watchedIcNumber && (
-                        <div>
-                          <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
-                            <Upload className="h-4 w-4" />
-                            Upload IC Photo
-                          </Label>
-                          {icDocumentUrl ? (
-                            <div className="mt-2 p-3 bg-green-100 border border-green-300 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <span className="text-sm text-green-700">IC document uploaded successfully</span>
-                              </div>
-                              <ObjectUploader
-                                maxNumberOfFiles={1}
-                                maxFileSize={10485760} // 10MB
-                                onGetUploadParameters={handleGetUploadParameters}
-                                onComplete={(result) => handleDocumentUpload(result, 'ic')}
-                                buttonClassName="mt-2"
-                              >
-                                <Camera className="h-4 w-4 mr-2" />
-                                Change IC Photo
-                              </ObjectUploader>
-                            </div>
-                          ) : (
-                            <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                              <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                              <p className="text-sm text-gray-500 mb-2">Upload a clear photo of your IC</p>
-                              <ObjectUploader
-                                maxNumberOfFiles={1}
-                                maxFileSize={10485760} // 10MB
-                                onGetUploadParameters={handleGetUploadParameters}
-                                onComplete={(result) => handleDocumentUpload(result, 'ic')}
-                              >
-                                <Camera className="h-4 w-4 mr-2" />
-                                Upload IC Photo
-                              </ObjectUploader>
-                            </div>
-                          )}
+                    <div>
+                      <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        Upload IC/Passport Photo
+                      </Label>
+                      {(icDocumentUrl || passportDocumentUrl) ? (
+                        <div className="mt-2 p-3 bg-green-100 border border-green-300 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="text-sm text-green-700">
+                              {watchedIcNumber && icDocumentUrl && "IC document uploaded successfully"}
+                              {watchedPassportNumber && passportDocumentUrl && "Passport document uploaded successfully"}
+                            </span>
+                          </div>
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={10485760} // 10MB
+                            onGetUploadParameters={handleGetUploadParameters}
+                            onComplete={(result) => {
+                              if (watchedIcNumber) {
+                                handleDocumentUpload(result, 'ic');
+                              } else if (watchedPassportNumber) {
+                                handleDocumentUpload(result, 'passport');
+                              }
+                            }}
+                            buttonClassName="mt-2"
+                          >
+                            <Camera className="h-4 w-4 mr-2" />
+                            Change Document Photo
+                          </ObjectUploader>
                         </div>
-                      )}
-
-                      {watchedPassportNumber && (
-                        <div>
-                          <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
-                            <Upload className="h-4 w-4" />
-                            Upload Passport Photo
-                          </Label>
-                          {passportDocumentUrl ? (
-                            <div className="mt-2 p-3 bg-green-100 border border-green-300 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <span className="text-sm text-green-700">Passport document uploaded successfully</span>
-                              </div>
-                              <ObjectUploader
-                                maxNumberOfFiles={1}
-                                maxFileSize={10485760} // 10MB
-                                onGetUploadParameters={handleGetUploadParameters}
-                                onComplete={(result) => handleDocumentUpload(result, 'passport')}
-                                buttonClassName="mt-2"
-                              >
-                                <Camera className="h-4 w-4 mr-2" />
-                                Change Passport Photo
-                              </ObjectUploader>
-                            </div>
-                          ) : (
-                            <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                              <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                              <p className="text-sm text-gray-500 mb-2">Upload a clear photo of your passport</p>
-                              <ObjectUploader
-                                maxNumberOfFiles={1}
-                                maxFileSize={10485760} // 10MB
-                                onGetUploadParameters={handleGetUploadParameters}
-                                onComplete={(result) => handleDocumentUpload(result, 'passport')}
-                              >
-                                <Camera className="h-4 w-4 mr-2" />
-                                Upload Passport Photo
-                              </ObjectUploader>
-                            </div>
-                          )}
+                      ) : (
+                        <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500 mb-2">
+                            Upload a clear photo of your {watchedIcNumber ? 'IC' : 'passport'}
+                          </p>
+                          <ObjectUploader
+                            maxNumberOfFiles={1}
+                            maxFileSize={10485760} // 10MB
+                            onGetUploadParameters={handleGetUploadParameters}
+                            onComplete={(result) => {
+                              if (watchedIcNumber) {
+                                handleDocumentUpload(result, 'ic');
+                              } else if (watchedPassportNumber) {
+                                handleDocumentUpload(result, 'passport');
+                              }
+                            }}
+                          >
+                            <Camera className="h-4 w-4 mr-2" />
+                            Upload {watchedIcNumber ? 'IC' : 'Passport'} Photo
+                          </ObjectUploader>
                         </div>
                       )}
                     </div>
@@ -824,7 +796,7 @@ export default function GuestCheckin() {
                     </Label>
                     <Select
                       value={form.watch("paymentMethod") || ""}
-                      onValueChange={(value) => form.setValue("paymentMethod", value as "cash" | "guest" | "bank" | "online_platform")}
+                      onValueChange={(value) => form.setValue("paymentMethod", value as "cash" | "bank" | "online_platform")}
                     >
                       <SelectTrigger className="w-full mt-1">
                         <SelectValue placeholder="Select payment method" />
@@ -833,13 +805,7 @@ export default function GuestCheckin() {
                         <SelectItem value="cash">
                           <div className="flex items-center gap-2">
                             <Banknote className="h-4 w-4" />
-                            <span>Cash</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="guest">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span>Paid to Guest/Person</span>
+                            <span>Cash (Paid to Guest/Person)</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="bank">
@@ -861,8 +827,8 @@ export default function GuestCheckin() {
                     )}
                   </div>
 
-                  {/* Guest Payment Description */}
-                  {watchedPaymentMethod === "guest" && (
+                  {/* Cash Payment Description */}
+                  {watchedPaymentMethod === "cash" && (
                     <div>
                       <Label htmlFor="guestPaymentDescription" className="text-sm font-medium text-hostel-text">
                         Describe whom you gave the payment to

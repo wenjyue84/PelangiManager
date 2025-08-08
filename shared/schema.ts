@@ -387,7 +387,7 @@ export const guestSelfCheckinSchema = z.object({
   passportNumber: z.string()
     .min(6, "Passport number must be at least 6 characters long")
     .max(15, "Passport number must not exceed 15 characters")
-    .regex(/^[A-Z0-9]+$/, "Passport number can only contain uppercase letters and numbers")
+    .regex(/^[A-Za-z0-9]+$/, "Passport number can only contain letters and numbers")
     .transform(val => val?.toUpperCase())
     .optional(),
   icDocumentUrl: z.string()
@@ -396,7 +396,7 @@ export const guestSelfCheckinSchema = z.object({
   passportDocumentUrl: z.string()
     .url("Passport document must be a valid URL")
     .optional(),
-  paymentMethod: z.enum(["cash", "guest", "bank", "online_platform"], { 
+  paymentMethod: z.enum(["cash", "bank", "online_platform"], { 
     required_error: "Please select a payment method" 
   }),
   guestPaymentDescription: z.string()
@@ -406,17 +406,32 @@ export const guestSelfCheckinSchema = z.object({
   message: "Please provide either IC number or passport number",
   path: ["icNumber"],
 }).refine((data) => {
-  // If IC number is provided, IC document photo should be provided
-  if (data.icNumber && !data.icDocumentUrl) return false;
-  // If passport number is provided, passport document photo should be provided
-  if (data.passportNumber && !data.passportDocumentUrl) return false;
+  // Must provide either complete IC info OR complete passport info
+  const hasCompleteIC = data.icNumber && data.icDocumentUrl;
+  const hasCompletePassport = data.passportNumber && data.passportDocumentUrl;
+  
+  // Must have at least one complete set
+  if (!hasCompleteIC && !hasCompletePassport) {
+    return false;
+  }
+  
+  // If IC number provided, must have IC document
+  if (data.icNumber && !data.icDocumentUrl) {
+    return false;
+  }
+  
+  // If passport number provided, must have passport document
+  if (data.passportNumber && !data.passportDocumentUrl) {
+    return false;
+  }
+  
   return true;
 }, {
   message: "Please upload a photo of your ID document",
   path: ["icDocumentUrl"],
 }).refine((data) => {
-  // If guest payment method is selected, description is required
-  if (data.paymentMethod === "guest" && !data.guestPaymentDescription?.trim()) {
+  // If cash payment method is selected, description is required
+  if (data.paymentMethod === "cash" && !data.guestPaymentDescription?.trim()) {
     return false;
   }
   return true;
