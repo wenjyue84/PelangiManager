@@ -189,7 +189,7 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     .transform(val => val.trim()),
   capsuleNumber: z.string()
     .min(1, "Please select a capsule for the guest")
-    .regex(/^[A-Z]\d{2}$/, "Invalid capsule format. Please use format like A01, B02, or C03 (one letter followed by two numbers)"),
+    .regex(/^C\d+$/, "Invalid capsule format. Please use format like C1, C2, or C24 (C followed by numbers)"),
   paymentAmount: z.string()
     .regex(/^\d*\.?\d{0,2}$/, "Invalid amount format. Please enter numbers only (e.g., 50.00 or 150)")
     .transform(val => val || "0")
@@ -264,7 +264,7 @@ export const insertCapsuleSchema = createInsertSchema(capsules).omit({
 }).extend({
   number: z.string()
     .min(1, "Capsule number is required")
-    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+    .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
     .transform(val => val.toUpperCase()),
   section: z.enum(["back", "middle", "front"], {
     required_error: "Section must be 'back', 'middle', or 'front'",
@@ -313,7 +313,7 @@ export const googleAuthSchema = z.object({
 export const createCapsuleProblemSchema = z.object({
   capsuleNumber: z.string()
     .min(1, "Capsule number is required")
-    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+    .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
     .transform(val => val.toUpperCase()),
   description: z.string()
     .min(10, "Problem description must be at least 10 characters long")
