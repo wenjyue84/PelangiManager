@@ -12,6 +12,7 @@ import { AlertTriangle, CheckCircle2, Clock, User, Calendar, AlertCircle, Chevro
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AuthContext } from "@/lib/auth";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import type { Capsule, CapsuleProblem, PaginatedResponse } from "@shared/schema";
 
 export default function MaintenanceManage() {
@@ -19,6 +20,8 @@ export default function MaintenanceManage() {
   const [problemDescription, setProblemDescription] = useState("");
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [expandedProblems, setExpandedProblems] = useState<Set<string>>(new Set());
+  const [problemToResolve, setProblemToResolve] = useState<CapsuleProblem | null>(null);
+  const [showResolveConfirmation, setShowResolveConfirmation] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const authContext = useContext(AuthContext);
@@ -81,6 +84,8 @@ export default function MaintenanceManage() {
       queryClient.invalidateQueries({ queryKey: ["/api/problems/active"] });
       queryClient.invalidateQueries({ queryKey: ["/api/capsules"] });
       setResolutionNotes("");
+      setProblemToResolve(null);
+      setShowResolveConfirmation(false);
       toast({
         title: "Problem Resolved",
         description: "The maintenance issue has been marked as resolved.",
@@ -94,6 +99,15 @@ export default function MaintenanceManage() {
       });
     },
   });
+
+  const confirmResolveProblem = () => {
+    if (problemToResolve) {
+      resolveProblemMutation.mutate({
+        problemId: problemToResolve.id,
+        notes: resolutionNotes,
+      });
+    }
+  };
 
   const handleReportProblem = () => {
     if (!selectedCapsule) {
@@ -259,10 +273,8 @@ export default function MaintenanceManage() {
                                   <Button
                                     size="sm"
                                     onClick={() => {
-                                      resolveProblemMutation.mutate({
-                                        problemId: problem.id,
-                                        notes: resolutionNotes,
-                                      });
+                                      setProblemToResolve(problem);
+                                      setShowResolveConfirmation(true);
                                     }}
                                     disabled={resolveProblemMutation.isPending}
                                     className="mt-2"
@@ -414,6 +426,22 @@ export default function MaintenanceManage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Resolve Problem Confirmation Dialog */}
+      {problemToResolve && (
+        <ConfirmationDialog
+          open={showResolveConfirmation}
+          onOpenChange={setShowResolveConfirmation}
+          title="Resolve Maintenance Issue"
+          description={`Are you sure you want to mark the maintenance issue for capsule ${problemToResolve.capsuleNumber} as resolved? ${resolutionNotes ? 'Your resolution notes will be saved.' : ''}`}
+          confirmText="Resolve Issue"
+          cancelText="Cancel"
+          onConfirm={confirmResolveProblem}
+          variant="success"
+          icon={<CheckCircle2 className="h-6 w-6 text-green-600" />}
+          isLoading={resolveProblemMutation.isPending}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,11 +16,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/components/auth-provider";
 import GuestTokenGenerator from "@/components/guest-token-generator";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 
 export default function CheckIn() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  const [showCheckinConfirmation, setShowCheckinConfirmation] = useState(false);
+  const [formDataToSubmit, setFormDataToSubmit] = useState<InsertGuest | null>(null);
   
   const { data: availableCapsules = [], isLoading: capsulesLoading } = useVisibilityQuery<Capsule[]>({
     queryKey: ["/api/capsules/available"],
@@ -91,7 +94,16 @@ export default function CheckIn() {
   });
 
   const onSubmit = (data: InsertGuest) => {
-    checkinMutation.mutate(data);
+    setFormDataToSubmit(data);
+    setShowCheckinConfirmation(true);
+  };
+
+  const confirmCheckin = () => {
+    if (formDataToSubmit) {
+      checkinMutation.mutate(formDataToSubmit);
+      setShowCheckinConfirmation(false);
+      setFormDataToSubmit(null);
+    }
   };
 
   const handleClear = () => {
@@ -621,6 +633,22 @@ export default function CheckIn() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Check-in Confirmation Dialog */}
+      {formDataToSubmit && (
+        <ConfirmationDialog
+          open={showCheckinConfirmation}
+          onOpenChange={setShowCheckinConfirmation}
+          title="Confirm Guest Check-In"
+          description={`Please confirm the check-in details for ${formDataToSubmit.name} in capsule ${formDataToSubmit.capsuleNumber}. Payment: RM ${formDataToSubmit.paymentAmount} via ${formDataToSubmit.paymentMethod}.`}
+          confirmText="Confirm Check-In"
+          cancelText="Review Details"
+          onConfirm={confirmCheckin}
+          variant="info"
+          icon={<UserPlus className="h-6 w-6 text-blue-600" />}
+          isLoading={checkinMutation.isPending}
+        />
+      )}
     </div>
   );
 }

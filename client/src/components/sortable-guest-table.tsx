@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import GuestDetailsModal from "./guest-details-modal";
+import { CheckoutConfirmationDialog } from "./confirmation-dialog";
 import type { Guest, GuestToken, PaginatedResponse } from "@shared/schema";
 
 type SortField = 'name' | 'capsuleNumber' | 'checkinTime' | 'expectedCheckoutDate';
@@ -234,6 +235,8 @@ export default function SortableGuestTable() {
   const [isCondensedView, setIsCondensedView] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [checkoutGuest, setCheckoutGuest] = useState<Guest | null>(null);
+  const [showCheckoutConfirmation, setShowCheckoutConfirmation] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [sortConfig, setSortConfig] = useState<{ field: SortField; order: SortOrder }>({
@@ -373,7 +376,20 @@ export default function SortableGuestTable() {
       return;
     }
     
-    checkoutMutation.mutate(guestId);
+    // Find the guest to show in confirmation dialog
+    const guest = guests.find(g => g.id === guestId);
+    if (guest) {
+      setCheckoutGuest(guest);
+      setShowCheckoutConfirmation(true);
+    }
+  };
+
+  const confirmCheckout = () => {
+    if (checkoutGuest) {
+      checkoutMutation.mutate(checkoutGuest.id);
+      setShowCheckoutConfirmation(false);
+      setCheckoutGuest(null);
+    }
   };
 
   const handleGuestClick = (guest: Guest) => {
@@ -657,6 +673,18 @@ export default function SortableGuestTable() {
         isOpen={isDetailsModalOpen}
         onClose={handleCloseModal}
       />
+
+      {/* Checkout Confirmation Dialog */}
+      {checkoutGuest && (
+        <CheckoutConfirmationDialog
+          open={showCheckoutConfirmation}
+          onOpenChange={setShowCheckoutConfirmation}
+          onConfirm={confirmCheckout}
+          guestName={checkoutGuest.name}
+          capsuleNumber={checkoutGuest.capsuleNumber}
+          isLoading={checkoutMutation.isPending}
+        />
+      )}
     </Card>
   );
 }
