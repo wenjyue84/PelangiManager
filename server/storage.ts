@@ -160,6 +160,7 @@ export class MemStorage implements IStorage {
         emergencyContact: null,
         emergencyPhone: null,
         age: null,
+        profilePhotoUrl: null,
         selfCheckinToken: null,
       };
       
@@ -184,9 +185,6 @@ export class MemStorage implements IStorage {
         number: `C${i}`,
         section: 'back',
         isAvailable: true,
-        problemDescription: null,
-        problemReportedAt: null,
-        problemResolvedAt: null,
       };
       this.capsules.set(capsule.number, capsule);
     }
@@ -198,9 +196,6 @@ export class MemStorage implements IStorage {
         number: `C${num}`,
         section: 'middle',
         isAvailable: true,
-        problemDescription: null,
-        problemReportedAt: null,
-        problemResolvedAt: null,
       };
       this.capsules.set(capsule.number, capsule);
     }
@@ -212,9 +207,6 @@ export class MemStorage implements IStorage {
         number: `C${i}`,
         section: 'front',
         isAvailable: true,
-        problemDescription: null,
-        problemReportedAt: null,
-        problemResolvedAt: null,
       };
       this.capsules.set(capsule.number, capsule);
     }
@@ -338,6 +330,7 @@ export class MemStorage implements IStorage {
       emergencyContact: insertGuest.emergencyContact || null,
       emergencyPhone: insertGuest.emergencyPhone || null,
       age: insertGuest.age || null,
+      profilePhotoUrl: insertGuest.profilePhotoUrl || null,
     };
     this.guests.set(id, guest);
     return guest;
@@ -410,7 +403,7 @@ export class MemStorage implements IStorage {
 
   async getAvailableCapsules(): Promise<Capsule[]> {
     const checkedInGuests = await this.getCheckedInGuests();
-    const occupiedCapsules = new Set(checkedInGuests.map(guest => guest.capsuleNumber));
+    const occupiedCapsules = new Set(checkedInGuests.data.map(guest => guest.capsuleNumber));
     
     return Array.from(this.capsules.values()).filter(
       capsule => capsule.isAvailable && !occupiedCapsules.has(capsule.number)
@@ -882,7 +875,7 @@ class DatabaseStorage implements IStorage {
 
   async getAvailableCapsules(): Promise<Capsule[]> {
     const checkedInGuests = await this.getCheckedInGuests();
-    const occupiedCapsules = new Set(checkedInGuests.map(guest => guest.capsuleNumber));
+    const occupiedCapsules = new Set(checkedInGuests.data.map(guest => guest.capsuleNumber));
     
     const availableCapsules = await this.db
       .select()
