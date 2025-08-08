@@ -1174,5 +1174,5 @@ class DatabaseStorage implements IStorage {
   }
 }
 
-// Use in-memory storage for now (switch to DatabaseStorage after proper migration)
-export const storage = new MemStorage();
+// Use DatabaseStorage for persistent data storage
+export const storage = new DatabaseStorage();
