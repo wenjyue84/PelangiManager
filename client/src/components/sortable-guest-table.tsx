@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useVisibilityQuery } from "@/hooks/useVisibilityQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -240,17 +241,21 @@ export default function SortableGuestTable() {
     order: 'asc'
   });
   
-  const { data: guestsResponse, isLoading } = useQuery<PaginatedResponse<Guest>>({
+  const { data: guestsResponse, isLoading } = useVisibilityQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
+    refetchIntervalWhenVisible: 30000, // Refresh every 30 seconds when visible
+    pauseWhenHidden: true,
   });
   
   const guests = guestsResponse?.data || [];
 
-  const { data: occupancy } = useQuery<{total: number; occupied: number; available: number}>({
+  const { data: occupancy } = useVisibilityQuery<{total: number; occupied: number; available: number}>({
     queryKey: ["/api/occupancy"],
+    refetchIntervalWhenVisible: 30000, // Refresh every 30 seconds when visible
+    pauseWhenHidden: true,
   });
 
-  const { data: activeTokensResponse } = useQuery<PaginatedResponse<{
+  const { data: activeTokensResponse } = useVisibilityQuery<PaginatedResponse<{
     id: string;
     token: string;
     capsuleNumber: string;
@@ -260,6 +265,8 @@ export default function SortableGuestTable() {
     expiresAt: string;
   }>>({
     queryKey: ["/api/guest-tokens/active"],
+    refetchIntervalWhenVisible: 60000, // Refresh every minute when visible
+    pauseWhenHidden: true,
   });
   
   const activeTokens = activeTokensResponse?.data || [];

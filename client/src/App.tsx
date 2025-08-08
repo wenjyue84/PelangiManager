@@ -17,6 +17,7 @@ import GuestCheckin from "./pages/guest-checkin";
 import GuestEdit from "./pages/guest-edit";
 import Header from "./components/header";
 import Navigation from "./components/navigation";
+import { VisibilityIndicator } from "./components/visibility-indicator";
 
 function Router() {
   return (
@@ -59,6 +60,7 @@ function App() {
         <TooltipProvider>
           <Router />
           <Toaster />
+          <VisibilityIndicator />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

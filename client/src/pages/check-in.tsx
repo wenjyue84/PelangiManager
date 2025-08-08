@@ -1,7 +1,8 @@
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useVisibilityQuery } from "@/hooks/useVisibilityQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,10 @@ export default function CheckIn() {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  const { data: availableCapsules = [], isLoading: capsulesLoading } = useQuery<Capsule[]>({
+  const { data: availableCapsules = [], isLoading: capsulesLoading } = useVisibilityQuery<Capsule[]>({
     queryKey: ["/api/capsules/available"],
+    refetchIntervalWhenVisible: 15000, // Refresh every 15 seconds when visible
+    pauseWhenHidden: true,
   });
 
   // Get the default collector name

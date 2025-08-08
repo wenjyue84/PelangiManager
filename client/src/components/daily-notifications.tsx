@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useVisibilityQuery } from "@/hooks/useVisibilityQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Guest, PaginatedResponse } from "@shared/schema";
 
 export default function DailyNotifications() {
-  const { data: guestsResponse, isLoading } = useQuery<PaginatedResponse<Guest>>({
+  const { data: guestsResponse, isLoading } = useVisibilityQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
+    refetchIntervalWhenVisible: 60000, // Refresh every minute when visible
+    pauseWhenHidden: true,
   });
   
   const guests = guestsResponse?.data || [];

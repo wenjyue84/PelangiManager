@@ -1,4 +1,4 @@
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, focusManager } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -7,7 +7,7 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-function getAuthHeaders() {
+function getAuthHeaders(): Record<string, string> {
   const token = localStorage.getItem('auth_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
@@ -17,7 +17,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const headers = {
+  const headers: Record<string, string> = {
     ...getAuthHeaders(),
     ...(data ? { "Content-Type": "application/json" } : {})
   };
@@ -54,13 +54,38 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+// Configure focus manager to use Page Visibility API
+focusManager.setEventListener((handleFocus) => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      handleFocus();
+    }
+  };
+  
+  const handleWindowFocus = () => {
+    handleFocus();
+  };
+
+  // Listen to visibility change
+  document.addEventListener('visibilitychange', handleVisibilityChange, false);
+  
+  // Also listen to focus for better browser compatibility
+  window.addEventListener('focus', handleWindowFocus, false);
+
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleWindowFocus);
+  };
+});
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      refetchOnWindowFocus: true, // Enable refetch on focus (controlled by visibility)
+      refetchIntervalInBackground: false, // Pause background refetching
+      staleTime: 30000, // Consider data stale after 30 seconds
       retry: false,
     },
     mutations: {

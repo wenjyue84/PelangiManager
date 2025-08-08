@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useVisibilityQuery } from "@/hooks/useVisibilityQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,14 +15,18 @@ export default function AdminNotifications() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: allNotificationsResponse } = useQuery<PaginatedResponse<AdminNotification>>({
+  const { data: allNotificationsResponse } = useVisibilityQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications"],
+    refetchIntervalWhenVisible: 60000, // Refresh every minute when visible
+    pauseWhenHidden: true,
   });
   
   const allNotifications = allNotificationsResponse?.data || [];
 
-  const { data: unreadNotificationsResponse } = useQuery<PaginatedResponse<AdminNotification>>({
+  const { data: unreadNotificationsResponse } = useVisibilityQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications/unread"],
+    refetchIntervalWhenVisible: 30000, // Refresh every 30 seconds when visible for unread
+    pauseWhenHidden: true,
   });
   
   const unreadNotifications = unreadNotificationsResponse?.data || [];

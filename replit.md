@@ -17,6 +17,22 @@ This is a capsule hostel management system called "Pelangi Capsule Hostel" built
   - `/api/problems` and `/api/problems/active` - Paginated problem reports
   - `/api/admin/notifications` and `/api/admin/notifications/unread` - Paginated notifications
 
+### Page Visibility API Integration
+- Implemented Page Visibility API to optimize performance and reduce unnecessary API calls
+- Created custom hooks (`usePageVisibility`, `useVisibilityQuery`) for visibility-aware data fetching
+- Configured React Query to pause/resume queries based on tab visibility
+- Added automatic refresh intervals for real-time data components:
+  - Guest table refreshes every 30 seconds when visible
+  - Occupancy data refreshes every 30 seconds when visible
+  - Notifications refresh every 30-60 seconds when visible
+  - Available capsules refresh every 15 seconds on check-in page
+- Added visual indicator showing when live updates are active or paused
+- Benefits:
+  - Reduced server load when tabs are inactive
+  - Better battery life for mobile devices
+  - Improved overall application performance
+  - Automatic data refresh when users return to the tab
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
