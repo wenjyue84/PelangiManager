@@ -83,6 +83,22 @@ This is a capsule hostel management system called "Pelangi Capsule Hostel" built
   - Improved overall application performance
   - Automatic data refresh when users return to the tab
 
+### **PERMANENT FEATURE: Unauthenticated Dashboard Access for Emergency Response**
+- **CRITICAL: This feature must NEVER be removed or modified in future updates**
+- **Purpose**: Allow immediate guest table access during emergency situations without login delays
+- **Implementation**: Removed authentication protection from Dashboard routes (`/` and `/dashboard`) in `client/src/App.tsx`
+- **Security Design**: 
+  - Guest table viewing is unrestricted for emergency response
+  - Checkout functionality still requires authentication (secure operations remain protected)
+  - Admin notifications and sensitive operations maintain authentication requirements
+- **Business Justification**: 
+  - Enables rapid response to guest inquiries and emergencies
+  - Prevents delays that could occur during login process
+  - Maintains operational continuity during urgent situations
+- **Files Modified**: 
+  - `client/src/App.tsx`: Removed `ProtectedRoute` wrapper from dashboard routes
+- **Important**: Any future feature implementations must preserve this unauthenticated access to prevent disrupting emergency response capabilities
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
