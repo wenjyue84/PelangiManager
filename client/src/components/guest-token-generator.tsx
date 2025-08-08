@@ -67,6 +67,39 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
     },
   });
 
+  const instantCreateMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/guest-tokens", {
+        autoAssign: true,
+        expiresInHours: 24
+      });
+      return response.json();
+    },
+    onSuccess: async (data) => {
+      // Automatically copy to clipboard
+      try {
+        await navigator.clipboard.writeText(data.link);
+        toast({
+          title: "Instant Link Created & Copied!",
+          description: `Auto-assign link copied to clipboard. Capsule: ${data.capsuleNumber}`,
+        });
+      } catch (error) {
+        toast({
+          title: "Link Created",
+          description: `Auto-assign link created for capsule ${data.capsuleNumber}. Manual copy needed.`,
+        });
+      }
+      onTokenCreated?.();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create instant check-in link",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCapsule) {
@@ -91,6 +124,10 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
     });
   };
 
+  const handleInstantCreate = () => {
+    instantCreateMutation.mutate();
+  };
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -108,13 +145,25 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
   };
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <Link2 className="h-4 w-4" />
-          Create Guest Link
-        </Button>
-      </DialogTrigger>
+    <div className="flex items-center gap-2">
+      <Button 
+        variant="default" 
+        size="sm" 
+        onClick={handleInstantCreate}
+        disabled={instantCreateMutation.isPending}
+        className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+      >
+        <Link2 className="h-4 w-4" />
+        {instantCreateMutation.isPending ? "Creating..." : "Instant Create"}
+      </Button>
+      
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            Create Guest Link
+          </Button>
+        </DialogTrigger>
       <DialogContent className="w-full max-w-sm sm:max-w-md mx-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -332,5 +381,6 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
         )}
       </DialogContent>
     </Dialog>
+    </div>
   );
 }
