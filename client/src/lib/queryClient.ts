@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction, focusManager } from "@tanstack/react-query";
+import { getQueryConfig } from "./queryConfig";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -82,14 +83,28 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
+      // Dynamic configuration based on query key
+      staleTime: 5 * 60 * 1000, // Default: 5 minutes
+      gcTime: 30 * 60 * 1000,   // Default: 30 minutes cache time
       refetchInterval: false,
-      refetchOnWindowFocus: true, // Enable refetch on focus (controlled by visibility)
-      refetchIntervalInBackground: false, // Pause background refetching
-      staleTime: 30000, // Consider data stale after 30 seconds
+      refetchOnWindowFocus: true,
+      refetchIntervalInBackground: false,
+      refetchOnReconnect: true,
       retry: false,
     },
     mutations: {
       retry: false,
+      gcTime: 5 * 60 * 1000, // Keep mutation results for 5 minutes
     },
   },
 });
+
+// Override default query behavior with endpoint-specific configurations
+const originalQuery = queryClient.defaultQueryOptions;
+queryClient.setQueryDefaults = function(queryKey: unknown[], options: any) {
+  const config = getQueryConfig(queryKey);
+  return queryClient.setQueryDefaults(queryKey, {
+    ...config,
+    ...options,
+  });
+};

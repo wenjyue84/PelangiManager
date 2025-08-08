@@ -24,8 +24,7 @@ export default function CheckIn() {
   
   const { data: availableCapsules = [], isLoading: capsulesLoading } = useVisibilityQuery<Capsule[]>({
     queryKey: ["/api/capsules/available"],
-    refetchIntervalWhenVisible: 15000, // Refresh every 15 seconds when visible
-    pauseWhenHidden: true,
+    // Uses smart config: nearRealtime (30s stale, 60s refetch)
   });
 
   // Get the default collector name

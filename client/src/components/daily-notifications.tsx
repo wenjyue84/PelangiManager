@@ -9,8 +9,7 @@ import type { Guest, PaginatedResponse } from "@shared/schema";
 export default function DailyNotifications() {
   const { data: guestsResponse, isLoading } = useVisibilityQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
-    refetchIntervalWhenVisible: 60000, // Refresh every minute when visible
-    pauseWhenHidden: true,
+    // Uses smart config: realtime (10s stale, 30s refetch)
   });
   
   const guests = guestsResponse?.data || [];

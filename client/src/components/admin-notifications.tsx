@@ -17,16 +17,14 @@ export default function AdminNotifications() {
 
   const { data: allNotificationsResponse } = useVisibilityQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications"],
-    refetchIntervalWhenVisible: 60000, // Refresh every minute when visible
-    pauseWhenHidden: true,
+    // Uses smart config: frequent (1m stale, no auto-refetch)
   });
   
   const allNotifications = allNotificationsResponse?.data || [];
 
   const { data: unreadNotificationsResponse } = useVisibilityQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications/unread"],
-    refetchIntervalWhenVisible: 30000, // Refresh every 30 seconds when visible for unread
-    pauseWhenHidden: true,
+    // Uses smart config: nearRealtime (30s stale, 60s refetch)
   });
   
   const unreadNotifications = unreadNotificationsResponse?.data || [];

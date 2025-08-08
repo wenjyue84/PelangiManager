@@ -243,16 +243,14 @@ export default function SortableGuestTable() {
   
   const { data: guestsResponse, isLoading } = useVisibilityQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
-    refetchIntervalWhenVisible: 30000, // Refresh every 30 seconds when visible
-    pauseWhenHidden: true,
+    // Uses smart config: realtime (10s stale, 30s refetch)
   });
   
   const guests = guestsResponse?.data || [];
 
   const { data: occupancy } = useVisibilityQuery<{total: number; occupied: number; available: number}>({
     queryKey: ["/api/occupancy"],
-    refetchIntervalWhenVisible: 30000, // Refresh every 30 seconds when visible
-    pauseWhenHidden: true,
+    // Uses smart config: realtime (10s stale, 30s refetch)
   });
 
   const { data: activeTokensResponse } = useVisibilityQuery<PaginatedResponse<{
@@ -265,8 +263,7 @@ export default function SortableGuestTable() {
     expiresAt: string;
   }>>({
     queryKey: ["/api/guest-tokens/active"],
-    refetchIntervalWhenVisible: 60000, // Refresh every minute when visible
-    pauseWhenHidden: true,
+    // Uses smart config: nearRealtime (30s stale, 60s refetch)
   });
   
   const activeTokens = activeTokensResponse?.data || [];
