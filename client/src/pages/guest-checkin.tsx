@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle, Upload, Camera, Globe, Video } from "lucide-react";
+import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle, Upload, Camera, Globe, Video, ImageIcon } from "lucide-react";
 import { guestSelfCheckinSchema, type GuestSelfCheckin } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 
 export default function GuestCheckin() {
   const [, setLocation] = useLocation();
@@ -32,6 +34,7 @@ export default function GuestCheckin() {
   const [editToken, setEditToken] = useState<string>("");
   const [editExpiresAt, setEditExpiresAt] = useState<Date | null>(null);
   const [canEdit, setCanEdit] = useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string>("");
 
   const form = useForm<GuestSelfCheckin>({
     resolver: zodResolver(guestSelfCheckinSchema),
@@ -45,6 +48,7 @@ export default function GuestCheckin() {
       icDocumentUrl: "",
       passportDocumentUrl: "",
       paymentMethod: undefined,
+      profilePhotoUrl: "",
     },
   });
 
@@ -110,10 +114,11 @@ export default function GuestCheckin() {
   const onSubmit = async (data: GuestSelfCheckin) => {
     setIsSubmitting(true);
     try {
+      const submitData = { ...data, profilePhotoUrl };
       const response = await fetch(`/api/guest-checkin/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify(submitData)
       });
 
       if (response.ok) {
@@ -142,6 +147,34 @@ export default function GuestCheckin() {
       });
     }
     setIsSubmitting(false);
+  };
+
+  const handleGetUploadParameters = async () => {
+    const response = await fetch('/api/objects/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    return {
+      method: 'PUT' as const,
+      url: data.uploadURL,
+    };
+  };
+
+  const handlePhotoUpload = (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful && result.successful.length > 0) {
+      const uploadedFile = result.successful[0];
+      if (uploadedFile.uploadURL) {
+        // Convert the upload URL to our object path format
+        const objectPath = new URL(uploadedFile.uploadURL).pathname;
+        const normalizedPath = `/objects${objectPath.split('/.private')[1]}`;
+        setProfilePhotoUrl(normalizedPath);
+        toast({
+          title: "Photo Uploaded",
+          description: "Your profile photo has been uploaded successfully.",
+        });
+      }
+    }
   };
 
   if (isLoading) {
@@ -310,6 +343,56 @@ export default function GuestCheckin() {
           </CardHeader>
           <CardContent>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Profile Photo Upload */}
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  Profile Photo (Optional)
+                </h3>
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">Upload a profile photo to personalize your stay</p>
+                  
+                  {profilePhotoUrl ? (
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={profilePhotoUrl}
+                        alt="Profile"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-600">Photo uploaded successfully!</p>
+                        <ObjectUploader
+                          maxNumberOfFiles={1}
+                          maxFileSize={5242880} // 5MB
+                          allowedFileTypes={['.jpg', '.jpeg', '.png', '.gif', '.webp']}
+                          onGetUploadParameters={handleGetUploadParameters}
+                          onComplete={handlePhotoUpload}
+                          buttonClassName="mt-2"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Change Photo
+                        </ObjectUploader>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
+                      <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 mb-3">No profile photo yet</p>
+                      <ObjectUploader
+                        maxNumberOfFiles={1}
+                        maxFileSize={5242880} // 5MB
+                        allowedFileTypes={['.jpg', '.jpeg', '.png', '.gif', '.webp']}
+                        onGetUploadParameters={handleGetUploadParameters}
+                        onComplete={handlePhotoUpload}
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Upload Photo
+                      </ObjectUploader>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Personal Information */}
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">

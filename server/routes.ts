@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { validateData, securityValidationMiddleware, sanitizers, validators } from "./validation";
 import { getConfig, getConfigForAPI, validateConfigUpdate, AppConfig } from "./configManager";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -818,8 +819,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         paymentMethod: validatedGuestData.paymentMethod,
         paymentCollector: "Self Check-in",
         isPaid: false,
+        profilePhotoUrl: validatedGuestData.profilePhotoUrl,
         selfCheckinToken: token, // Store the token for edit access
-        notes: `IC: ${validatedGuestData.icNumber || 'N/A'}, Passport: ${validatedGuestData.passportNumber || 'N/A'}${validatedGuestData.icDocumentUrl ? `, IC Doc: ${validatedGuestData.icDocumentUrl}` : ''}${validatedGuestData.passportDocumentUrl ? `, Passport Doc: ${validatedGuestData.passportDocumentUrl}` : ''}`,
+        notes: `IC: ${validatedGuestData.icNumber || 'N/A'}, Passport: ${validatedGuestData.passportNumber || 'N/A'}${validatedGuestData.icDocumentUrl ? `, IC Doc: ${validatedGuestData.icDocumentUrl}` : ''}${validatedGuestData.passportDocumentUrl ? `, Passport Doc: ${validatedGuestData.passportDocumentUrl}` : ''}${validatedGuestData.profilePhotoUrl ? `, Profile Photo: ${validatedGuestData.profilePhotoUrl}` : ''}`,
       });
 
       // Mark token as used
@@ -934,6 +936,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating guest information:", error);
       res.status(400).json({ message: error.message || "Failed to update information" });
+    }
+  });
+
+  // Object Storage Routes for Profile Photos
+  
+  // Get upload URL for profile photos
+  app.post("/api/objects/upload", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+
+  // Serve private objects (profile photos)
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      
+      // For profile photos, we'll make them publicly accessible
+      // but you could add ACL checks here if needed
+      await objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error accessing object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
     }
   });
 

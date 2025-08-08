@@ -55,6 +55,7 @@ export const guests = pgTable("guests", {
   emergencyContact: text("emergency_contact"),
   emergencyPhone: text("emergency_phone"),
   age: text("age"),
+  profilePhotoUrl: text("profile_photo_url"),
   selfCheckinToken: text("self_checkin_token"), // Link back to the token used for self check-in
 }, (table) => ([
   index("idx_guests_capsule_number").on(table.capsuleNumber),
@@ -262,6 +263,9 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
       return age >= 16 && age <= 120;
     }, "Age must be between the allowed range (check with admin for current age limits)")
     .optional(),
+  profilePhotoUrl: z.string()
+    .url("Profile photo must be a valid URL")
+    .optional(),
 });
 
 export const insertCapsuleSchema = createInsertSchema(capsules).omit({
@@ -388,6 +392,9 @@ export const guestSelfCheckinSchema = z.object({
   paymentMethod: z.enum(["cash", "card", "online_transfer"], { 
     required_error: "Please select a payment method" 
   }),
+  profilePhotoUrl: z.string()
+    .url("Profile photo must be a valid URL")
+    .optional(),
 }).refine((data) => data.icNumber || data.passportNumber, {
   message: "Either IC number or passport number is required",
   path: ["icNumber"],
