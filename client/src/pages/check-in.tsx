@@ -68,8 +68,8 @@ export default function CheckIn() {
     // Parse capsule numbers for sorting
     const capsulesWithNumbers = availableCapsules.map(capsule => {
       const match = capsule.number.match(/C(\d+)/);
-      const number = match ? parseInt(match[1]) : 0;
-      return { ...capsule, number };
+      const numericValue = match ? parseInt(match[1]) : 0;
+      return { ...capsule, numericValue, originalNumber: capsule.number };
     });
 
     if (gender === "female") {
@@ -77,37 +77,37 @@ export default function CheckIn() {
       const backCapsules = capsulesWithNumbers
         .filter(c => c.section === "back") // Back section
         .sort((a, b) => {
-          const aIsBottom = a.number % 2 === 0;
-          const bIsBottom = b.number % 2 === 0;
+          const aIsBottom = a.numericValue % 2 === 0;
+          const bIsBottom = b.numericValue % 2 === 0;
           if (aIsBottom && !bIsBottom) return -1;
           if (!aIsBottom && bIsBottom) return 1;
-          return a.number - b.number;
+          return a.numericValue - b.numericValue;
         });
       
       if (backCapsules.length > 0) {
-        return backCapsules[0].number;
+        return backCapsules[0].originalNumber;
       }
     } else {
       // For non-females: front bottom capsules with lowest number first
       const frontBottomCapsules = capsulesWithNumbers
-        .filter(c => c.section === "front" && c.number % 2 === 0) // Front section, bottom (even numbers)
-        .sort((a, b) => a.number - b.number);
+        .filter(c => c.section === "front" && c.numericValue % 2 === 0) // Front section, bottom (even numbers)
+        .sort((a, b) => a.numericValue - b.numericValue);
       
       if (frontBottomCapsules.length > 0) {
-        return frontBottomCapsules[0].number;
+        return frontBottomCapsules[0].originalNumber;
       }
     }
 
     // Fallback: any available capsule, prefer bottom (even numbers)
     const sortedCapsules = capsulesWithNumbers.sort((a, b) => {
-      const aIsBottom = a.number % 2 === 0;
-      const bIsBottom = b.number % 2 === 0;
+      const aIsBottom = a.numericValue % 2 === 0;
+      const bIsBottom = b.numericValue % 2 === 0;
       if (aIsBottom && !bIsBottom) return -1;
       if (!aIsBottom && bIsBottom) return 1;
-      return a.number - b.number;
+      return a.numericValue - b.numericValue;
     });
 
-    return sortedCapsules[0]?.number || "";
+    return sortedCapsules[0]?.originalNumber || "";
   }, [availableCapsules]);
 
   const form = useForm<InsertGuest>({
@@ -156,18 +156,18 @@ export default function CheckIn() {
 
   // Auto-assign capsule based on gender
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
+    const subscription = form.watch((value, { name }) => {
       if (name === "gender" && value.gender && availableCapsules.length > 0) {
         // Always suggest a new capsule when gender changes
         const recommendedCapsule = getRecommendedCapsule(value.gender);
         
-        if (recommendedCapsule) {
+        if (recommendedCapsule && recommendedCapsule !== form.getValues("capsuleNumber")) {
           form.setValue("capsuleNumber", recommendedCapsule);
         }
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, availableCapsules, getRecommendedCapsule]);
+  }, [availableCapsules, getRecommendedCapsule]); // Removed 'form' from dependencies to prevent infinite loop
 
   const checkinMutation = useMutation({
     mutationFn: async (data: InsertGuest) => {
