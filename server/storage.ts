@@ -481,6 +481,7 @@ export class MemStorage implements IStorage {
   // Cleaning management methods
   async markCapsuleCleaned(capsuleNumber: string, cleanedBy: string): Promise<Capsule | undefined> {
     const capsule = this.capsules.get(capsuleNumber);
+    
     if (capsule) {
       const updatedCapsule: Capsule = {
         ...capsule,

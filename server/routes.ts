@@ -378,10 +378,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/capsules/:number/mark-cleaned", securityValidationMiddleware, async (req, res) => {
     try {
       const { number: capsuleNumber } = req.params;
-      const validatedData = validateData(markCapsuleCleanedSchema, {
+      
+      const requestData = {
         ...req.body,
         capsuleNumber
-      });
+      };
+      
+      const validatedData = markCapsuleCleanedSchema.parse(requestData);
       
       const capsule = await storage.markCapsuleCleaned(validatedData.capsuleNumber, validatedData.cleanedBy);
       
