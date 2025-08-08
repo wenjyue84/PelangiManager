@@ -303,8 +303,9 @@ export default function SortableGuestTable() {
           break;
         case 'capsuleNumber':
           // Extract number for proper sorting (C1, C2, C11, C12, etc.)
-          aValue = parseInt(a.data.capsuleNumber.replace('C', ''));
-          bValue = parseInt(b.data.capsuleNumber.replace('C', ''));
+          // Handle null capsuleNumbers by putting them at the end
+          aValue = a.data.capsuleNumber ? parseInt(a.data.capsuleNumber.replace('C', '')) : 999999;
+          bValue = b.data.capsuleNumber ? parseInt(b.data.capsuleNumber.replace('C', '')) : 999999;
           break;
         case 'checkinTime':
           aValue = a.type === 'guest' ? new Date(a.data.checkinTime).getTime() : new Date(a.data.createdAt).getTime();
