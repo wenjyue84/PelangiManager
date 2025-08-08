@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "../lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [, setLocation] = useLocation();
   const { login, loginWithGoogle } = useAuth();
   const { toast } = useToast();
 
@@ -66,10 +68,14 @@ export function LoginForm() {
     if (success) {
       toast({
         title: "🎉 Login Successful!",
-        description: "Welcome back! You have been logged in successfully.",
-        duration: 5000,
+        description: "Welcome back! Redirecting to dashboard...",
+        duration: 3000,
         className: "border-green-500 bg-green-50 text-green-800 shadow-lg text-base font-semibold"
       });
+      // Redirect to dashboard after successful login
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 1500);
     } else {
       toast({
         title: "Login Failed",
@@ -89,10 +95,14 @@ export function LoginForm() {
     if (success) {
       toast({
         title: "🎉 Google Login Successful!",
-        description: "Welcome! You have been logged in with Google successfully.",
-        duration: 5000,
+        description: "Welcome! Redirecting to dashboard...",
+        duration: 3000,
         className: "border-green-500 bg-green-50 text-green-800 shadow-lg text-base font-semibold"
       });
+      // Redirect to dashboard after successful Google login
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 1500);
     } else {
       toast({
         title: "Google Login Failed",

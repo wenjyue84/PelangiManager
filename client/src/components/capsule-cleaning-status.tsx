@@ -26,15 +26,14 @@ interface MarkCleanedDialogProps {
 }
 
 function MarkCleanedDialog({ capsule, onSuccess }: MarkCleanedDialogProps) {
-  const [cleanedBy, setCleanedBy] = useState("");
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
   const mutation = useMutation({
-    mutationFn: async (data: { capsuleNumber: string; cleanedBy: string }) => {
+    mutationFn: async (data: { capsuleNumber: string }) => {
       await apiRequest(`/api/capsules/${data.capsuleNumber}/mark-cleaned`, {
         method: "POST",
-        body: JSON.stringify({ cleanedBy: data.cleanedBy }),
+        body: JSON.stringify({ cleanedBy: "Staff" }),
       });
     },
     onSuccess: () => {
@@ -43,7 +42,6 @@ function MarkCleanedDialog({ capsule, onSuccess }: MarkCleanedDialogProps) {
         description: `Capsule ${capsule.number} marked as cleaned successfully`,
       });
       setOpen(false);
-      setCleanedBy("");
       onSuccess();
     },
     onError: (error: Error) => {
@@ -55,19 +53,9 @@ function MarkCleanedDialog({ capsule, onSuccess }: MarkCleanedDialogProps) {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cleanedBy.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter the cleaner's name",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleMarkCleaned = () => {
     mutation.mutate({
       capsuleNumber: capsule.number,
-      cleanedBy: cleanedBy.trim(),
     });
   };
 
@@ -83,40 +71,31 @@ function MarkCleanedDialog({ capsule, onSuccess }: MarkCleanedDialogProps) {
         <DialogHeader>
           <DialogTitle>Mark Capsule {capsule.number} as Cleaned</DialogTitle>
           <DialogDescription>
-            Please enter the name of the person who cleaned this capsule.
+            Are you sure you want to mark this capsule as cleaned?
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="cleanedBy">Cleaned By</Label>
-              <Input
-                id="cleanedBy"
-                value={cleanedBy}
-                onChange={(e) => setCleanedBy(e.target.value)}
-                placeholder="Enter cleaner's name"
-                disabled={mutation.isPending}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={mutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || !cleanedBy.trim()}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {mutation.isPending ? "Marking..." : "Mark as Cleaned"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <div className="py-4">
+          <p className="text-sm text-muted-foreground">
+            This will mark the capsule as cleaned and ready for new guests.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={mutation.isPending}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleMarkCleaned}
+            disabled={mutation.isPending}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {mutation.isPending ? "Marking..." : "Mark as Cleaned"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
