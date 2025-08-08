@@ -1,14 +1,23 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useVisibilityQuery } from "@/hooks/useVisibilityQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Calendar, Clock, User } from "lucide-react";
+import { Bell, Calendar, Clock, User, UserMinus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/auth-provider";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { CheckoutConfirmationDialog } from "./confirmation-dialog";
 import type { Guest, PaginatedResponse } from "@shared/schema";
 
 export default function DailyNotifications() {
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [checkoutGuest, setCheckoutGuest] = useState<Guest | null>(null);
+  const [showCheckoutConfirmation, setShowCheckoutConfirmation] = useState(false);
   
   const { data: guestsResponse, isLoading } = useVisibilityQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
@@ -21,6 +30,43 @@ export default function DailyNotifications() {
   if (!isAuthenticated) {
     return null;
   }
+
+  const checkoutMutation = useMutation({
+    mutationFn: async (guestId: string) => {
+      const response = await apiRequest("POST", "/api/guests/checkout", { id: guestId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guests/checked-in"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/guests/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] });
+      toast({
+        title: "Success",
+        description: "Guest checked out successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to check out guest",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCheckout = (guest: Guest) => {
+    setCheckoutGuest(guest);
+    setShowCheckoutConfirmation(true);
+  };
+
+  const confirmCheckout = () => {
+    if (checkoutGuest) {
+      checkoutMutation.mutate(checkoutGuest.id);
+      setShowCheckoutConfirmation(false);
+      setCheckoutGuest(null);
+    }
+  };
 
   // Check for guests checking out today (expected checkout date is today)
   const today = new Date().toISOString().split('T')[0];
@@ -90,10 +136,19 @@ export default function DailyNotifications() {
                       <div className="text-sm text-gray-600">Capsule {guest.capsuleNumber}</div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="flex items-center gap-2">
                     <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
                       Due Today
                     </Badge>
+                    <Button
+                      size="sm"
+                      onClick={() => handleCheckout(guest)}
+                      disabled={checkoutMutation.isPending}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      <UserMinus className="h-4 w-4 mr-1" />
+                      {checkoutMutation.isPending && checkoutMutation.variables === guest.id ? "Checking out..." : "Check Out"}
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -123,10 +178,19 @@ export default function DailyNotifications() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="flex items-center gap-2">
                     <Badge className="bg-red-600 text-white">
                       Overdue
                     </Badge>
+                    <Button
+                      size="sm"
+                      onClick={() => handleCheckout(guest)}
+                      disabled={checkoutMutation.isPending}
+                      variant="destructive"
+                    >
+                      <UserMinus className="h-4 w-4 mr-1" />
+                      {checkoutMutation.isPending && checkoutMutation.variables === guest.id ? "Checking out..." : "Check Out"}
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -140,6 +204,22 @@ export default function DailyNotifications() {
           </div>
         )}
       </CardContent>
+      
+      {checkoutGuest && (
+        <CheckoutConfirmationDialog
+          open={showCheckoutConfirmation}
+          onOpenChange={(open) => {
+            setShowCheckoutConfirmation(open);
+            if (!open) {
+              setCheckoutGuest(null);
+            }
+          }}
+          onConfirm={confirmCheckout}
+          guestName={checkoutGuest.name}
+          capsuleNumber={checkoutGuest.capsuleNumber}
+          isLoading={checkoutMutation.isPending}
+        />
+      )}
     </Card>
   );
 }
