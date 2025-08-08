@@ -1,5 +1,6 @@
-import { QueryClient, QueryFunction, focusManager } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, focusManager, MutationCache, QueryCache } from "@tanstack/react-query";
 import { getQueryConfig } from "./queryConfig";
+import { toast } from "@/hooks/use-toast";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -79,7 +80,94 @@ focusManager.setEventListener((handleFocus) => {
   };
 });
 
+// Global error handler for queries
+const handleQueryError = (error: unknown) => {
+  console.error('Query error:', error);
+  
+  if (error instanceof Error) {
+    // Handle specific error types
+    if (error.message.includes('401:')) {
+      // Don't show toast for 401 errors - let auth provider handle
+      return;
+    }
+    
+    if (error.message.includes('Network Error') || error.message.includes('fetch')) {
+      toast({
+        title: "Connection Problem",
+        description: "Please check your internet connection and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (error.message.includes('500:')) {
+      toast({
+        title: "Server Error",
+        description: "Something went wrong on our end. Please try again later.",
+        variant: "destructive",
+      });
+      return;
+    }
+  }
+};
+
+// Global error handler for mutations
+const handleMutationError = (error: unknown) => {
+  console.error('Mutation error:', error);
+  
+  if (error instanceof Error) {
+    // Handle validation errors (400)
+    if (error.message.includes('400:')) {
+      try {
+        const errorData = JSON.parse(error.message.split('400: ')[1]);
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+          // Show validation errors
+          errorData.errors.slice(0, 3).forEach((err: any) => {
+            toast({
+              title: "Validation Error",
+              description: err.message || 'Please check your input and try again.',
+              variant: "destructive",
+            });
+          });
+          return;
+        }
+      } catch {
+        // Fallback for malformed validation errors
+        toast({
+          title: "Validation Error",
+          description: "Please check your input and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    // Handle authorization errors
+    if (error.message.includes('401:') || error.message.includes('403:')) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to perform this action.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Generic error fallback
+    toast({
+      title: "Operation Failed",
+      description: "Something went wrong. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
+
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: handleQueryError,
+  }),
+  mutationCache: new MutationCache({
+    onError: handleMutationError,
+  }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
@@ -90,10 +178,24 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: true,
       refetchIntervalInBackground: false,
       refetchOnReconnect: true,
-      retry: false,
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors (client errors)
+        if (error instanceof Error && error.message.match(/^4\d{2}:/)) {
+          return false;
+        }
+        // Retry up to 2 times for other errors
+        return failureCount < 2;
+      },
     },
     mutations: {
-      retry: false,
+      retry: (failureCount, error) => {
+        // Don't retry mutations on client errors
+        if (error instanceof Error && error.message.match(/^4\d{2}:/)) {
+          return false;
+        }
+        // Retry once for server errors
+        return failureCount < 1;
+      },
       gcTime: 5 * 60 * 1000, // Keep mutation results for 5 minutes
     },
   },

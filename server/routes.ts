@@ -16,6 +16,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     process.env.GOOGLE_REDIRECT_URI
   );
   
+  // Error reporting endpoint
+  app.post("/api/errors/report", securityValidationMiddleware, async (req, res) => {
+    try {
+      const errorReport = req.body;
+      
+      // In development, just log the error
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🐛 Client Error Report:', JSON.stringify(errorReport, null, 2));
+      }
+      
+      // In production, you might want to:
+      // 1. Store in a database for analysis
+      // 2. Send to an external error monitoring service (Sentry, LogRocket, etc.)
+      // 3. Send alerts for critical errors
+      
+      // For now, just acknowledge receipt
+      res.json({ 
+        success: true, 
+        message: 'Error report received',
+        reportId: randomUUID()
+      });
+    } catch (error) {
+      console.error('Failed to process error report:', error);
+      res.status(500).json({ success: false, message: 'Failed to process error report' });
+    }
+  });
+
   // Setup endpoint for creating admin user (development only)
   app.post("/setup-admin", async (req, res) => {
     try {
