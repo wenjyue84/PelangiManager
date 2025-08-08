@@ -53,6 +53,7 @@ export interface IStorage {
   getGuestToken(token: string): Promise<GuestToken | undefined>;
   getActiveGuestTokens(pagination?: PaginationParams): Promise<PaginatedResponse<GuestToken>>;
   markTokenAsUsed(token: string): Promise<GuestToken | undefined>;
+  deleteGuestToken(id: string): Promise<boolean>;
   cleanExpiredTokens(): Promise<void>;
 
   // Admin notification methods
@@ -616,6 +617,16 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  async deleteGuestToken(id: string): Promise<boolean> {
+    for (const [token, guestToken] of this.guestTokens.entries()) {
+      if (guestToken.id === id) {
+        this.guestTokens.delete(token);
+        return true;
+      }
+    }
+    return false;
+  }
+
   async cleanExpiredTokens(): Promise<void> {
     const now = new Date();
     for (const [token, tokenData] of Array.from(this.guestTokens.entries())) {
@@ -1056,6 +1067,14 @@ class DatabaseStorage implements IStorage {
       .returning();
     
     return result[0];
+  }
+
+  async deleteGuestToken(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(guestTokens)
+      .where(eq(guestTokens.id, id));
+    
+    return result.rowCount > 0;
   }
 
   async getActiveGuestTokens(pagination?: PaginationParams): Promise<PaginatedResponse<GuestToken>> {

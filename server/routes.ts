@@ -842,6 +842,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cancel/delete guest token (authenticated route)
+  app.delete("/api/guest-tokens/:id", 
+    securityValidationMiddleware,
+    authenticateToken,
+    async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const success = await storage.deleteGuestToken(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Guest token not found" });
+      }
+      
+      res.json({ message: "Guest token cancelled successfully" });
+    } catch (error: any) {
+      console.error("Error cancelling guest token:", error);
+      res.status(500).json({ message: "Failed to cancel guest token" });
+    }
+  });
+
   // Guest self-check-in (public route)
   app.post("/api/guest-checkin/:token", async (req, res) => {
     try {

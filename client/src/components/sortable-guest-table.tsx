@@ -271,14 +271,14 @@ export default function SortableGuestTable() {
   
   const activeTokens = activeTokensResponse?.data || [];
 
-  // Create a combined list of guests and reserved capsules
+  // Create a combined list of guests and pending check-ins
   const combinedData = useMemo(() => {
     const guestData = guests.map(guest => ({ type: 'guest' as const, data: guest }));
-    const reservedData = activeTokens.map(token => ({ 
-      type: 'reserved' as const, 
+    const pendingData = activeTokens.map(token => ({ 
+      type: 'pending' as const, 
       data: {
         id: token.id,
-        name: token.guestName || 'Reserved',
+        name: token.guestName || 'Pending Check-in',
         capsuleNumber: token.capsuleNumber,
         createdAt: token.createdAt,
         expiresAt: token.expiresAt,
@@ -286,7 +286,7 @@ export default function SortableGuestTable() {
       }
     }));
     
-    return [...guestData, ...reservedData];
+    return [...guestData, ...pendingData];
   }, [guests, activeTokens]);
 
   const sortedData = useMemo(() => {
@@ -362,6 +362,28 @@ export default function SortableGuestTable() {
     },
   });
 
+  const cancelTokenMutation = useMutation({
+    mutationFn: async (tokenId: string) => {
+      await apiRequest("DELETE", `/api/guest-tokens/${tokenId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guest-tokens/active"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] });
+      toast({
+        title: "Success",
+        description: "Pending check-in cancelled successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to cancel pending check-in",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCheckout = (guestId: string) => {
     if (!isAuthenticated) {
       toast({
@@ -393,6 +415,25 @@ export default function SortableGuestTable() {
       setShowCheckoutConfirmation(false);
       setCheckoutGuest(null);
     }
+  };
+
+  const handleCancelToken = (tokenId: string) => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to cancel pending check-ins. Redirecting to login page...",
+        variant: "destructive",
+        duration: 3000,
+      });
+      
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1000);
+      
+      return;
+    }
+    
+    cancelTokenMutation.mutate(tokenId);
   };
 
   const handleGuestClick = (guest: Guest) => {
@@ -459,7 +500,7 @@ export default function SortableGuestTable() {
       <CardContent>
         {sortedData.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <p>No guests currently checked in or capsules reserved</p>
+            <p>No guests currently checked in or pending check-ins</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -602,25 +643,25 @@ export default function SortableGuestTable() {
                       </SwipeableGuestRow>
                     );
                   } else {
-                    // Reserved capsule row
-                    const reservedData = item.data;
+                    // Pending check-in row
+                    const pendingData = item.data;
                     return (
-                      <tr key={`reserved-${reservedData.id}`} className="bg-orange-50">
+                      <tr key={`pending-${pendingData.id}`} className="bg-orange-50">
                         {/* Capsule column - sticky first column */}
                         <td className="px-2 py-3 whitespace-nowrap sticky left-0 bg-orange-50 z-10">
                           <Badge variant="outline" className="bg-orange-500 text-white border-orange-500">
-                            {reservedData.capsuleNumber}
+                            {pendingData.capsuleNumber}
                           </Badge>
                         </td>
                         {/* Guest column */}
                         <td className="px-2 py-3 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center mr-2">
-                              <span className="text-orange-600 font-bold text-sm">R</span>
+                              <span className="text-orange-600 font-bold text-sm">P</span>
                             </div>
                             {!isCondensedView && (
                               <span className="text-sm font-medium text-orange-700">
-                                {reservedData.name}
+                                {pendingData.name}
                               </span>
                             )}
                           </div>
@@ -628,38 +669,50 @@ export default function SortableGuestTable() {
                         {/* Nationality column - only in detailed view */}
                         {!isCondensedView && (
                           <td className="px-2 py-3 whitespace-nowrap text-xs text-orange-600">
-                            Reserved
+                            Pending
                           </td>
                         )}
-                        {/* Check-in column - show reservation time */}
+                        {/* Check-in column - show creation time */}
                         <td className="px-2 py-3 whitespace-nowrap text-xs text-orange-600">
                           {isCondensedView 
-                            ? formatShortDate(reservedData.createdAt)
-                            : formatShortDateTime(reservedData.createdAt)
+                            ? formatShortDate(pendingData.createdAt)
+                            : formatShortDateTime(pendingData.createdAt)
                           }
                         </td>
                         {/* Checkout column - show expiration */}
                         <td className="px-2 py-3 whitespace-nowrap text-xs text-orange-600">
                           <span className="font-medium">
-                            Expires {formatShortDate(reservedData.expiresAt)}
+                            Expires {formatShortDate(pendingData.expiresAt)}
                           </span>
                         </td>
                         {/* Payment and Status columns - only in detailed view */}
                         {!isCondensedView && (
                           <>
                             <td className="px-2 py-3 whitespace-nowrap text-xs text-orange-600">
-                              Pending self check-in
+                              Awaiting self check-in
                             </td>
                             <td className="px-2 py-3 whitespace-nowrap">
                               <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center">
-                                <span className="text-orange-600 font-bold text-xs">R</span>
+                                <span className="text-orange-600 font-bold text-xs">P</span>
                               </div>
                             </td>
                           </>
                         )}
                         {/* Actions column */}
                         <td className="px-2 py-3 whitespace-nowrap">
-                          <span className="text-xs text-orange-600">Reserved</span>
+                          {isAuthenticated ? (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleCancelToken(pendingData.id)}
+                              disabled={cancelTokenMutation.isPending}
+                              className="text-orange-600 hover:text-orange-800 font-medium p-1 text-xs"
+                            >
+                              {cancelTokenMutation.isPending ? 'Cancelling...' : 'Cancel'}
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-orange-600">Pending</span>
+                          )}
                         </td>
                       </tr>
                     );
