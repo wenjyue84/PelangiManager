@@ -17,29 +17,18 @@ export default function AdminNotifications() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
 
-  // Don't show notifications if not authenticated
-  if (!isAuthenticated) {
-    return null;
-  }
-
+  // Always call all hooks before any conditional logic
   const { data: allNotificationsResponse } = useVisibilityQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications"],
+    enabled: isAuthenticated, // Only fetch when authenticated
     // Uses smart config: frequent (1m stale, no auto-refetch)
   });
   
-  const allNotifications = allNotificationsResponse?.data || [];
-
   const { data: unreadNotificationsResponse } = useVisibilityQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications/unread"],
+    enabled: isAuthenticated, // Only fetch when authenticated
     // Uses smart config: nearRealtime (30s stale, 60s refetch)
   });
-  
-  const unreadNotifications = unreadNotificationsResponse?.data || [];
-
-  // Don't show admin notifications if there are no unread notifications
-  if (unreadNotifications.length === 0) {
-    return null;
-  }
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
@@ -80,6 +69,20 @@ export default function AdminNotifications() {
       });
     },
   });
+
+  // Now handle conditional logic after all hooks are called
+  const allNotifications = allNotificationsResponse?.data || [];
+  const unreadNotifications = unreadNotificationsResponse?.data || [];
+
+  // Don't show notifications if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Don't show admin notifications if there are no unread notifications
+  if (unreadNotifications.length === 0) {
+    return null;
+  }
 
   const notificationsToShow = showAll ? allNotifications : unreadNotifications;
 
