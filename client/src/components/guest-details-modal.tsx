@@ -210,6 +210,9 @@ export default function GuestDetailsModal({ guest, isOpen, onClose }: GuestDetai
                 <Label>Age</Label>
                 {isEditing ? (
                   <Input
+                    type="number"
+                    min="16"
+                    max="120"
                     value={editData.age || ""}
                     onChange={(e) => setEditData({ ...editData, age: e.target.value })}
                     className="mt-1"
