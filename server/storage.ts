@@ -1079,12 +1079,13 @@ class DatabaseStorage implements IStorage {
 
   async deleteGuestToken(id: string): Promise<boolean> {
     try {
-      await this.db
+      const result = await this.db
         .delete(guestTokens)
-        .where(eq(guestTokens.id, id));
+        .where(eq(guestTokens.id, id))
+        .returning();
       
-      // With Neon serverless + Drizzle, if no error is thrown, deletion succeeded
-      return true;
+      // Check if any rows were actually deleted
+      return result.length > 0;
     } catch (error) {
       console.error('Error deleting guest token:', error);
       return false;
