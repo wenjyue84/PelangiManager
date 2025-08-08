@@ -41,6 +41,9 @@ export default function GuestTable() {
       queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
       queryClient.invalidateQueries({ queryKey: ["/api/guests/history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] });
+      // Invalidate cleaning status queries to update the cleaning list
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/cleaning-status/to_be_cleaned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/cleaning-status/cleaned"] });
       toast({
         title: "Success",
         description: "Guest checked out successfully",

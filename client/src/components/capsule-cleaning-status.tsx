@@ -188,20 +188,32 @@ function CapsuleCleaningCard({ capsule, onRefresh }: CapsuleCleaningCardProps) {
 export default function CapsuleCleaningStatus() {
   const queryClient = useQueryClient();
   
-  const { data: capsulesToClean = [], isLoading: loadingToClean } = useQuery<Capsule[]>({
+  const { data: capsulesToClean = [], isLoading: loadingToClean, refetch: refetchToClean } = useQuery<Capsule[]>({
     queryKey: ["/api/capsules/cleaning-status/to_be_cleaned"],
     staleTime: 30000, // 30 seconds
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    enabled: true, // Ensure query is enabled
   });
 
-  const { data: cleanedCapsules = [], isLoading: loadingCleaned } = useQuery<Capsule[]>({
+  const { data: cleanedCapsules = [], isLoading: loadingCleaned, refetch: refetchCleaned } = useQuery<Capsule[]>({
     queryKey: ["/api/capsules/cleaning-status/cleaned"],
     staleTime: 30000, // 30 seconds
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    enabled: true, // Ensure query is enabled
   });
 
-  const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/capsules/cleaning-status"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/capsules"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
+  const handleRefresh = async () => {
+    // Explicitly refetch both queries
+    await Promise.all([
+      refetchToClean(),
+      refetchCleaned(),
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/cleaning-status/to_be_cleaned"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/cleaning-status/cleaned"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules"] }),
+      queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] }),
+    ]);
   };
 
   if (loadingToClean || loadingCleaned) {
