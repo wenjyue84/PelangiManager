@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, date } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, date, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,7 +15,11 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("staff"), // 'admin' or 'staff'
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ([
+  index("idx_users_email").on(table.email),
+  index("idx_users_username").on(table.username),
+  index("idx_users_role").on(table.role),
+]));
 
 // Sessions table for authentication
 export const sessions = pgTable("sessions", {
@@ -24,7 +28,11 @@ export const sessions = pgTable("sessions", {
   token: text("token").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ([
+  index("idx_sessions_user_id").on(table.userId),
+  index("idx_sessions_token").on(table.token),
+  index("idx_sessions_expires_at").on(table.expiresAt),
+]));
 
 export const guests = pgTable("guests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -48,14 +56,23 @@ export const guests = pgTable("guests", {
   emergencyPhone: text("emergency_phone"),
   age: text("age"),
   selfCheckinToken: text("self_checkin_token"), // Link back to the token used for self check-in
-});
+}, (table) => ([
+  index("idx_guests_capsule_number").on(table.capsuleNumber),
+  index("idx_guests_is_checked_in").on(table.isCheckedIn),
+  index("idx_guests_checkin_time").on(table.checkinTime),
+  index("idx_guests_checkout_time").on(table.checkoutTime),
+  index("idx_guests_self_checkin_token").on(table.selfCheckinToken),
+]));
 
 export const capsules = pgTable("capsules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   number: text("number").notNull().unique(),
   section: text("section").notNull(), // 'back', 'middle', 'front'
   isAvailable: boolean("is_available").notNull().default(true),
-});
+}, (table) => ([
+  index("idx_capsules_is_available").on(table.isAvailable),
+  index("idx_capsules_section").on(table.section),
+]));
 
 // Separate table for tracking all capsule problems
 export const capsuleProblems = pgTable("capsule_problems", {
@@ -68,7 +85,11 @@ export const capsuleProblems = pgTable("capsule_problems", {
   resolvedBy: text("resolved_by"), // Username of staff who resolved
   resolvedAt: timestamp("resolved_at"),
   notes: text("notes"), // Resolution notes
-});
+}, (table) => ([
+  index("idx_capsule_problems_capsule_number").on(table.capsuleNumber),
+  index("idx_capsule_problems_is_resolved").on(table.isResolved),
+  index("idx_capsule_problems_reported_at").on(table.reportedAt),
+]));
 
 // Guest check-in tokens for self-service check-in
 export const guestTokens = pgTable("guest_tokens", {
@@ -84,7 +105,12 @@ export const guestTokens = pgTable("guest_tokens", {
   usedAt: timestamp("used_at"),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ([
+  index("idx_guest_tokens_token").on(table.token),
+  index("idx_guest_tokens_is_used").on(table.isUsed),
+  index("idx_guest_tokens_expires_at").on(table.expiresAt),
+  index("idx_guest_tokens_capsule_number").on(table.capsuleNumber),
+]));
 
 // Admin notifications for various events
 export const adminNotifications = pgTable("admin_notifications", {
@@ -96,7 +122,11 @@ export const adminNotifications = pgTable("admin_notifications", {
   capsuleNumber: text("capsule_number"), // Optional capsule reference
   isRead: boolean("is_read").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ([
+  index("idx_admin_notifications_is_read").on(table.isRead),
+  index("idx_admin_notifications_type").on(table.type),
+  index("idx_admin_notifications_created_at").on(table.createdAt),
+]));
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -247,7 +277,9 @@ export const appSettings = pgTable("app_settings", {
   description: text("description"),
   updatedBy: varchar("updated_by"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => ([
+  index("idx_app_settings_key").on(table.key),
+]));
 
 export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
