@@ -17,7 +17,7 @@ interface TokenGeneratorProps {
 }
 
 export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorProps) {
-  const [selectedCapsule, setSelectedCapsule] = useState("");
+  const [selectedCapsule, setSelectedCapsule] = useState("auto-assign");
   const [guestName, setGuestName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -310,7 +310,7 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
                 variant="outline"
                 onClick={() => {
                   setGeneratedToken(null);
-                  setSelectedCapsule("");
+                  setSelectedCapsule("auto-assign");
                   setGuestName("");
                   setPhoneNumber("");
                   setEmail("");
