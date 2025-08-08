@@ -39,7 +39,8 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
 
   const createTokenMutation = useMutation({
     mutationFn: async (data: { 
-      capsuleNumber: string; 
+      capsuleNumber?: string; 
+      autoAssign?: boolean;
       guestName?: string;
       phoneNumber?: string;
       email?: string;
@@ -71,15 +72,17 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
     if (!selectedCapsule) {
       toast({
         title: "Validation Error",
-        description: "Please select a capsule",
+        description: "Please select a capsule assignment option",
         variant: "destructive",
       });
       return;
     }
     // Name and phone are now optional - guest will fill them during self-check-in
 
+    const isAutoAssign = selectedCapsule === "auto-assign";
     createTokenMutation.mutate({
-      capsuleNumber: selectedCapsule,
+      capsuleNumber: isAutoAssign ? undefined : selectedCapsule,
+      autoAssign: isAutoAssign,
       guestName: guestName.trim() || undefined,
       phoneNumber: phoneNumber.trim() || undefined,
       email: email.trim() || undefined,
@@ -179,7 +182,7 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
               </Label>
               <Select value={selectedCapsule} onValueChange={setSelectedCapsule}>
                 <SelectTrigger className="w-full mt-1">
-                  <SelectValue placeholder="Choose available capsule" />
+                  <SelectValue placeholder="Choose capsule assignment" />
                 </SelectTrigger>
                 <SelectContent>
                   {capsulesLoading ? (
@@ -187,31 +190,50 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
                   ) : availableCapsules.length === 0 ? (
                     <SelectItem value="no-capsules" disabled>No capsules available</SelectItem>
                   ) : (
-                    availableCapsules
-                      .sort((a, b) => {
-                        const aNum = parseInt(a.number.replace('C', ''));
-                        const bNum = parseInt(b.number.replace('C', ''));
-                        const aIsBottom = aNum % 2 === 0;
-                        const bIsBottom = bNum % 2 === 0;
-                        
-                        if (aIsBottom && !bIsBottom) return -1;
-                        if (!aIsBottom && bIsBottom) return 1;
-                        return aNum - bNum;
-                      })
-                      .map((capsule) => {
-                        const capsuleNum = parseInt(capsule.number.replace('C', ''));
-                        const isBottom = capsuleNum % 2 === 0;
-                        const position = isBottom ? "Bottom ⭐" : "Top";
-                        
-                        return (
-                          <SelectItem key={capsule.number} value={capsule.number}>
-                            {capsule.number} - {position} ({capsule.section})
-                          </SelectItem>
-                        );
-                      })
+                    <>
+                      <SelectItem value="auto-assign">
+                        <div className="flex items-center gap-2">
+                          <span>🤖</span>
+                          <span>Auto Assign (Based on Gender)</span>
+                        </div>
+                      </SelectItem>
+                      {availableCapsules
+                        .sort((a, b) => {
+                          const aNum = parseInt(a.number.replace('C', ''));
+                          const bNum = parseInt(b.number.replace('C', ''));
+                          const aIsBottom = aNum % 2 === 0;
+                          const bIsBottom = bNum % 2 === 0;
+                          
+                          if (aIsBottom && !bIsBottom) return -1;
+                          if (!aIsBottom && bIsBottom) return 1;
+                          return aNum - bNum;
+                        })
+                        .map((capsule) => {
+                          const capsuleNum = parseInt(capsule.number.replace('C', ''));
+                          const isBottom = capsuleNum % 2 === 0;
+                          const position = isBottom ? "Bottom ⭐" : "Top";
+                          
+                          return (
+                            <SelectItem key={capsule.number} value={capsule.number}>
+                              {capsule.number} - {position} ({capsule.section})
+                            </SelectItem>
+                          );
+                        })}
+                    </>
                   )}
                 </SelectContent>
               </Select>
+              {selectedCapsule === "auto-assign" && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-700">
+                    <span className="font-medium">Auto Assignment:</span> The system will automatically assign the best available capsule based on the guest's gender preference:
+                  </p>
+                  <ul className="text-xs text-blue-600 mt-1 space-y-1">
+                    <li>• Females: Back section, bottom bunks preferred</li>
+                    <li>• Males: Front section, bottom bunks preferred</li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div>
@@ -248,13 +270,18 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline" className="bg-green-100 text-green-800">
-                  {generatedToken.capsuleNumber}
+                  {generatedToken.capsuleNumber || "Auto Assign 🤖"}
                 </Badge>
                 <span className="text-sm text-green-700">Check-in link created!</span>
               </div>
               <div className="text-xs text-green-600">
                 Expires: {new Date(generatedToken.expiresAt).toLocaleString()}
               </div>
+              {!generatedToken.capsuleNumber && (
+                <div className="text-xs text-blue-600 mt-1 font-medium">
+                  Capsule will be auto-assigned based on guest's gender
+                </div>
+              )}
             </div>
 
             <div>

@@ -21,7 +21,8 @@ export default function GuestCheckin() {
   const { t } = useI18n();
   const [token, setToken] = useState<string>("");
   const [guestInfo, setGuestInfo] = useState<{
-    capsuleNumber: string;
+    capsuleNumber?: string;
+    autoAssign?: boolean;
     guestName: string;
     phoneNumber: string;
     email?: string;
@@ -76,11 +77,16 @@ export default function GuestCheckin() {
       const response = await fetch(`/api/guest-tokens/${tokenValue}`);
       if (response.ok) {
         const data = await response.json();
-        const capsuleNum = parseInt(data.capsuleNumber.replace('C', ''));
-        const position = capsuleNum % 2 === 0 ? 'Bottom (Preferred)' : 'Top';
+        let position = 'To be assigned based on gender';
+        
+        if (data.capsuleNumber) {
+          const capsuleNum = parseInt(data.capsuleNumber.replace('C', ''));
+          position = capsuleNum % 2 === 0 ? 'Bottom (Preferred)' : 'Top';
+        }
         
         setGuestInfo({
           capsuleNumber: data.capsuleNumber,
+          autoAssign: data.autoAssign,
           guestName: data.guestName,
           phoneNumber: data.phoneNumber,
           email: data.email,
@@ -255,7 +261,11 @@ export default function GuestCheckin() {
                   <div className="flex items-center gap-2">
                     <span>🛌</span>
                     <span className="font-medium">{t.capsuleNumber}</span>
-                    <span className="font-bold text-lg text-orange-600">{guestInfo?.capsuleNumber} ({guestInfo?.position})</span>
+                    {guestInfo?.autoAssign ? (
+                      <span className="font-bold text-lg text-blue-600">Auto-assigned based on gender</span>
+                    ) : (
+                      <span className="font-bold text-lg text-orange-600">{guestInfo?.capsuleNumber} ({guestInfo?.position})</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span>🃏</span>
@@ -325,10 +335,14 @@ export default function GuestCheckin() {
               </div>
               {guestInfo && (
                 <div className="mt-4 space-y-2">
-                  <div className="bg-orange-50 rounded-lg p-3">
-                    <div className="flex items-center justify-center text-sm font-medium text-orange-800">
+                  <div className={`rounded-lg p-3 ${guestInfo.autoAssign ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                    <div className={`flex items-center justify-center text-sm font-medium ${guestInfo.autoAssign ? 'text-blue-800' : 'text-orange-800'}`}>
                       <MapPin className="h-4 w-4 mr-2" />
-                      {t.assignedCapsule}: {guestInfo.capsuleNumber} - {guestInfo.position}
+                      {guestInfo.autoAssign ? (
+                        <span>🤖 Auto Assignment: Capsule will be assigned based on your gender</span>
+                      ) : (
+                        <span>{t.assignedCapsule}: {guestInfo.capsuleNumber} - {guestInfo.position}</span>
+                      )}
                     </div>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">

@@ -785,7 +785,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const token = await storage.createGuestToken({
         token: tokenValue,
-        capsuleNumber: validatedData.capsuleNumber,
+        capsuleNumber: validatedData.capsuleNumber || null,
+        autoAssign: validatedData.autoAssign || false,
         guestName: validatedData.guestName,
         phoneNumber: validatedData.phoneNumber,
         email: validatedData.email,
@@ -827,6 +828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         capsuleNumber: guestToken.capsuleNumber,
+        autoAssign: guestToken.autoAssign,
         guestName: guestToken.guestName,
         phoneNumber: guestToken.phoneNumber,
         email: guestToken.email,
@@ -859,10 +861,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedGuestData = guestSelfCheckinSchema.parse(req.body);
 
-      // Create guest with token's capsule and self-check-in data
+      // Auto-assign capsule based on gender if needed
+      let assignedCapsuleNumber = guestToken.capsuleNumber;
+      
+      if (guestToken.autoAssign && !assignedCapsuleNumber) {
+        // Get available capsules for gender-based assignment
+        const availableCapsules = await storage.getAvailableCapsules();
+        
+        if (availableCapsules.length === 0) {
+          return res.status(400).json({ message: "No capsules available for check-in" });
+        }
+        
+        // Gender-based assignment logic
+        const capsulesWithNumbers = availableCapsules.map(capsule => {
+          const match = capsule.number.match(/C(\d+)/);
+          const numericValue = match ? parseInt(match[1]) : 0;
+          return { ...capsule, numericValue, originalNumber: capsule.number };
+        });
+        
+        if (validatedGuestData.gender === "female") {
+          // For females: back capsules with lowest number first, prefer bottom (even numbers)
+          const backCapsules = capsulesWithNumbers
+            .filter(c => c.section === "back")
+            .sort((a, b) => {
+              const aIsBottom = a.numericValue % 2 === 0;
+              const bIsBottom = b.numericValue % 2 === 0;
+              if (aIsBottom && !bIsBottom) return -1;
+              if (!aIsBottom && bIsBottom) return 1;
+              return a.numericValue - b.numericValue;
+            });
+          
+          if (backCapsules.length > 0) {
+            assignedCapsuleNumber = backCapsules[0].originalNumber;
+          } else {
+            // Fallback to any available capsule
+            assignedCapsuleNumber = availableCapsules[0].number;
+          }
+        } else {
+          // For males: front bottom capsules with lowest number first
+          const frontBottomCapsules = capsulesWithNumbers
+            .filter(c => c.section === "front" && c.numericValue % 2 === 0)
+            .sort((a, b) => a.numericValue - b.numericValue);
+          
+          if (frontBottomCapsules.length > 0) {
+            assignedCapsuleNumber = frontBottomCapsules[0].originalNumber;
+          } else {
+            // Fallback to any available capsule
+            assignedCapsuleNumber = availableCapsules[0].number;
+          }
+        }
+        
+        if (!assignedCapsuleNumber) {
+          return res.status(400).json({ message: "Unable to assign a suitable capsule" });
+        }
+      }
+      
+      if (!assignedCapsuleNumber) {
+        return res.status(400).json({ message: "No capsule assigned for this token" });
+      }
+
+      // Create guest with assigned capsule and self-check-in data
       const guest = await storage.createGuest({
         name: validatedGuestData.nameAsInDocument,
-        capsuleNumber: guestToken.capsuleNumber,
+        capsuleNumber: assignedCapsuleNumber,
         phoneNumber: guestToken.phoneNumber,
         email: guestToken.email || undefined,
         gender: validatedGuestData.gender,
@@ -885,16 +946,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createAdminNotification({
         type: "self_checkin",
         title: "New Self Check-In",
-        message: `${validatedGuestData.nameAsInDocument} has completed self check-in to capsule ${guestToken.capsuleNumber}. Payment method: ${validatedGuestData.paymentMethod}`,
+        message: `${validatedGuestData.nameAsInDocument} has completed self check-in to capsule ${assignedCapsuleNumber}${guestToken.autoAssign ? ' (auto-assigned)' : ''}. Payment method: ${validatedGuestData.paymentMethod}`,
         guestId: guest.id,
-        capsuleNumber: guestToken.capsuleNumber,
+        capsuleNumber: assignedCapsuleNumber,
         isRead: false,
       });
 
       res.json({
         message: "Check-in successful",
         guest: guest,
-        capsuleNumber: guestToken.capsuleNumber,
+        capsuleNumber: assignedCapsuleNumber,
         editToken: token, // Provide token for editing within 1 hour
         editExpiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
       });

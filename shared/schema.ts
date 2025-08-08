@@ -100,7 +100,8 @@ export const capsuleProblems = pgTable("capsule_problems", {
 export const guestTokens = pgTable("guest_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   token: text("token").notNull().unique(),
-  capsuleNumber: text("capsule_number").notNull(),
+  capsuleNumber: text("capsule_number"), // Optional - null when auto-assign is used
+  autoAssign: boolean("auto_assign").default(false), // True when capsule should be auto-assigned
   guestName: text("guest_name"), // Optional - guest fills it themselves
   phoneNumber: text("phone_number"), // Optional - guest fills it themselves
   email: text("email"),
@@ -420,7 +421,9 @@ export const createTokenSchema = z.object({
   capsuleNumber: z.string()
     .min(1, "Capsule number is required")
     .regex(/^C\d+$/, "Capsule number must be in format like C1, C11, C25")
-    .transform(val => val.toUpperCase()),
+    .transform(val => val.toUpperCase())
+    .optional(),
+  autoAssign: z.boolean().optional(),
   guestName: z.string()
     .min(2, "Guest name must be at least 2 characters long")
     .max(100, "Guest name must not exceed 100 characters")
@@ -450,6 +453,15 @@ export const createTokenSchema = z.object({
     .min(1, "Token must expire in at least 1 hour")
     .max(168, "Token cannot expire later than 168 hours (7 days)")
     .default(24),
+}).refine((data) => {
+  // Either capsuleNumber or autoAssign must be provided, but not both
+  const hasCapsuleNumber = data.capsuleNumber && data.capsuleNumber.length > 0;
+  const hasAutoAssign = data.autoAssign === true;
+  
+  return (hasCapsuleNumber && !hasAutoAssign) || (!hasCapsuleNumber && hasAutoAssign);
+}, {
+  message: "Either specify a capsule number or choose auto assign (but not both)",
+  path: ["capsuleNumber"],
 });
 
 // Type exports

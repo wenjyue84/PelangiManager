@@ -578,7 +578,8 @@ export class MemStorage implements IStorage {
     const token: GuestToken = {
       id: randomUUID(),
       token: insertToken.token,
-      capsuleNumber: insertToken.capsuleNumber,
+      capsuleNumber: insertToken.capsuleNumber || null,
+      autoAssign: insertToken.autoAssign || false,
       guestName: insertToken.guestName || null,
       phoneNumber: insertToken.phoneNumber || null,
       email: insertToken.email || null,
