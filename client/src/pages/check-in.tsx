@@ -411,10 +411,11 @@ export default function CheckIn() {
                     Amount (RM)
                   </Label>
                   <Select
-                    value={form.watch("paymentAmount") || "45"}
+                    value={["45", "48", "650"].includes(form.watch("paymentAmount") || "45") ? form.watch("paymentAmount") || "45" : "custom"}
                     onValueChange={(value) => {
                       if (value === "custom") {
-                        // Let user type custom amount
+                        // Clear the field and let user type custom amount
+                        form.setValue("paymentAmount", "");
                         return;
                       }
                       form.setValue("paymentAmount", value);
@@ -430,15 +431,17 @@ export default function CheckIn() {
                       <SelectItem value="custom">Custom Amount...</SelectItem>
                     </SelectContent>
                   </Select>
-                  {(form.watch("paymentAmount") === "custom" || !["45", "48", "650"].includes(form.watch("paymentAmount") || "")) && (
+                  {!["45", "48", "650"].includes(form.watch("paymentAmount") || "") && (
                     <Input
-                      id="paymentAmount"
+                      id="customPaymentAmount"
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="Enter custom amount"
+                      placeholder="Enter custom amount (e.g., 35.50)"
                       className="w-full mt-2"
-                      {...form.register("paymentAmount")}
+                      value={form.watch("paymentAmount") || ""}
+                      onChange={(e) => form.setValue("paymentAmount", e.target.value)}
+                      autoFocus
                     />
                   )}
                   {form.formState.errors.paymentAmount && (
