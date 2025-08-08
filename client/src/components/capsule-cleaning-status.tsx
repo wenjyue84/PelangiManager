@@ -31,9 +31,8 @@ function MarkCleanedDialog({ capsule, onSuccess }: MarkCleanedDialogProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: { capsuleNumber: string }) => {
-      await apiRequest(`/api/capsules/${data.capsuleNumber}/mark-cleaned`, {
-        method: "POST",
-        body: JSON.stringify({ cleanedBy: "Staff" }),
+      await apiRequest("POST", `/api/capsules/${data.capsuleNumber}/mark-cleaned`, {
+        cleanedBy: "Staff"
       });
     },
     onSuccess: () => {
