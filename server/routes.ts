@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema, updateSettingsSchema, updateGuestSchema } from "@shared/schema";
+import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema, updateSettingsSchema, updateGuestSchema, markCapsuleCleanedSchema } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
@@ -354,6 +354,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(capsule);
     } catch (error) {
       res.status(500).json({ message: "Failed to update capsule" });
+    }
+  });
+
+  // Get capsules by cleaning status
+  app.get("/api/capsules/cleaning-status/:status", async (req, res) => {
+    try {
+      const { status } = req.params;
+      
+      if (status !== "cleaned" && status !== "to_be_cleaned") {
+        return res.status(400).json({ message: "Invalid cleaning status. Must be 'cleaned' or 'to_be_cleaned'" });
+      }
+      
+      const capsules = await storage.getCapsulesByCleaningStatus(status as "cleaned" | "to_be_cleaned");
+      res.json(capsules);
+    } catch (error) {
+      console.error('Error fetching capsules by cleaning status:', error);
+      res.status(500).json({ message: "Failed to get capsules by cleaning status" });
+    }
+  });
+
+  // Mark capsule as cleaned
+  app.post("/api/capsules/:number/mark-cleaned", securityValidationMiddleware, async (req, res) => {
+    try {
+      const { number: capsuleNumber } = req.params;
+      const validatedData = validateData(markCapsuleCleanedSchema, {
+        ...req.body,
+        capsuleNumber
+      });
+      
+      const capsule = await storage.markCapsuleCleaned(validatedData.capsuleNumber, validatedData.cleanedBy);
+      
+      if (!capsule) {
+        return res.status(404).json({ message: "Capsule not found" });
+      }
+
+      res.json({
+        message: "Capsule marked as cleaned successfully",
+        capsule
+      });
+    } catch (error) {
+      console.error('Error marking capsule as cleaned:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors.map(e => ({ 
+            field: e.path.join('.'), 
+            message: e.message 
+          }))
+        });
+      }
+      res.status(500).json({ message: "Failed to mark capsule as cleaned" });
     }
   });
 

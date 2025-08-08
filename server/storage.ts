@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, type AdminNotification, type InsertAdminNotification, type AppSetting, type InsertAppSetting, type PaginationParams, type PaginatedResponse, users, guests, capsules, sessions, guestTokens, capsuleProblems, adminNotifications, appSettings } from "@shared/schema";
+import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, type AdminNotification, type InsertAdminNotification, type AppSetting, type InsertAppSetting, type MarkCapsuleCleaned, type PaginationParams, type PaginatedResponse, users, guests, capsules, sessions, guestTokens, capsuleProblems, adminNotifications, appSettings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -38,6 +38,8 @@ export interface IStorage {
   getCapsule(number: string): Promise<Capsule | undefined>;
   updateCapsule(number: string, updates: Partial<Capsule>): Promise<Capsule | undefined>;
   createCapsule(capsule: InsertCapsule): Promise<Capsule>;
+  markCapsuleCleaned(capsuleNumber: string, cleanedBy: string): Promise<Capsule | undefined>;
+  getCapsulesByCleaningStatus(status: "cleaned" | "to_be_cleaned"): Promise<Capsule[]>;
   
   // Capsule problem management
   createCapsuleProblem(problem: InsertCapsuleProblem): Promise<CapsuleProblem>;
@@ -185,6 +187,9 @@ export class MemStorage implements IStorage {
         number: `C${i}`,
         section: 'back',
         isAvailable: true,
+        cleaningStatus: 'cleaned',
+        lastCleanedAt: null,
+        lastCleanedBy: null,
       };
       this.capsules.set(capsule.number, capsule);
     }
@@ -196,6 +201,9 @@ export class MemStorage implements IStorage {
         number: `C${num}`,
         section: 'middle',
         isAvailable: true,
+        cleaningStatus: 'cleaned',
+        lastCleanedAt: null,
+        lastCleanedBy: null,
       };
       this.capsules.set(capsule.number, capsule);
     }
@@ -207,6 +215,9 @@ export class MemStorage implements IStorage {
         number: `C${i}`,
         section: 'front',
         isAvailable: true,
+        cleaningStatus: 'cleaned',
+        lastCleanedAt: null,
+        lastCleanedBy: null,
       };
       this.capsules.set(capsule.number, capsule);
     }
@@ -364,6 +375,18 @@ export class MemStorage implements IStorage {
         isCheckedIn: false,
       };
       this.guests.set(id, updatedGuest);
+      
+      // Set capsule status to 'to be cleaned' after checkout
+      const capsule = this.capsules.get(guest.capsuleNumber);
+      if (capsule) {
+        const updatedCapsule: Capsule = {
+          ...capsule,
+          cleaningStatus: 'to_be_cleaned',
+          isAvailable: true, // Make available for booking but needs cleaning
+        };
+        this.capsules.set(guest.capsuleNumber, updatedCapsule);
+      }
+      
       return updatedGuest;
     }
     return undefined;
@@ -448,9 +471,33 @@ export class MemStorage implements IStorage {
     const capsule: Capsule = { 
       ...insertCapsule, 
       id,
+      lastCleanedAt: insertCapsule.lastCleanedAt || null,
+      lastCleanedBy: insertCapsule.lastCleanedBy || null,
     };
     this.capsules.set(capsule.number, capsule);
     return capsule;
+  }
+
+  // Cleaning management methods
+  async markCapsuleCleaned(capsuleNumber: string, cleanedBy: string): Promise<Capsule | undefined> {
+    const capsule = this.capsules.get(capsuleNumber);
+    if (capsule) {
+      const updatedCapsule: Capsule = {
+        ...capsule,
+        cleaningStatus: 'cleaned',
+        lastCleanedAt: new Date(),
+        lastCleanedBy: cleanedBy,
+      };
+      this.capsules.set(capsuleNumber, updatedCapsule);
+      return updatedCapsule;
+    }
+    return undefined;
+  }
+
+  async getCapsulesByCleaningStatus(status: "cleaned" | "to_be_cleaned"): Promise<Capsule[]> {
+    return Array.from(this.capsules.values()).filter(
+      capsule => capsule.cleaningStatus === status
+    );
   }
 
   // Capsule problem management
@@ -531,8 +578,8 @@ export class MemStorage implements IStorage {
       id: randomUUID(),
       token: insertToken.token,
       capsuleNumber: insertToken.capsuleNumber,
-      guestName: insertToken.guestName,
-      phoneNumber: insertToken.phoneNumber,
+      guestName: insertToken.guestName || null,
+      phoneNumber: insertToken.phoneNumber || null,
       email: insertToken.email || null,
       expectedCheckoutDate: insertToken.expectedCheckoutDate || null,
       createdBy: insertToken.createdBy,
@@ -569,7 +616,7 @@ export class MemStorage implements IStorage {
 
   async cleanExpiredTokens(): Promise<void> {
     const now = new Date();
-    for (const [token, tokenData] of this.guestTokens) {
+    for (const [token, tokenData] of Array.from(this.guestTokens.entries())) {
       if (tokenData.expiresAt < now) {
         this.guestTokens.delete(token);
       }
@@ -617,7 +664,7 @@ export class MemStorage implements IStorage {
   }
 
   async markAllNotificationsAsRead(): Promise<void> {
-    for (const [id, notification] of this.adminNotifications) {
+    for (const [id, notification] of Array.from(this.adminNotifications.entries())) {
       if (!notification.isRead) {
         notification.isRead = true;
         this.adminNotifications.set(id, notification);

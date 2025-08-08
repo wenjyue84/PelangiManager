@@ -70,9 +70,13 @@ export const capsules = pgTable("capsules", {
   number: text("number").notNull().unique(),
   section: text("section").notNull(), // 'back', 'middle', 'front'
   isAvailable: boolean("is_available").notNull().default(true),
+  cleaningStatus: text("cleaning_status").notNull().default("cleaned"), // 'cleaned', 'to_be_cleaned'
+  lastCleanedAt: timestamp("last_cleaned_at"),
+  lastCleanedBy: text("last_cleaned_by"),
 }, (table) => ([
   index("idx_capsules_is_available").on(table.isAvailable),
   index("idx_capsules_section").on(table.section),
+  index("idx_capsules_cleaning_status").on(table.cleaningStatus),
 ]));
 
 // Separate table for tracking all capsule problems
@@ -279,6 +283,11 @@ export const insertCapsuleSchema = createInsertSchema(capsules).omit({
     required_error: "Section must be 'back', 'middle', or 'front'",
   }),
   isAvailable: z.boolean().default(true),
+  cleaningStatus: z.enum(["cleaned", "to_be_cleaned"], {
+    required_error: "Cleaning status must be 'cleaned' or 'to_be_cleaned'",
+  }).default("cleaned"),
+  lastCleanedAt: z.date().optional(),
+  lastCleanedBy: z.string().max(50, "Cleaner name must not exceed 50 characters").optional(),
   problemDescription: z.string()
     .max(500, "Problem description must not exceed 500 characters")
     .transform(val => val?.trim())
@@ -287,6 +296,16 @@ export const insertCapsuleSchema = createInsertSchema(capsules).omit({
 
 export const checkoutGuestSchema = z.object({
   id: z.string().min(1, "Guest ID is required"),
+});
+
+export const markCapsuleCleanedSchema = z.object({
+  capsuleNumber: z.string()
+    .min(1, "Capsule number is required")
+    .regex(/^C\d+$/, "Capsule number must be in format like C1, C11, C25"),
+  cleanedBy: z.string()
+    .min(1, "Cleaner name is required")
+    .max(50, "Cleaner name must not exceed 50 characters")
+    .transform(val => val.trim()),
 });
 
 // Authentication schemas
@@ -471,6 +490,7 @@ export type AdminNotification = typeof adminNotifications.$inferSelect;
 export type InsertAdminNotification = typeof adminNotifications.$inferInsert;
 export type GuestSelfCheckin = z.infer<typeof guestSelfCheckinSchema>;
 export type CreateToken = z.infer<typeof createTokenSchema>;
+export type MarkCapsuleCleaned = z.infer<typeof markCapsuleCleanedSchema>;
 
 // Admin notification schema for validation
 export const insertAdminNotificationSchema = createInsertSchema(adminNotifications).omit({ 
