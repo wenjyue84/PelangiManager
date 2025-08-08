@@ -413,7 +413,7 @@ export const guestSelfCheckinSchema = z.object({
 export const createTokenSchema = z.object({
   capsuleNumber: z.string()
     .min(1, "Capsule number is required")
-    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+    .regex(/^C\d+$/, "Capsule number must be in format like C1, C11, C25")
     .transform(val => val.toUpperCase()),
   guestName: z.string()
     .min(2, "Guest name must be at least 2 characters long")
