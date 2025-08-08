@@ -61,6 +61,12 @@ export interface IStorage {
   markAllNotificationsAsRead(): Promise<void>;
 
   // App settings methods
+  getAppSetting(key: string): Promise<AppSetting | undefined>;
+  upsertAppSetting(setting: InsertAppSetting): Promise<AppSetting>;
+  getAllAppSettings(): Promise<AppSetting[]>;
+  deleteAppSetting(key: string): Promise<boolean>;
+  
+  // Legacy methods for backward compatibility
   getSetting(key: string): Promise<AppSetting | undefined>;
   setSetting(key: string, value: string, description?: string, updatedBy?: string): Promise<AppSetting>;
   getAllSettings(): Promise<AppSetting[]>;
@@ -154,6 +160,7 @@ export class MemStorage implements IStorage {
         emergencyContact: null,
         emergencyPhone: null,
         age: null,
+        selfCheckinToken: null,
       };
       
       this.guests.set(guestRecord.id, guestRecord);
@@ -652,6 +659,24 @@ export class MemStorage implements IStorage {
     return setting ? parseInt(setting.value) : 24; // Default to 24 hours
   }
 
+  // New app settings methods
+  async getAppSetting(key: string): Promise<AppSetting | undefined> {
+    return this.getSetting(key);
+  }
+
+  async upsertAppSetting(setting: InsertAppSetting): Promise<AppSetting> {
+    return this.setSetting(setting.key, setting.value, setting.description, setting.updatedBy);
+  }
+
+  async getAllAppSettings(): Promise<AppSetting[]> {
+    return this.getAllSettings();
+  }
+
+  async deleteAppSetting(key: string): Promise<boolean> {
+    const deleted = this.appSettings.delete(key);
+    return deleted;
+  }
+
   private initializeDefaultSettings(): void {
     // Initialize default settings
     this.setSetting('guestTokenExpirationHours', '24', 'Hours before guest check-in tokens expire');
@@ -1051,6 +1076,27 @@ class DatabaseStorage implements IStorage {
   async getGuestTokenExpirationHours(): Promise<number> {
     const setting = await this.getSetting('guestTokenExpirationHours');
     return setting ? parseInt(setting.value) : 24; // Default to 24 hours
+  }
+
+  // New app settings methods
+  async getAppSetting(key: string): Promise<AppSetting | undefined> {
+    return this.getSetting(key);
+  }
+
+  async upsertAppSetting(setting: InsertAppSetting): Promise<AppSetting> {
+    return this.setSetting(setting.key, setting.value, setting.description, setting.updatedBy);
+  }
+
+  async getAllAppSettings(): Promise<AppSetting[]> {
+    return this.getAllSettings();
+  }
+
+  async deleteAppSetting(key: string): Promise<boolean> {
+    const result = await this.db
+      .delete(appSettings)
+      .where(eq(appSettings.key, key))
+      .returning();
+    return result.length > 0;
   }
 }
 

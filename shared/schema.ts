@@ -190,12 +190,14 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     .transform(val => val || "0")
     .refine(val => {
       const num = parseFloat(val);
+      // Note: Max amount validation now uses configurable value on the server
+      // Client validation uses default that should match server configuration
       return !isNaN(num) && num >= 0 && num <= 9999.99;
-    }, "Amount must be between RM 0.00 and RM 9999.99. Please enter a valid payment amount")
+    }, "Amount must be within the allowed range. Please check with admin for current limits")
     .optional(),
   paymentMethod: z.enum(["cash", "tng", "bank", "platform"], {
     required_error: "Please select a payment method"
-  }).default("cash"),
+  }).default("cash"), // Default can be overridden by configuration
   paymentCollector: z.string()
     .min(1, "Please select who collected the payment")
     .max(50, "Collector name too long. Please use 50 characters or fewer")
@@ -255,8 +257,10 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     .refine(val => {
       if (!val) return true; // Optional field
       const age = parseInt(val);
+      // Note: Age validation now uses configurable min/max values on the server
+      // Client validation uses defaults that should match server configuration
       return age >= 16 && age <= 120;
-    }, "Age must be between 16 and 120")
+    }, "Age must be between the allowed range (check with admin for current age limits)")
     .optional(),
 });
 
@@ -484,11 +488,112 @@ export type InsertAppSetting = typeof appSettings.$inferInsert;
 
 // Settings schemas with validation
 export const updateSettingsSchema = z.object({
+  // Token and Session Settings
   guestTokenExpirationHours: z.number()
     .min(1, "Token expiration must be at least 1 hour")
     .max(168, "Token expiration cannot exceed 168 hours (7 days)")
     .int("Token expiration must be a whole number of hours")
     .default(24),
+  sessionExpirationHours: z.number()
+    .min(1, "Session expiration must be at least 1 hour")
+    .max(168, "Session expiration cannot exceed 168 hours (7 days)")
+    .int("Session expiration must be a whole number of hours")
+    .default(24),
+  
+  // System Settings
+  defaultUserRole: z.enum(["admin", "staff"], {
+    required_error: "Default user role must be either 'admin' or 'staff'",
+  }).default("staff"),
+  maxGuestStayDays: z.number()
+    .min(1, "Maximum stay must be at least 1 day")
+    .max(365, "Maximum stay cannot exceed 365 days")
+    .int("Maximum stay must be a whole number of days")
+    .default(30),
+  
+  // Payment Settings
+  defaultPaymentMethod: z.enum(["cash", "tng", "bank", "platform"], {
+    required_error: "Default payment method is required"
+  }).default("cash"),
+  maxPaymentAmount: z.number()
+    .min(0, "Maximum payment amount must be positive")
+    .max(99999.99, "Maximum payment amount cannot exceed RM 99,999.99")
+    .default(9999.99),
+  
+  // Capsule Settings
+  totalCapsules: z.number()
+    .min(1, "Total capsules must be at least 1")
+    .max(100, "Total capsules cannot exceed 100")
+    .int("Total capsules must be a whole number")
+    .default(24),
+  capsuleSections: z.array(z.string())
+    .min(1, "At least one capsule section is required")
+    .default(["front", "middle", "back"]),
+  capsuleNumberFormat: z.string()
+    .regex(/^[A-Z]\d+$/, "Capsule format must be like A01, B02, etc.")
+    .default("A01"),
+  
+  // Notification Settings
+  notificationRetentionDays: z.number()
+    .min(1, "Notification retention must be at least 1 day")
+    .max(365, "Notification retention cannot exceed 365 days")
+    .int("Notification retention must be a whole number of days")
+    .default(30),
+  
+  // Cache and Performance Settings
+  cacheTimeMinutes: z.number()
+    .min(1, "Cache time must be at least 1 minute")
+    .max(60, "Cache time cannot exceed 60 minutes")
+    .int("Cache time must be a whole number of minutes")
+    .default(5),
+  queryRefreshIntervalSeconds: z.number()
+    .min(5, "Refresh interval must be at least 5 seconds")
+    .max(300, "Refresh interval cannot exceed 300 seconds (5 minutes)")
+    .int("Refresh interval must be a whole number of seconds")
+    .default(30),
+  
+  // Data Pagination Settings
+  defaultPageSize: z.number()
+    .min(10, "Page size must be at least 10")
+    .max(100, "Page size cannot exceed 100")
+    .int("Page size must be a whole number")
+    .default(20),
+  maxPageSize: z.number()
+    .min(50, "Maximum page size must be at least 50")
+    .max(500, "Maximum page size cannot exceed 500")
+    .int("Maximum page size must be a whole number")
+    .default(100),
+  
+  // Business Rules
+  minGuestAge: z.number()
+    .min(16, "Minimum age must be at least 16")
+    .max(21, "Minimum age cannot exceed 21")
+    .int("Minimum age must be a whole number")
+    .default(16),
+  maxGuestAge: z.number()
+    .min(60, "Maximum age must be at least 60")
+    .max(120, "Maximum age cannot exceed 120")
+    .int("Maximum age must be a whole number")
+    .default(120),
+  
+  // Contact Information
+  defaultAdminEmail: z.string()
+    .email("Default admin email must be a valid email address")
+    .default("admin@pelangicapsule.com"),
+  supportEmail: z.string()
+    .email("Support email must be a valid email address")
+    .default("support@pelangicapsule.com"),
+  supportPhone: z.string()
+    .regex(/^[+]?[\d\s\-\(\)]{7,20}$/, "Support phone must be a valid phone number")
+    .default("+60123456789"),
+  
+  // Application Settings
+  hostelName: z.string()
+    .min(1, "Hostel name is required")
+    .max(100, "Hostel name cannot exceed 100 characters")
+    .default("Pelangi Capsule Hostel"),
+  timezone: z.string()
+    .regex(/^[A-Za-z_]+\/[A-Za-z_]+$/, "Timezone must be in format like Asia/Kuala_Lumpur")
+    .default("Asia/Kuala_Lumpur"),
 });
 
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;

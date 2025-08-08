@@ -6,6 +6,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { validateData, securityValidationMiddleware, sanitizers, validators } from "./validation";
+import { getConfig, getConfigForAPI, validateConfigUpdate, AppConfig } from "./configManager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -16,6 +17,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     process.env.GOOGLE_REDIRECT_URI
   );
   
+  // Configuration management endpoints
+  app.get("/api/admin/config", securityValidationMiddleware, async (req, res) => {
+    try {
+      const config = await getConfigForAPI();
+      res.json(config);
+    } catch (error) {
+      console.error('Error fetching configuration:', error);
+      res.status(500).json({ message: 'Failed to fetch configuration' });
+    }
+  });
+
+  app.put("/api/admin/config", securityValidationMiddleware, async (req, res) => {
+    try {
+      const updates = req.body;
+      
+      // Validate the updates first
+      const validation = await validateConfigUpdate(updates);
+      if (!validation.valid) {
+        return res.status(400).json({ 
+          message: 'Invalid configuration update',
+          errors: validation.errors 
+        });
+      }
+
+      const config = getConfig();
+      await config.updateMultiple(updates, req.user?.username || 'admin');
+      
+      const updatedConfig = await getConfigForAPI();
+      res.json({ 
+        message: 'Configuration updated successfully',
+        config: updatedConfig 
+      });
+    } catch (error) {
+      console.error('Error updating configuration:', error);
+      res.status(500).json({ message: 'Failed to update configuration' });
+    }
+  });
+
+  app.post("/api/admin/config/reset", securityValidationMiddleware, async (req, res) => {
+    try {
+      const { key } = req.body;
+      const config = getConfig();
+      
+      if (key) {
+        // Reset specific setting
+        await config.reset(key, req.user?.username || 'admin');
+        res.json({ message: `Setting '${key}' reset to default` });
+      } else {
+        // Reset all settings
+        await config.resetAll(req.user?.username || 'admin');
+        res.json({ message: 'All settings reset to defaults' });
+      }
+    } catch (error) {
+      console.error('Error resetting configuration:', error);
+      res.status(500).json({ message: 'Failed to reset configuration' });
+    }
+  });
+
   // Error reporting endpoint
   app.post("/api/errors/report", securityValidationMiddleware, async (req, res) => {
     try {

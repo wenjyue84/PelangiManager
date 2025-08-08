@@ -1,7 +1,24 @@
 /**
  * Centralized React Query configuration for different query types
  * Defines stale time and cache time for optimal performance
+ * Now uses configurable values instead of hardcoded intervals
  */
+
+import { DEFAULT_CONFIG } from '../hooks/useConfig';
+
+// Helper function to get configuration values from localStorage or defaults
+function getConfigValue<K extends keyof typeof DEFAULT_CONFIG>(key: K): typeof DEFAULT_CONFIG[K] {
+  try {
+    const cached = localStorage.getItem('app-config');
+    if (cached) {
+      const config = JSON.parse(cached);
+      return config[key] || DEFAULT_CONFIG[key];
+    }
+  } catch (error) {
+    console.warn('Failed to load cached config:', error);
+  }
+  return DEFAULT_CONFIG[key];
+}
 
 // Time constants in milliseconds
 const SECOND = 1000;
@@ -15,8 +32,8 @@ export const queryConfigs = {
   // Real-time data that changes frequently
   realtime: {
     staleTime: 10 * SECOND,     // Consider stale after 10 seconds
-    gcTime: 5 * MINUTE,          // Keep in cache for 5 minutes
-    refetchInterval: 30 * SECOND, // Auto-refresh every 30 seconds
+    gcTime: getConfigValue('cacheTimeMinutes') * MINUTE, // Use configured cache time
+    refetchInterval: getConfigValue('queryRefreshIntervalSeconds') * SECOND, // Use configured refresh interval
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   },
@@ -24,8 +41,8 @@ export const queryConfigs = {
   // Near real-time data (updates every few minutes)
   nearRealtime: {
     staleTime: 30 * SECOND,      // Consider stale after 30 seconds
-    gcTime: 10 * MINUTE,         // Keep in cache for 10 minutes
-    refetchInterval: 60 * SECOND, // Auto-refresh every minute
+    gcTime: getConfigValue('cacheTimeMinutes') * MINUTE, // Use configured cache time
+    refetchInterval: Math.max(getConfigValue('queryRefreshIntervalSeconds') * 2, 60) * SECOND, // Double the interval, min 60s
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   },
@@ -33,7 +50,7 @@ export const queryConfigs = {
   // Frequently changing data (but not real-time critical)
   frequent: {
     staleTime: 1 * MINUTE,       // Consider stale after 1 minute
-    gcTime: 15 * MINUTE,         // Keep in cache for 15 minutes
+    gcTime: getConfigValue('cacheTimeMinutes') * 3 * MINUTE, // 3x cache time for frequent data
     refetchInterval: false,      // No auto-refresh
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -111,7 +128,8 @@ export function getQueryConfig(queryKey: unknown[]) {
   }
 
   // Static/configuration data
-  if (endpoint.includes('/api/settings') ||
+  if (endpoint.includes('/api/admin/config') ||
+      endpoint.includes('/api/settings') ||
       endpoint.includes('/api/users')) {
     return queryConfigs.static;
   }
