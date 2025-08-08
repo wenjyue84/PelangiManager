@@ -226,8 +226,8 @@ export const validators = {
    * Validate capsule number format and check if it exists
    */
   isValidCapsuleFormat: (capsuleNumber: string): boolean => {
-    // Must be in format like A01, B02, C03 etc.
-    return /^[A-Z]\d{2}$/.test(capsuleNumber);
+    // Must be in format like C1, C2, C24 etc.
+    return /^C\d+$/.test(capsuleNumber);
   }
 };
 

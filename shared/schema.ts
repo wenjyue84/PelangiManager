@@ -626,7 +626,7 @@ export const emailSchema = z.string()
 
 export const capsuleNumberSchema = z.string()
   .min(1, "Capsule number is required")
-  .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03")
+  .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
   .transform(val => val.toUpperCase());
 
 export const nameSchema = z.string()

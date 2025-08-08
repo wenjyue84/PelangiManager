@@ -158,13 +158,8 @@ export default function CheckIn() {
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
       if (name === "gender" && value.gender && availableCapsules.length > 0) {
-        console.log("Gender changed to:", value.gender); // Debug log
-        const currentCapsule = form.getValues("capsuleNumber");
-        console.log("Current capsule:", currentCapsule); // Debug log
-        
         // Always suggest a new capsule when gender changes
         const recommendedCapsule = getRecommendedCapsule(value.gender);
-        console.log("Recommended capsule:", recommendedCapsule); // Debug log
         
         if (recommendedCapsule) {
           form.setValue("capsuleNumber", recommendedCapsule);
