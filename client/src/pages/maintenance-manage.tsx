@@ -12,7 +12,7 @@ import { AlertTriangle, CheckCircle2, Clock, User, Calendar, AlertCircle, Chevro
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { AuthContext } from "@/lib/auth";
-import type { Capsule, CapsuleProblem } from "@shared/schema";
+import type { Capsule, CapsuleProblem, PaginatedResponse } from "@shared/schema";
 
 export default function MaintenanceManage() {
   const [selectedCapsule, setSelectedCapsule] = useState<string>("");
@@ -28,13 +28,17 @@ export default function MaintenanceManage() {
     queryKey: ["/api/capsules"],
   });
 
-  const { data: allProblems = [], isLoading: isLoadingProblems } = useQuery<CapsuleProblem[]>({
+  const { data: allProblemsResponse, isLoading: isLoadingProblems } = useQuery<PaginatedResponse<CapsuleProblem>>({
     queryKey: ["/api/problems"],
   });
+  
+  const allProblems = allProblemsResponse?.data || [];
 
-  const { data: activeProblems = [] } = useQuery<CapsuleProblem[]>({
+  const { data: activeProblemsResponse } = useQuery<PaginatedResponse<CapsuleProblem>>({
     queryKey: ["/api/problems/active"],
   });
+  
+  const activeProblems = activeProblemsResponse?.data || [];
 
   const reportProblemMutation = useMutation({
     mutationFn: async ({ capsuleNumber, description }: { capsuleNumber: string; description: string }) => {

@@ -7,20 +7,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bell, BellRing, Check, CheckCircle2, User, MapPin, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { AdminNotification } from "@shared/schema";
+import type { AdminNotification, PaginatedResponse } from "@shared/schema";
 
 export default function AdminNotifications() {
   const [showAll, setShowAll] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: allNotifications = [] } = useQuery<AdminNotification[]>({
+  const { data: allNotificationsResponse } = useQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications"],
   });
+  
+  const allNotifications = allNotificationsResponse?.data || [];
 
-  const { data: unreadNotifications = [] } = useQuery<AdminNotification[]>({
+  const { data: unreadNotificationsResponse } = useQuery<PaginatedResponse<AdminNotification>>({
     queryKey: ["/api/admin/notifications/unread"],
   });
+  
+  const unreadNotifications = unreadNotificationsResponse?.data || [];
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {

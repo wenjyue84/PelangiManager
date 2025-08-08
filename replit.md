@@ -2,6 +2,21 @@
 
 This is a capsule hostel management system called "Pelangi Capsule Hostel" built as a full-stack web application. The system manages guest check-ins, check-outs, and provides a dashboard for monitoring occupancy across 24 capsules (A-01 to A-08, B-01 to B-08, C-01 to C-08). The application features a modern React frontend with TypeScript and a Node.js/Express backend, designed for real-time hostel operations management.
 
+## Recent Updates (August 8, 2025)
+
+### Pagination Implementation
+- Added comprehensive pagination support for all data-heavy endpoints to improve performance with large datasets
+- Implemented pagination types (PaginationParams, PaginatedResponse) in shared schema
+- Updated storage layer (both MemStorage and DatabaseStorage) to support pagination
+- Modified API endpoints to accept page and limit query parameters (defaults: page=1, limit=20)
+- Updated all client components to handle paginated responses with backward compatibility
+- Affected endpoints:
+  - `/api/guests/checked-in` - Paginated guest listings
+  - `/api/guests/history` - Paginated guest history
+  - `/api/guest-tokens/active` - Paginated active tokens
+  - `/api/problems` and `/api/problems/active` - Paginated problem reports
+  - `/api/admin/notifications` and `/api/admin/notifications/unread` - Paginated notifications
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.

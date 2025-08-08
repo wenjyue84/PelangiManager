@@ -194,19 +194,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all checked-in guests
-  app.get("/api/guests/checked-in", async (_req, res) => {
+  app.get("/api/guests/checked-in", async (req, res) => {
     try {
-      const guests = await storage.getCheckedInGuests();
-      res.json(guests);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const paginatedGuests = await storage.getCheckedInGuests({ page, limit });
+      res.json(paginatedGuests);
     } catch (error) {
       res.status(500).json({ message: "Failed to get checked-in guests" });
     }
   });
 
   // Get active guest tokens (reserved capsules)
-  app.get("/api/guest-tokens/active", async (_req, res) => {
+  app.get("/api/guest-tokens/active", async (req, res) => {
     try {
-      const activeTokens = await storage.getActiveGuestTokens();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const activeTokens = await storage.getActiveGuestTokens({ page, limit });
       res.json(activeTokens);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch active tokens" });
@@ -214,9 +218,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get guest history
-  app.get("/api/guests/history", async (_req, res) => {
+  app.get("/api/guests/history", async (req, res) => {
     try {
-      const history = await storage.getGuestHistory();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const history = await storage.getGuestHistory({ page, limit });
       res.json(history);
     } catch (error) {
       res.status(500).json({ message: "Failed to get guest history" });
@@ -290,7 +296,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all problems
   app.get("/api/problems", authenticateToken, async (req, res) => {
     try {
-      const problems = await storage.getAllProblems();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const problems = await storage.getAllProblems({ page, limit });
       res.json(problems);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch problems" });
@@ -300,7 +308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get active problems only
   app.get("/api/problems/active", authenticateToken, async (req, res) => {
     try {
-      const problems = await storage.getActiveProblems();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const problems = await storage.getActiveProblems({ page, limit });
       res.json(problems);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch active problems" });
@@ -368,7 +378,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin notification routes
   app.get("/api/admin/notifications", authenticateToken, async (req, res) => {
     try {
-      const notifications = await storage.getAdminNotifications();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const notifications = await storage.getAdminNotifications({ page, limit });
       res.json(notifications);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch notifications" });
@@ -377,7 +389,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/notifications/unread", authenticateToken, async (req, res) => {
     try {
-      const notifications = await storage.getUnreadAdminNotifications();
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const notifications = await storage.getUnreadAdminNotifications({ page, limit });
       res.json(notifications);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch unread notifications" });

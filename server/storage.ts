@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, type AdminNotification, type InsertAdminNotification, type AppSetting, type InsertAppSetting, users, guests, capsules, sessions, guestTokens, capsuleProblems, adminNotifications, appSettings } from "@shared/schema";
+import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule, type InsertCapsule, type Session, type GuestToken, type InsertGuestToken, type CapsuleProblem, type InsertCapsuleProblem, type AdminNotification, type InsertAdminNotification, type AppSetting, type InsertAppSetting, type PaginationParams, type PaginatedResponse, users, guests, capsules, sessions, guestTokens, capsuleProblems, adminNotifications, appSettings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
@@ -24,9 +24,9 @@ export interface IStorage {
   // Guest management methods
   createGuest(guest: InsertGuest): Promise<Guest>;
   getGuest(id: string): Promise<Guest | undefined>;
-  getAllGuests(): Promise<Guest[]>;
-  getCheckedInGuests(): Promise<Guest[]>;
-  getGuestHistory(): Promise<Guest[]>;
+  getAllGuests(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>>;
+  getCheckedInGuests(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>>;
+  getGuestHistory(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>>;
   checkoutGuest(id: string): Promise<Guest | undefined>;
   updateGuest(id: string, updates: Partial<Guest>): Promise<Guest | undefined>;
   getGuestsWithCheckoutToday(): Promise<Guest[]>;
@@ -42,21 +42,21 @@ export interface IStorage {
   // Capsule problem management
   createCapsuleProblem(problem: InsertCapsuleProblem): Promise<CapsuleProblem>;
   getCapsuleProblems(capsuleNumber: string): Promise<CapsuleProblem[]>;
-  getActiveProblems(): Promise<CapsuleProblem[]>;
-  getAllProblems(): Promise<CapsuleProblem[]>;
+  getActiveProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>>;
+  getAllProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>>;
   resolveProblem(problemId: string, resolvedBy: string, notes?: string): Promise<CapsuleProblem | undefined>;
 
   // Guest token management methods
   createGuestToken(token: InsertGuestToken): Promise<GuestToken>;
   getGuestToken(token: string): Promise<GuestToken | undefined>;
-  getActiveGuestTokens(): Promise<GuestToken[]>;
+  getActiveGuestTokens(pagination?: PaginationParams): Promise<PaginatedResponse<GuestToken>>;
   markTokenAsUsed(token: string): Promise<GuestToken | undefined>;
   cleanExpiredTokens(): Promise<void>;
 
   // Admin notification methods
   createAdminNotification(notification: InsertAdminNotification): Promise<AdminNotification>;
-  getAdminNotifications(): Promise<AdminNotification[]>;
-  getUnreadAdminNotifications(): Promise<AdminNotification[]>;
+  getAdminNotifications(pagination?: PaginationParams): Promise<PaginatedResponse<AdminNotification>>;
+  getUnreadAdminNotifications(pagination?: PaginationParams): Promise<PaginatedResponse<AdminNotification>>;
   markNotificationAsRead(id: string): Promise<AdminNotification | undefined>;
   markAllNotificationsAsRead(): Promise<void>;
 
@@ -340,16 +340,19 @@ export class MemStorage implements IStorage {
     return this.guests.get(id);
   }
 
-  async getAllGuests(): Promise<Guest[]> {
-    return Array.from(this.guests.values());
+  async getAllGuests(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>> {
+    const allGuests = Array.from(this.guests.values());
+    return this.paginate(allGuests, pagination);
   }
 
-  async getCheckedInGuests(): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(guest => guest.isCheckedIn);
+  async getCheckedInGuests(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>> {
+    const checkedInGuests = Array.from(this.guests.values()).filter(guest => guest.isCheckedIn);
+    return this.paginate(checkedInGuests, pagination);
   }
 
-  async getGuestHistory(): Promise<Guest[]> {
-    return Array.from(this.guests.values()).filter(guest => !guest.isCheckedIn);
+  async getGuestHistory(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>> {
+    const guestHistory = Array.from(this.guests.values()).filter(guest => !guest.isCheckedIn);
+    return this.paginate(guestHistory, pagination);
   }
 
   async checkoutGuest(id: string): Promise<Guest | undefined> {
@@ -385,8 +388,8 @@ export class MemStorage implements IStorage {
   }
 
   async getCapsuleOccupancy(): Promise<{ total: number; occupied: number; available: number; occupancyRate: number }> {
-    const checkedInGuests = await this.getCheckedInGuests();
-    const occupied = checkedInGuests.length;
+    const checkedInGuestsResponse = await this.getCheckedInGuests();
+    const occupied = checkedInGuestsResponse.pagination.total;
     const available = this.totalCapsules - occupied;
     const occupancyRate = Math.round((occupied / this.totalCapsules) * 100);
 
@@ -482,15 +485,17 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime());
   }
 
-  async getActiveProblems(): Promise<CapsuleProblem[]> {
-    return Array.from(this.capsuleProblems.values())
+  async getActiveProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>> {
+    const activeProblems = Array.from(this.capsuleProblems.values())
       .filter(p => !p.isResolved)
       .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime());
+    return this.paginate(activeProblems, pagination);
   }
 
-  async getAllProblems(): Promise<CapsuleProblem[]> {
-    return Array.from(this.capsuleProblems.values())
+  async getAllProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>> {
+    const allProblems = Array.from(this.capsuleProblems.values())
       .sort((a, b) => b.reportedAt.getTime() - a.reportedAt.getTime());
+    return this.paginate(allProblems, pagination);
   }
 
   async resolveProblem(problemId: string, resolvedBy: string, notes?: string): Promise<CapsuleProblem | undefined> {
@@ -544,11 +549,12 @@ export class MemStorage implements IStorage {
     return this.guestTokens.get(token);
   }
 
-  async getActiveGuestTokens(): Promise<GuestToken[]> {
+  async getActiveGuestTokens(pagination?: PaginationParams): Promise<PaginatedResponse<GuestToken>> {
     const now = new Date();
-    return Array.from(this.guestTokens.values())
+    const activeTokens = Array.from(this.guestTokens.values())
       .filter(token => !token.isUsed && token.expiresAt > now)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return this.paginate(activeTokens, pagination);
   }
 
   async markTokenAsUsed(token: string): Promise<GuestToken | undefined> {
@@ -587,15 +593,17 @@ export class MemStorage implements IStorage {
     return adminNotification;
   }
 
-  async getAdminNotifications(): Promise<AdminNotification[]> {
-    return Array.from(this.adminNotifications.values())
+  async getAdminNotifications(pagination?: PaginationParams): Promise<PaginatedResponse<AdminNotification>> {
+    const allNotifications = Array.from(this.adminNotifications.values())
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return this.paginate(allNotifications, pagination);
   }
 
-  async getUnreadAdminNotifications(): Promise<AdminNotification[]> {
-    return Array.from(this.adminNotifications.values())
+  async getUnreadAdminNotifications(pagination?: PaginationParams): Promise<PaginatedResponse<AdminNotification>> {
+    const unreadNotifications = Array.from(this.adminNotifications.values())
       .filter(n => !n.isRead)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return this.paginate(unreadNotifications, pagination);
   }
 
   async markNotificationAsRead(id: string): Promise<AdminNotification | undefined> {
@@ -648,6 +656,30 @@ export class MemStorage implements IStorage {
     // Initialize default settings
     this.setSetting('guestTokenExpirationHours', '24', 'Hours before guest check-in tokens expire');
   }
+
+  // Helper function for pagination
+  private paginate<T>(items: T[], pagination?: PaginationParams): PaginatedResponse<T> {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 20;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    
+    const paginatedItems = items.slice(startIndex, endIndex);
+    const total = items.length;
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+    
+    return {
+      data: paginatedItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore,
+      },
+    };
+  }
 }
 
 // Database Storage Implementation
@@ -660,6 +692,30 @@ class DatabaseStorage implements IStorage {
     }
     const sql = neon(process.env.DATABASE_URL);
     this.db = drizzle(sql);
+  }
+
+  // Helper function for pagination
+  private paginate<T>(items: T[], pagination?: PaginationParams): PaginatedResponse<T> {
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 20;
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    
+    const paginatedItems = items.slice(startIndex, endIndex);
+    const total = items.length;
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+    
+    return {
+      data: paginatedItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore,
+      },
+    };
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -735,16 +791,19 @@ class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getAllGuests(): Promise<Guest[]> {
-    return await this.db.select().from(guests);
+  async getAllGuests(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>> {
+    const allGuests = await this.db.select().from(guests);
+    return this.paginate(allGuests, pagination);
   }
 
-  async getCheckedInGuests(): Promise<Guest[]> {
-    return await this.db.select().from(guests).where(eq(guests.isCheckedIn, true));
+  async getCheckedInGuests(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>> {
+    const checkedInGuests = await this.db.select().from(guests).where(eq(guests.isCheckedIn, true));
+    return this.paginate(checkedInGuests, pagination);
   }
 
-  async getGuestHistory(): Promise<Guest[]> {
-    return await this.db.select().from(guests).where(eq(guests.isCheckedIn, false));
+  async getGuestHistory(pagination?: PaginationParams): Promise<PaginatedResponse<Guest>> {
+    const guestHistory = await this.db.select().from(guests).where(eq(guests.isCheckedIn, false));
+    return this.paginate(guestHistory, pagination);
   }
 
   async checkoutGuest(id: string): Promise<Guest | undefined> {
@@ -782,8 +841,8 @@ class DatabaseStorage implements IStorage {
   }
 
   async getCapsuleOccupancy(): Promise<{ total: number; occupied: number; available: number; occupancyRate: number }> {
-    const checkedInGuests = await this.getCheckedInGuests();
-    const occupied = checkedInGuests.length;
+    const checkedInGuestsResponse = await this.getCheckedInGuests();
+    const occupied = checkedInGuestsResponse.pagination.total;
     const totalCapsules = 22; // C1-C6 (6) + C25-C26 (2) + C11-C24 (14) = 22 total
     const available = totalCapsules - occupied;
     const occupancyRate = Math.round((occupied / totalCapsules) * 100);
@@ -846,19 +905,21 @@ class DatabaseStorage implements IStorage {
       .orderBy(capsuleProblems.reportedAt);
   }
 
-  async getActiveProblems(): Promise<CapsuleProblem[]> {
-    return await this.db
+  async getActiveProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>> {
+    const activeProblems = await this.db
       .select()
       .from(capsuleProblems)
       .where(eq(capsuleProblems.isResolved, false))
       .orderBy(capsuleProblems.reportedAt);
+    return this.paginate(activeProblems, pagination);
   }
 
-  async getAllProblems(): Promise<CapsuleProblem[]> {
-    return await this.db
+  async getAllProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>> {
+    const allProblems = await this.db
       .select()
       .from(capsuleProblems)
       .orderBy(capsuleProblems.reportedAt);
+    return this.paginate(allProblems, pagination);
   }
 
   async resolveProblem(problemId: string, resolvedBy: string, notes?: string): Promise<CapsuleProblem | undefined> {
@@ -897,6 +958,21 @@ class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getActiveGuestTokens(pagination?: PaginationParams): Promise<PaginatedResponse<GuestToken>> {
+    const now = new Date();
+    const activeTokens = await this.db
+      .select()
+      .from(guestTokens)
+      .where(and(
+        eq(guestTokens.isUsed, false),
+        ne(guestTokens.expiresAt, null)
+      ))
+      .orderBy(guestTokens.createdAt);
+    // Filter out expired tokens
+    const nonExpiredTokens = activeTokens.filter(token => token.expiresAt && token.expiresAt > now);
+    return this.paginate(nonExpiredTokens, pagination);
+  }
+
   async cleanExpiredTokens(): Promise<void> {
     const now = new Date();
     await this.db.delete(guestTokens).where(lte(guestTokens.expiresAt, now));
@@ -908,19 +984,21 @@ class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getAdminNotifications(): Promise<AdminNotification[]> {
-    return await this.db
+  async getAdminNotifications(pagination?: PaginationParams): Promise<PaginatedResponse<AdminNotification>> {
+    const allNotifications = await this.db
       .select()
       .from(adminNotifications)
       .orderBy(adminNotifications.createdAt);
+    return this.paginate(allNotifications, pagination);
   }
 
-  async getUnreadAdminNotifications(): Promise<AdminNotification[]> {
-    return await this.db
+  async getUnreadAdminNotifications(pagination?: PaginationParams): Promise<PaginatedResponse<AdminNotification>> {
+    const unreadNotifications = await this.db
       .select()
       .from(adminNotifications)
       .where(eq(adminNotifications.isRead, false))
       .orderBy(adminNotifications.createdAt);
+    return this.paginate(unreadNotifications, pagination);
   }
 
   async markNotificationAsRead(id: string): Promise<AdminNotification | undefined> {

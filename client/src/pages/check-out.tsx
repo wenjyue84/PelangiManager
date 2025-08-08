@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserMinus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Guest } from "@shared/schema";
+import type { Guest, PaginatedResponse } from "@shared/schema";
 
 function formatDuration(checkinTime: string): string {
   const checkin = new Date(checkinTime);
@@ -44,9 +44,11 @@ export default function CheckOut() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const { data: guests = [], isLoading } = useQuery<Guest[]>({
+  const { data: guestsResponse, isLoading } = useQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
   });
+  
+  const guests = guestsResponse?.data || [];
 
   const checkoutMutation = useMutation({
     mutationFn: async (guestId: string) => {
@@ -104,7 +106,7 @@ export default function CheckOut() {
                 </div>
               ))}
             </div>
-          ) : guests.length === 0 ? (
+          ) : !guestsResponse || guests.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No guests currently checked in</p>
             </div>

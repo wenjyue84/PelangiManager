@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search } from "lucide-react";
-import type { Guest } from "@shared/schema";
+import type { Guest, PaginatedResponse } from "@shared/schema";
 
 function formatDuration(checkinTime: string, checkoutTime: string): string {
   const checkin = new Date(checkinTime);
@@ -27,9 +27,11 @@ export default function History() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   
-  const { data: guestHistory = [], isLoading } = useQuery<Guest[]>({
+  const { data: guestHistoryResponse, isLoading } = useQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/history"],
   });
+  
+  const guestHistory = guestHistoryResponse?.data || [];
 
   const filteredHistory = guestHistory.filter(guest => {
     const matchesSearch = guest.name.toLowerCase().includes(searchQuery.toLowerCase());

@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import GuestDetailsModal from "./guest-details-modal";
-import type { Guest, GuestToken } from "@shared/schema";
+import type { Guest, GuestToken, PaginatedResponse } from "@shared/schema";
 
 type SortField = 'name' | 'capsuleNumber' | 'checkinTime' | 'expectedCheckoutDate';
 type SortOrder = 'asc' | 'desc';
@@ -240,15 +240,17 @@ export default function SortableGuestTable() {
     order: 'asc'
   });
   
-  const { data: guests = [], isLoading } = useQuery<Guest[]>({
+  const { data: guestsResponse, isLoading } = useQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
   });
+  
+  const guests = guestsResponse?.data || [];
 
   const { data: occupancy } = useQuery<{total: number; occupied: number; available: number}>({
     queryKey: ["/api/occupancy"],
   });
 
-  const { data: activeTokens = [] } = useQuery<Array<{
+  const { data: activeTokensResponse } = useQuery<PaginatedResponse<{
     id: string;
     token: string;
     capsuleNumber: string;
@@ -259,6 +261,8 @@ export default function SortableGuestTable() {
   }>>({
     queryKey: ["/api/guest-tokens/active"],
   });
+  
+  const activeTokens = activeTokensResponse?.data || [];
 
   // Create a combined list of guests and reserved capsules
   const combinedData = useMemo(() => {

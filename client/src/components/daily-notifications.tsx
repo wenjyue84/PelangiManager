@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bell, Calendar, Clock, User } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Guest } from "@shared/schema";
+import type { Guest, PaginatedResponse } from "@shared/schema";
 
 export default function DailyNotifications() {
-  const { data: guests = [], isLoading } = useQuery<Guest[]>({
+  const { data: guestsResponse, isLoading } = useQuery<PaginatedResponse<Guest>>({
     queryKey: ["/api/guests/checked-in"],
   });
+  
+  const guests = guestsResponse?.data || [];
 
   // Check for guests checking out today (expected checkout date is today)
   const today = new Date().toISOString().split('T')[0];
