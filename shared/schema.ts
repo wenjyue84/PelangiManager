@@ -385,17 +385,45 @@ export const guestSelfCheckinSchema = z.object({
     }, "Please enter a valid IC number with a valid birth date")
     .optional(),
   passportNumber: z.string()
-    .min(6, "Passport number must be at least 6 characters long")
-    .max(15, "Passport number must not exceed 15 characters")
-    .regex(/^[A-Za-z0-9]+$/, "Passport number can only contain letters and numbers")
-    .transform(val => val?.toUpperCase())
-    .optional(),
+    .optional()
+    .transform(val => val === "" ? undefined : val) // Convert empty strings to undefined
+    .refine((val) => {
+      if (val === undefined) return true; // Skip validation if undefined
+      return val.length >= 6;
+    }, "Passport number must be at least 6 characters long")
+    .refine((val) => {
+      if (val === undefined) return true; // Skip validation if undefined
+      return val.length <= 15;
+    }, "Passport number must not exceed 15 characters")
+    .refine((val) => {
+      if (val === undefined) return true; // Skip validation if undefined
+      return /^[A-Za-z0-9]+$/.test(val);
+    }, "Passport number can only contain letters and numbers")
+    .transform(val => val?.toUpperCase()),
   icDocumentUrl: z.string()
-    .url("IC document must be a valid URL")
-    .optional(),
+    .optional()
+    .transform(val => val === "" ? undefined : val) // Convert empty strings to undefined
+    .refine((val) => {
+      if (val === undefined) return true; // Skip validation if undefined
+      try {
+        new URL(val);
+        return true;
+      } catch {
+        return false;
+      }
+    }, "IC document must be a valid URL"),
   passportDocumentUrl: z.string()
-    .url("Passport document must be a valid URL")
-    .optional(),
+    .optional()
+    .transform(val => val === "" ? undefined : val) // Convert empty strings to undefined
+    .refine((val) => {
+      if (val === undefined) return true; // Skip validation if undefined
+      try {
+        new URL(val);
+        return true;
+      } catch {
+        return false;
+      }
+    }, "Passport document must be a valid URL"),
   paymentMethod: z.enum(["cash", "bank", "online_platform"], { 
     required_error: "Please select a payment method" 
   }),

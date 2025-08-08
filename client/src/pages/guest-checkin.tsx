@@ -264,19 +264,27 @@ export default function GuestCheckin() {
   // Clear the disabled field when the other field is filled
   useEffect(() => {
     if (watchedIcNumber && watchedIcNumber.trim().length > 0) {
-      // Clear passport fields when IC is filled
-      form.setValue("passportNumber", "");
-      form.setValue("passportDocumentUrl", "");
-      setPassportDocumentUrl("");
+      // Clear passport fields when IC is filled - set to empty strings which will be converted to undefined by schema
+      if (watchedPassportNumber) {
+        form.setValue("passportNumber", "");
+      }
+      if (passportDocumentUrl) {
+        form.setValue("passportDocumentUrl", "");
+        setPassportDocumentUrl("");
+      }
     }
   }, [watchedIcNumber]);
 
   useEffect(() => {
     if (watchedPassportNumber && watchedPassportNumber.trim().length > 0) {
-      // Clear IC fields when passport is filled
-      form.setValue("icNumber", "");
-      form.setValue("icDocumentUrl", "");
-      setIcDocumentUrl("");
+      // Clear IC fields when passport is filled - set to empty strings which will be converted to undefined by schema
+      if (watchedIcNumber) {
+        form.setValue("icNumber", "");
+      }
+      if (icDocumentUrl) {
+        form.setValue("icDocumentUrl", "");
+        setIcDocumentUrl("");
+      }
     }
   }, [watchedPassportNumber]);
 
