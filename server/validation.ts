@@ -20,13 +20,34 @@ export function validateData(
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const friendlyErrors = error.errors.map(err => {
+          const field = err.path.join('.');
+          let friendlyMessage = err.message;
+          
+          // Add more context for specific validation errors
+          if (err.code === 'invalid_string' && err.validation === 'email') {
+            friendlyMessage = `${friendlyMessage}. Check for typos in your email address.`;
+          } else if (err.code === 'too_small' && err.type === 'string') {
+            friendlyMessage = `${friendlyMessage}. This field needs more characters.`;
+          } else if (err.code === 'too_big' && err.type === 'string') {
+            friendlyMessage = `${friendlyMessage}. Please shorten this field.`;
+          } else if (err.code === 'invalid_string' && err.validation === 'regex') {
+            friendlyMessage = `${friendlyMessage}. Please check the format requirements.`;
+          }
+          
+          return {
+            field: field,
+            message: friendlyMessage,
+            code: err.code,
+            expected: err.expected,
+            received: err.received
+          };
+        });
+        
         return res.status(400).json({
-          message: "Validation failed",
-          errors: error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message,
-            code: err.code
-          }))
+          message: "Please fix the following issues:",
+          errors: friendlyErrors,
+          totalErrors: friendlyErrors.length
         });
       }
       
@@ -303,15 +324,19 @@ export const securityValidationMiddleware = (req: Request, res: Response, next: 
         
         if (securityValidation.hasSQLInjection(obj[key])) {
           return res.status(400).json({
-            message: "Input validation failed",
-            error: `Potential SQL injection detected in field: ${currentPath}`
+            message: "Security Issue Detected",
+            error: `The ${currentPath} field contains potentially harmful characters. Please remove any SQL-related keywords and special characters.`,
+            field: currentPath,
+            suggestion: "Try using only letters, numbers, and common punctuation."
           });
         }
         
         if (securityValidation.hasXSSAttempt(obj[key])) {
           return res.status(400).json({
-            message: "Input validation failed", 
-            error: `Potential XSS attempt detected in field: ${currentPath}`
+            message: "Security Issue Detected",
+            error: `The ${currentPath} field contains potentially harmful code. Please remove any HTML tags, scripts, or javascript code.`,
+            field: currentPath,
+            suggestion: "Please enter plain text only without HTML or code."
           });
         }
         

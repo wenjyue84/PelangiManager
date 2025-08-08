@@ -134,21 +134,23 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 }).extend({
   email: z.string()
-    .email("Please enter a valid email address")
-    .min(5, "Email must be at least 5 characters long")
-    .max(254, "Email must not exceed 254 characters")
+    .email("Please enter a valid email address (e.g., john@example.com)")
+    .min(5, "Email is too short. Please enter at least 5 characters including @ and domain")
+    .max(254, "Email is too long. Please use a shorter email address (maximum 254 characters)")
     .toLowerCase()
     .transform(val => val.trim()),
   username: z.string()
-    .min(3, "Username must be at least 3 characters long")
-    .max(30, "Username must not exceed 30 characters")
-    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only contain letters, numbers, hyphens, and underscores")
+    .min(3, "Username too short. Please enter at least 3 characters")
+    .max(30, "Username too long. Please use 30 characters or fewer")
+    .regex(/^[a-zA-Z0-9_-]+$/, "Username can only use letters, numbers, dashes (-), and underscores (_). No spaces or special characters allowed")
     .transform(val => val.trim())
     .optional(),
   password: z.string()
-    .min(8, "Password must be at least 8 characters long")
-    .max(128, "Password must not exceed 128 characters")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password must contain at least one lowercase letter, one uppercase letter, and one number")
+    .min(8, "Password too short. Please create a password with at least 8 characters")
+    .max(128, "Password too long. Please use 128 characters or fewer")
+    .regex(/^(?=.*[a-z])/, "Password missing lowercase letter. Please add at least one lowercase letter (a-z)")
+    .regex(/^(?=.*[A-Z])/, "Password missing uppercase letter. Please add at least one uppercase letter (A-Z)")
+    .regex(/^(?=.*\d)/, "Password missing number. Please add at least one number (0-9)")
     .optional(),
   googleId: z.string().optional(),
   firstName: z.string()
@@ -176,32 +178,32 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
   isCheckedIn: true,
 }).extend({
   name: z.string()
-    .min(2, "Guest name must be at least 2 characters long")
-    .max(100, "Guest name must not exceed 100 characters")
-    .regex(/^[a-zA-Z\s.'-]+$/, "Guest name can only contain letters, spaces, periods, apostrophes, and hyphens")
+    .min(2, "Please enter the guest's full name (at least 2 characters)")
+    .max(100, "Guest name too long. Please use 100 characters or fewer")
+    .regex(/^[a-zA-Z\s.'-]+$/, "Guest name can only contain letters, spaces, periods (.), apostrophes ('), and hyphens (-). Please remove numbers or symbols")
     .transform(val => val.trim()),
   capsuleNumber: z.string()
-    .min(1, "Capsule number is required")
-    .regex(/^[A-Z]\d{2}$/, "Capsule number must be in format like A01, B02, C03"),
+    .min(1, "Please select a capsule for the guest")
+    .regex(/^[A-Z]\d{2}$/, "Invalid capsule format. Please use format like A01, B02, or C03 (one letter followed by two numbers)"),
   paymentAmount: z.string()
-    .regex(/^\d*\.?\d{0,2}$/, "Payment amount must be a valid monetary value")
+    .regex(/^\d*\.?\d{0,2}$/, "Invalid amount format. Please enter numbers only (e.g., 50.00 or 150)")
     .transform(val => val || "0")
     .refine(val => {
       const num = parseFloat(val);
       return !isNaN(num) && num >= 0 && num <= 9999.99;
-    }, "Payment amount must be between 0 and 9999.99")
+    }, "Amount must be between RM 0.00 and RM 9999.99. Please enter a valid payment amount")
     .optional(),
   paymentMethod: z.enum(["cash", "tng", "bank", "platform"], {
     required_error: "Please select a payment method"
   }).default("cash"),
   paymentCollector: z.string()
-    .min(1, "Payment collector is required")
-    .max(50, "Payment collector name must not exceed 50 characters")
-    .regex(/^[a-zA-Z\s'-]+$/, "Payment collector name can only contain letters, spaces, apostrophes, and hyphens")
+    .min(1, "Please select who collected the payment")
+    .max(50, "Collector name too long. Please use 50 characters or fewer")
+    .regex(/^[a-zA-Z\s'-]+$/, "Invalid collector name. Please use letters, spaces, apostrophes ('), and hyphens (-) only")
     .transform(val => val.trim()),
   isPaid: z.boolean().default(false),
   notes: z.string()
-    .max(500, "Notes must not exceed 500 characters")
+    .max(500, "Notes too long. Please use 500 characters or fewer to describe any special requirements")
     .transform(val => val?.trim() || "")
     .optional(),
   expectedCheckoutDate: z.string()
@@ -219,9 +221,9 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     required_error: "Please select a gender"
   }).optional(),
   nationality: z.string()
-    .min(2, "Nationality must be at least 2 characters long")
-    .max(50, "Nationality must not exceed 50 characters")
-    .regex(/^[a-zA-Z\s-]+$/, "Nationality can only contain letters, spaces, and hyphens")
+    .min(2, "Please enter the guest's nationality (e.g., Malaysian, Singaporean)")
+    .max(50, "Nationality too long. Please use 50 characters or fewer")
+    .regex(/^[a-zA-Z\s-]+$/, "Nationality can only contain letters, spaces, and hyphens (-). Please remove numbers or symbols")
     .transform(val => val?.trim())
     .optional(),
   phoneNumber: z.string()
@@ -229,13 +231,13 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     .transform(val => val?.replace(/\s/g, ""))
     .optional(),
   email: z.union([
-    z.string().email("Please enter a valid email address").transform(val => val.toLowerCase().trim()),
+    z.string().email("Invalid email format. Please enter a valid email address like john@example.com").transform(val => val.toLowerCase().trim()),
     z.literal("")
   ]).optional(),
   idNumber: z.string()
-    .min(6, "ID number must be at least 6 characters long")
-    .max(20, "ID number must not exceed 20 characters")
-    .regex(/^[A-Z0-9\-]+$/i, "ID number can only contain letters, numbers, and hyphens")
+    .min(6, "ID/Passport number too short. Please enter at least 6 characters")
+    .max(20, "ID/Passport number too long. Please use 20 characters or fewer")
+    .regex(/^[A-Z0-9\-]+$/i, "Invalid ID format. Please use letters, numbers, and hyphens (-) only. Example: 950101-01-1234 or A1234567")
     .transform(val => val?.toUpperCase())
     .optional(),
   emergencyContact: z.string()
