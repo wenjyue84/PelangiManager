@@ -185,7 +185,7 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
   name: z.string()
     .min(2, "Please enter the guest's full name (at least 2 characters)")
     .max(100, "Guest name too long. Please use 100 characters or fewer")
-    .regex(/^[a-zA-Z\s.'-]+$/, "Guest name can only contain letters, spaces, periods (.), apostrophes ('), and hyphens (-). Please remove numbers or symbols")
+    .regex(/^[a-zA-Z0-9\s.'-]+$/, "Guest name can only contain letters, numbers, spaces, periods (.), apostrophes ('), and hyphens (-). Special symbols are not allowed")
     .transform(val => val.trim()),
   capsuleNumber: z.string()
     .min(1, "Please select a capsule for the guest")
@@ -228,44 +228,31 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     required_error: "Please select a gender"
   }).optional(),
   nationality: z.string()
-    .min(2, "Please enter the guest's nationality (e.g., Malaysian, Singaporean)")
-    .max(50, "Nationality too long. Please use 50 characters or fewer")
-    .regex(/^[a-zA-Z\s-]+$/, "Nationality can only contain letters, spaces, and hyphens (-). Please remove numbers or symbols")
     .transform(val => val?.trim())
+    .refine(val => !val || (val.length >= 2 && val.length <= 50 && /^[a-zA-Z\s-]+$/.test(val)), "Nationality must be 2-50 characters and contain only letters, spaces, and hyphens")
     .optional(),
   phoneNumber: z.string()
-    .regex(/^[+]?[\d\s\-\(\)]{7,20}$/, "Please enter a valid phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
     .transform(val => val?.replace(/\s/g, ""))
+    .refine(val => !val || /^[+]?[\d\s\-\(\)]{7,20}$/.test(val), "Please enter a valid phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
     .optional(),
   email: z.union([
     z.string().email("Invalid email format. Please enter a valid email address like john@example.com").transform(val => val.toLowerCase().trim()),
     z.literal("")
   ]).optional(),
   idNumber: z.string()
-    .min(6, "ID/Passport number too short. Please enter at least 6 characters")
-    .max(20, "ID/Passport number too long. Please use 20 characters or fewer")
-    .regex(/^[A-Z0-9\-]+$/i, "Invalid ID format. Please use letters, numbers, and hyphens (-) only. Example: 950101-01-1234 or A1234567")
     .transform(val => val?.toUpperCase())
+    .refine(val => !val || (val.length >= 6 && val.length <= 20 && /^[A-Z0-9\-]+$/i.test(val)), "ID/Passport number must be 6-20 characters with letters, numbers, and hyphens only")
     .optional(),
   emergencyContact: z.string()
-    .min(2, "Emergency contact name must be at least 2 characters long")
-    .max(100, "Emergency contact name must not exceed 100 characters")
-    .regex(/^[a-zA-Z\s.'-]+$/, "Emergency contact name can only contain letters, spaces, periods, apostrophes, and hyphens")
     .transform(val => val?.trim())
+    .refine(val => !val || (val.length >= 2 && val.length <= 100 && /^[a-zA-Z\s.'-]+$/.test(val)), "Emergency contact name must be 2-100 characters with letters, spaces, periods, apostrophes, and hyphens only")
     .optional(),
   emergencyPhone: z.string()
-    .regex(/^[+]?[\d\s\-\(\)]{7,20}$/, "Please enter a valid emergency phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
     .transform(val => val?.replace(/\s/g, ""))
+    .refine(val => !val || /^[+]?[\d\s\-\(\)]{7,20}$/.test(val), "Please enter a valid emergency phone number (7-20 digits, may include +, spaces, dashes, parentheses)")
     .optional(),
   age: z.string()
-    .regex(/^\d{1,3}$/, "Age must be a number")
-    .refine(val => {
-      if (!val) return true; // Optional field
-      const age = parseInt(val);
-      // Note: Age validation now uses configurable min/max values on the server
-      // Client validation uses defaults that should match server configuration
-      return age >= 16 && age <= 120;
-    }, "Age must be between the allowed range (check with admin for current age limits)")
+    .refine(val => !val || (/^\d{1,3}$/.test(val) && parseInt(val) >= 16 && parseInt(val) <= 120), "Age must be a number between 16 and 120")
     .optional(),
   profilePhotoUrl: z.string()
     .url("Profile photo must be a valid URL")

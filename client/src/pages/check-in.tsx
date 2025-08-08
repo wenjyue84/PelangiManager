@@ -127,9 +127,20 @@ export default function CheckIn() {
       emergencyContact: "",
       emergencyPhone: "",
       age: "",
-      expectedCheckoutDate: "",
+      expectedCheckoutDate: (() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+      })(),
     },
   });
+
+  // Get next day date for default checkout
+  const getNextDayDate = useCallback(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+  }, []);
 
   // Set defaults when user is available
   useEffect(() => {
@@ -139,20 +150,26 @@ export default function CheckIn() {
     if (!form.getValues("name")) {
       form.setValue("name", getNextGuestNumber());
     }
-  }, [user, form, getDefaultCollector, getNextGuestNumber]);
+    if (!form.getValues("expectedCheckoutDate")) {
+      form.setValue("expectedCheckoutDate", getNextDayDate());
+    }
+  }, [user, form, getDefaultCollector, getNextGuestNumber, getNextDayDate]);
 
   // Auto-assign capsule based on gender
   useEffect(() => {
-    const currentGender = form.watch("gender");
-    const currentCapsule = form.watch("capsuleNumber");
-    
-    if (currentGender && !currentCapsule && availableCapsules.length > 0) {
-      const recommendedCapsule = getRecommendedCapsule(currentGender);
-      if (recommendedCapsule) {
-        form.setValue("capsuleNumber", recommendedCapsule);
+    const subscription = form.watch((value, { name }) => {
+      if (name === "gender" && value.gender && availableCapsules.length > 0) {
+        const currentCapsule = form.getValues("capsuleNumber");
+        if (!currentCapsule) {
+          const recommendedCapsule = getRecommendedCapsule(value.gender);
+          if (recommendedCapsule) {
+            form.setValue("capsuleNumber", String(recommendedCapsule));
+          }
+        }
       }
-    }
-  }, [form.watch("gender"), availableCapsules, getRecommendedCapsule]);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, availableCapsules, getRecommendedCapsule]);
 
   const checkinMutation = useMutation({
     mutationFn: async (data: InsertGuest) => {
@@ -206,7 +223,7 @@ export default function CheckIn() {
       emergencyContact: "",
       emergencyPhone: "",
       age: "",
-      expectedCheckoutDate: "",
+      expectedCheckoutDate: getNextDayDate(),
     });
   };
 
@@ -286,6 +303,31 @@ export default function CheckIn() {
               </div>
               {form.formState.errors.name && (
                 <p className="text-hostel-error text-sm mt-1">{form.formState.errors.name.message}</p>
+              )}
+            </div>
+
+            {/* Gender Selection - Moved here for smart capsule assignment */}
+            <div>
+              <Label htmlFor="gender" className="flex items-center text-sm font-medium text-hostel-text mb-2">
+                <Users className="mr-2 h-4 w-4" />
+                Gender <span className="text-gray-500 text-xs ml-2">(For smart capsule assignment)</span>
+              </Label>
+              <Select
+                value={form.watch("gender") || ""}
+                onValueChange={(value) => form.setValue("gender", value as "male" | "female" | "other" | "prefer-not-to-say")}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select gender to enable smart capsule assignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male (Front section preferred)</SelectItem>
+                  <SelectItem value="female">Female (Back section preferred)</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.gender && (
+                <p className="text-hostel-error text-sm mt-1">{form.formState.errors.gender.message}</p>
               )}
             </div>
 
@@ -370,46 +412,37 @@ export default function CheckIn() {
                   <Label htmlFor="paymentAmount" className="text-sm font-medium text-hostel-text">
                     Amount (RM)
                   </Label>
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={form.watch("paymentAmount") === "45" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePaymentPreset("45")}
-                        className="text-xs"
-                      >
-                        RM45
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={form.watch("paymentAmount") === "48" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePaymentPreset("48")}
-                        className="text-xs"
-                      >
-                        RM48
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={form.watch("paymentAmount") === "650" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handlePaymentPreset("650")}
-                        className="text-xs"
-                      >
-                        RM650 (Monthly)
-                      </Button>
-                    </div>
+                  <Select
+                    value={form.watch("paymentAmount") || "45"}
+                    onValueChange={(value) => {
+                      if (value === "custom") {
+                        // Let user type custom amount
+                        return;
+                      }
+                      form.setValue("paymentAmount", value);
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select amount" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="45">RM45 (Standard)</SelectItem>
+                      <SelectItem value="48">RM48 (Premium)</SelectItem>
+                      <SelectItem value="650">RM650 (Monthly Package)</SelectItem>
+                      <SelectItem value="custom">Custom Amount...</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(form.watch("paymentAmount") === "custom" || !["45", "48", "650"].includes(form.watch("paymentAmount") || "")) && (
                     <Input
                       id="paymentAmount"
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder="45.00"
-                      className="w-full"
+                      placeholder="Enter custom amount"
+                      className="w-full mt-2"
                       {...form.register("paymentAmount")}
                     />
-                  </div>
+                  )}
                   {form.formState.errors.paymentAmount && (
                     <p className="text-hostel-error text-sm mt-1">{form.formState.errors.paymentAmount.message}</p>
                   )}
@@ -560,28 +593,6 @@ export default function CheckIn() {
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="gender" className="text-sm font-medium text-hostel-text">
-                    Gender <span className="text-gray-500 text-xs">(for smart capsule assignment)</span>
-                  </Label>
-                  <Select
-                    value={form.watch("gender") || ""}
-                    onValueChange={(value) => form.setValue("gender", value as "male" | "female" | "other" | "prefer-not-to-say")}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select gender for capsule recommendation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.gender && (
-                    <p className="text-hostel-error text-sm mt-1">{form.formState.errors.gender.message}</p>
-                  )}
-                </div>
 
                 <div className="sm:col-span-2">
                   <Label htmlFor="expectedCheckoutDate" className="text-sm font-medium text-hostel-text flex items-center">
