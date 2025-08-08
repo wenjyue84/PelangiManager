@@ -112,7 +112,7 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
           Create Guest Link
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-full max-w-sm sm:max-w-md mx-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-orange-600" />
@@ -124,8 +124,8 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
         </DialogHeader>
 
         {!generatedToken ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <div className="sm:col-span-2">
                 <Label htmlFor="guestName">Guest Name (Optional - guest will fill during check-in)</Label>
                 <Input
@@ -237,7 +237,7 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
 
             <Button 
               type="submit" 
-              className="w-full bg-orange-600 hover:bg-orange-700"
+              className="w-full h-12 sm:h-10 text-sm sm:text-base bg-orange-600 hover:bg-orange-700"
               disabled={createTokenMutation.isPending || !selectedCapsule}
             >
               {createTokenMutation.isPending ? "Generating..." : "Generate Check-in Link"}

@@ -44,7 +44,7 @@ export interface AppConfig {
 }
 
 // Default configuration values (fallback if API is unavailable)
-const DEFAULT_CONFIG: AppConfig = {
+export const DEFAULT_CONFIG: AppConfig = {
   guestTokenExpirationHours: 24,
   sessionExpirationHours: 24,
   defaultUserRole: 'staff',

@@ -105,8 +105,8 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
-      <Card className="w-[400px]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 px-4 py-8">
+      <Card className="w-full max-w-sm sm:max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-orange-700">Pelangi Capsule Hostel</CardTitle>
           <CardDescription>Management System Login</CardDescription>
@@ -114,8 +114,8 @@ export function LoginForm() {
             <strong>Demo Login:</strong> admin / admin123
           </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="px-4 sm:px-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email">Username or Email</Label>
               <Input
@@ -138,7 +138,7 @@ export function LoginForm() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>

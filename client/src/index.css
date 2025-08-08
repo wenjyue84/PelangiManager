@@ -126,4 +126,75 @@
   .border-hostel-primary {
     border-color: var(--hostel-primary);
   }
+
+  /* Mobile-optimized form utilities */
+  .mobile-form-container {
+    @apply max-w-2xl mx-auto px-3 py-4 sm:px-6 sm:py-8;
+  }
+
+  .mobile-form-section {
+    @apply rounded-lg p-3 sm:p-4 border space-y-3 sm:space-y-4;
+  }
+
+  .mobile-form-grid-2 {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4;
+  }
+
+  .mobile-form-grid-3 {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4;
+  }
+
+  .mobile-button-primary {
+    @apply w-full h-12 sm:h-10 text-sm sm:text-base font-medium;
+  }
+
+  .mobile-button-secondary {
+    @apply w-full h-10 sm:h-9 text-xs sm:text-sm;
+  }
+
+  .mobile-dialog-content {
+    @apply w-full max-w-sm sm:max-w-md mx-4;
+  }
+
+  .mobile-card-padding {
+    @apply p-3 sm:p-6;
+  }
+
+  .mobile-section-spacing {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  .mobile-tight-spacing {
+    @apply space-y-3 sm:space-y-4;
+  }
+
+  .mobile-stats-grid {
+    @apply grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4;
+  }
+
+  /* Touch-friendly form inputs */
+  .mobile-input {
+    @apply h-12 text-base;
+  }
+
+  .mobile-select-trigger {
+    @apply h-12 text-base;
+  }
+
+  .mobile-textarea {
+    @apply min-h-[120px] text-base;
+  }
+
+  /* Responsive text scaling */
+  .mobile-title {
+    @apply text-xl sm:text-2xl;
+  }
+
+  .mobile-subtitle {
+    @apply text-sm sm:text-base;
+  }
+
+  .mobile-label {
+    @apply text-sm sm:text-base font-medium;
+  }
 }

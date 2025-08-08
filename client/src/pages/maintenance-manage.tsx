@@ -160,13 +160,13 @@ export default function MaintenanceManage() {
   const resolvedProblems = allProblems.filter(p => p.isResolved);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Maintenance Management</h1>
         <p className="text-gray-600 mt-1">Report and track capsule maintenance issues</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Report New Problem */}
         <Card>
           <CardHeader>
@@ -175,7 +175,7 @@ export default function MaintenanceManage() {
               Report New Problem
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
             <div>
               <Label htmlFor="capsule">Select Capsule</Label>
               <Select value={selectedCapsule} onValueChange={setSelectedCapsule}>
@@ -209,7 +209,7 @@ export default function MaintenanceManage() {
             <Button 
               onClick={handleReportProblem}
               disabled={reportProblemMutation.isPending || !selectedCapsule || !problemDescription.trim()}
-              className="w-full"
+              className="w-full h-12 sm:h-10 text-sm sm:text-base"
             >
               {reportProblemMutation.isPending ? "Reporting..." : "Report Problem"}
             </Button>
@@ -368,7 +368,7 @@ export default function MaintenanceManage() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">

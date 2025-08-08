@@ -143,8 +143,8 @@ export default function CheckIn() {
   const { timeString, dateString } = getCurrentDateTime();
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card>
+    <div className="max-w-2xl mx-auto px-4 py-4 sm:px-6">
+      <Card className="shadow-sm">
         <CardHeader>
           <div className="text-center">
             <div className="w-16 h-16 bg-hostel-secondary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -159,7 +159,7 @@ export default function CheckIn() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-4 sm:space-y-6">
             <div>
               <Label htmlFor="name" className="flex items-center text-sm font-medium text-hostel-text mb-2">
                 <User className="mr-2 h-4 w-4" />
@@ -243,9 +243,9 @@ export default function CheckIn() {
             </div>
 
             {/* Payment Information */}
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200">
               <h3 className="text-sm font-medium text-hostel-text mb-3">Payment Information</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div>
                   <Label htmlFor="paymentAmount" className="text-sm font-medium text-hostel-text">
                     Amount (RM)
@@ -311,12 +311,12 @@ export default function CheckIn() {
             </div>
 
             {/* Contact Information */}
-            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+            <div className="bg-green-50 rounded-lg p-3 sm:p-4 border border-green-200">
               <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
                 <Phone className="mr-2 h-4 w-4" />
                 Contact Information
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                 <div>
                   <Label htmlFor="phoneNumber" className="text-sm font-medium text-hostel-text">
                     Phone Number
@@ -368,12 +368,12 @@ export default function CheckIn() {
             </div>
 
             {/* Identification & Personal Details */}
-            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+            <div className="bg-orange-50 rounded-lg p-3 sm:p-4 border border-orange-200">
               <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Identification & Personal Details
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
                 <div>
                   <Label htmlFor="idNumber" className="text-sm font-medium text-hostel-text">
                     ID/Passport Number
