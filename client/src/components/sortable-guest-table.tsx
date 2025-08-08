@@ -345,6 +345,8 @@ export default function SortableGuestTable() {
       queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
       queryClient.invalidateQueries({ queryKey: ["/api/guests/history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/cleaning-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules"] });
       toast({
         title: "Success",
         description: "Guest checked out successfully",
