@@ -364,7 +364,7 @@ export const guestSelfCheckinSchema = z.object({
     .regex(/^[a-zA-Z\s-]+$/, "Nationality can only contain letters, spaces, and hyphens")
     .transform(val => val.trim()),
   icNumber: z.string()
-    .regex(/^\d{6}-\d{2}-\d{4}$/, "IC number must be in format XXXXXX-XX-XXXX")
+    .regex(/^\d{12}$/, "IC number must be 12 digits (e.g., 840816015291)")
     .refine(val => {
       if (!val) return true; // Optional when passport is provided
       // Basic IC validation - check if first 6 digits form a valid date
@@ -396,14 +396,14 @@ export const guestSelfCheckinSchema = z.object({
   passportDocumentUrl: z.string()
     .url("Passport document must be a valid URL")
     .optional(),
-  paymentMethod: z.enum(["cash", "card", "online_transfer"], { 
+  paymentMethod: z.enum(["cash", "guest", "bank", "online_platform"], { 
     required_error: "Please select a payment method" 
   }),
-  profilePhotoUrl: z.string()
-    .url("Profile photo must be a valid URL")
+  guestPaymentDescription: z.string()
+    .max(200, "Payment description must not exceed 200 characters")
     .optional(),
 }).refine((data) => data.icNumber || data.passportNumber, {
-  message: "Either IC number or passport number is required",
+  message: "Please provide either IC number or passport number",
   path: ["icNumber"],
 }).refine((data) => {
   // If IC number is provided, IC document photo should be provided
@@ -412,8 +412,17 @@ export const guestSelfCheckinSchema = z.object({
   if (data.passportNumber && !data.passportDocumentUrl) return false;
   return true;
 }, {
-  message: "Document photo is required for the provided ID type",
+  message: "Please upload a photo of your ID document",
   path: ["icDocumentUrl"],
+}).refine((data) => {
+  // If guest payment method is selected, description is required
+  if (data.paymentMethod === "guest" && !data.guestPaymentDescription?.trim()) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Please describe whom you gave the payment to",
+  path: ["guestPaymentDescription"],
 });
 
 // Token creation schema with comprehensive validation

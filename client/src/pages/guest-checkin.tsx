@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle, Upload, Camera, Globe, Video, ImageIcon } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { UserPlus, User, Phone, Mail, Calendar, MapPin, CheckCircle, Upload, Camera, Globe, Video, CreditCard, Users, Banknote, DollarSign } from "lucide-react";
 import { guestSelfCheckinSchema, type GuestSelfCheckin } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -14,6 +15,203 @@ import { useI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import type { UploadResult } from "@uppy/core";
+import qrCodeImage from "@assets/WhatsApp Image 2025-08-08 at 19.49.44_5bbbcb18_1754653834112.jpg";
+
+// Comprehensive nationality list
+const NATIONALITIES = [
+  { value: "Malaysian", label: "Malaysian" },
+  { value: "Singaporean", label: "Singaporean" },
+  // Alphabetical order for the rest
+  { value: "Afghan", label: "Afghan" },
+  { value: "Albanian", label: "Albanian" },
+  { value: "Algerian", label: "Algerian" },
+  { value: "American", label: "American" },
+  { value: "Andorran", label: "Andorran" },
+  { value: "Angolan", label: "Angolan" },
+  { value: "Argentine", label: "Argentine" },
+  { value: "Armenian", label: "Armenian" },
+  { value: "Australian", label: "Australian" },
+  { value: "Austrian", label: "Austrian" },
+  { value: "Azerbaijani", label: "Azerbaijani" },
+  { value: "Bahamian", label: "Bahamian" },
+  { value: "Bahraini", label: "Bahraini" },
+  { value: "Bangladeshi", label: "Bangladeshi" },
+  { value: "Barbadian", label: "Barbadian" },
+  { value: "Belarusian", label: "Belarusian" },
+  { value: "Belgian", label: "Belgian" },
+  { value: "Belizean", label: "Belizean" },
+  { value: "Beninese", label: "Beninese" },
+  { value: "Bhutanese", label: "Bhutanese" },
+  { value: "Bolivian", label: "Bolivian" },
+  { value: "Bosnian", label: "Bosnian" },
+  { value: "Botswanan", label: "Botswanan" },
+  { value: "Brazilian", label: "Brazilian" },
+  { value: "British", label: "British" },
+  { value: "Bruneian", label: "Bruneian" },
+  { value: "Bulgarian", label: "Bulgarian" },
+  { value: "Burkinabe", label: "Burkinabe" },
+  { value: "Burmese", label: "Burmese" },
+  { value: "Burundian", label: "Burundian" },
+  { value: "Cambodian", label: "Cambodian" },
+  { value: "Cameroonian", label: "Cameroonian" },
+  { value: "Canadian", label: "Canadian" },
+  { value: "Cape Verdean", label: "Cape Verdean" },
+  { value: "Central African", label: "Central African" },
+  { value: "Chadian", label: "Chadian" },
+  { value: "Chilean", label: "Chilean" },
+  { value: "Chinese", label: "Chinese" },
+  { value: "Colombian", label: "Colombian" },
+  { value: "Comoran", label: "Comoran" },
+  { value: "Congolese", label: "Congolese" },
+  { value: "Costa Rican", label: "Costa Rican" },
+  { value: "Croatian", label: "Croatian" },
+  { value: "Cuban", label: "Cuban" },
+  { value: "Cypriot", label: "Cypriot" },
+  { value: "Czech", label: "Czech" },
+  { value: "Danish", label: "Danish" },
+  { value: "Djiboutian", label: "Djiboutian" },
+  { value: "Dominican", label: "Dominican" },
+  { value: "Dutch", label: "Dutch" },
+  { value: "East Timorese", label: "East Timorese" },
+  { value: "Ecuadorean", label: "Ecuadorean" },
+  { value: "Egyptian", label: "Egyptian" },
+  { value: "Emirian", label: "Emirian" },
+  { value: "Equatorial Guinean", label: "Equatorial Guinean" },
+  { value: "Eritrean", label: "Eritrean" },
+  { value: "Estonian", label: "Estonian" },
+  { value: "Ethiopian", label: "Ethiopian" },
+  { value: "Fijian", label: "Fijian" },
+  { value: "Filipino", label: "Filipino" },
+  { value: "Finnish", label: "Finnish" },
+  { value: "French", label: "French" },
+  { value: "Gabonese", label: "Gabonese" },
+  { value: "Gambian", label: "Gambian" },
+  { value: "Georgian", label: "Georgian" },
+  { value: "German", label: "German" },
+  { value: "Ghanaian", label: "Ghanaian" },
+  { value: "Greek", label: "Greek" },
+  { value: "Grenadian", label: "Grenadian" },
+  { value: "Guatemalan", label: "Guatemalan" },
+  { value: "Guinea-Bissauan", label: "Guinea-Bissauan" },
+  { value: "Guinean", label: "Guinean" },
+  { value: "Guyanese", label: "Guyanese" },
+  { value: "Haitian", label: "Haitian" },
+  { value: "Herzegovinian", label: "Herzegovinian" },
+  { value: "Honduran", label: "Honduran" },
+  { value: "Hungarian", label: "Hungarian" },
+  { value: "Icelandic", label: "Icelandic" },
+  { value: "Indian", label: "Indian" },
+  { value: "Indonesian", label: "Indonesian" },
+  { value: "Iranian", label: "Iranian" },
+  { value: "Iraqi", label: "Iraqi" },
+  { value: "Irish", label: "Irish" },
+  { value: "Israeli", label: "Israeli" },
+  { value: "Italian", label: "Italian" },
+  { value: "Ivorian", label: "Ivorian" },
+  { value: "Jamaican", label: "Jamaican" },
+  { value: "Japanese", label: "Japanese" },
+  { value: "Jordanian", label: "Jordanian" },
+  { value: "Kazakhstani", label: "Kazakhstani" },
+  { value: "Kenyan", label: "Kenyan" },
+  { value: "Kittian and Nevisian", label: "Kittian and Nevisian" },
+  { value: "Kuwaiti", label: "Kuwaiti" },
+  { value: "Kyrgyz", label: "Kyrgyz" },
+  { value: "Laotian", label: "Laotian" },
+  { value: "Latvian", label: "Latvian" },
+  { value: "Lebanese", label: "Lebanese" },
+  { value: "Liberian", label: "Liberian" },
+  { value: "Libyan", label: "Libyan" },
+  { value: "Liechtensteiner", label: "Liechtensteiner" },
+  { value: "Lithuanian", label: "Lithuanian" },
+  { value: "Luxembourgish", label: "Luxembourgish" },
+  { value: "Macedonian", label: "Macedonian" },
+  { value: "Malagasy", label: "Malagasy" },
+  { value: "Malawian", label: "Malawian" },
+  { value: "Maldivan", label: "Maldivan" },
+  { value: "Malian", label: "Malian" },
+  { value: "Maltese", label: "Maltese" },
+  { value: "Marshallese", label: "Marshallese" },
+  { value: "Mauritanian", label: "Mauritanian" },
+  { value: "Mauritian", label: "Mauritian" },
+  { value: "Mexican", label: "Mexican" },
+  { value: "Micronesian", label: "Micronesian" },
+  { value: "Moldovan", label: "Moldovan" },
+  { value: "Monacan", label: "Monacan" },
+  { value: "Mongolian", label: "Mongolian" },
+  { value: "Moroccan", label: "Moroccan" },
+  { value: "Mosotho", label: "Mosotho" },
+  { value: "Motswana", label: "Motswana" },
+  { value: "Mozambican", label: "Mozambican" },
+  { value: "Namibian", label: "Namibian" },
+  { value: "Nauruan", label: "Nauruan" },
+  { value: "Nepalese", label: "Nepalese" },
+  { value: "New Zealander", label: "New Zealander" },
+  { value: "Ni-Vanuatu", label: "Ni-Vanuatu" },
+  { value: "Nicaraguan", label: "Nicaraguan" },
+  { value: "Nigerian", label: "Nigerian" },
+  { value: "Nigerien", label: "Nigerien" },
+  { value: "North Korean", label: "North Korean" },
+  { value: "Northern Irish", label: "Northern Irish" },
+  { value: "Norwegian", label: "Norwegian" },
+  { value: "Omani", label: "Omani" },
+  { value: "Pakistani", label: "Pakistani" },
+  { value: "Palauan", label: "Palauan" },
+  { value: "Panamanian", label: "Panamanian" },
+  { value: "Papua New Guinean", label: "Papua New Guinean" },
+  { value: "Paraguayan", label: "Paraguayan" },
+  { value: "Peruvian", label: "Peruvian" },
+  { value: "Polish", label: "Polish" },
+  { value: "Portuguese", label: "Portuguese" },
+  { value: "Qatari", label: "Qatari" },
+  { value: "Romanian", label: "Romanian" },
+  { value: "Russian", label: "Russian" },
+  { value: "Rwandan", label: "Rwandan" },
+  { value: "Saint Lucian", label: "Saint Lucian" },
+  { value: "Salvadoran", label: "Salvadoran" },
+  { value: "Samoan", label: "Samoan" },
+  { value: "San Marinese", label: "San Marinese" },
+  { value: "Sao Tomean", label: "Sao Tomean" },
+  { value: "Saudi", label: "Saudi" },
+  { value: "Scottish", label: "Scottish" },
+  { value: "Senegalese", label: "Senegalese" },
+  { value: "Serbian", label: "Serbian" },
+  { value: "Seychellois", label: "Seychellois" },
+  { value: "Sierra Leonean", label: "Sierra Leonean" },
+  { value: "Slovak", label: "Slovak" },
+  { value: "Slovenian", label: "Slovenian" },
+  { value: "Solomon Islander", label: "Solomon Islander" },
+  { value: "Somali", label: "Somali" },
+  { value: "South African", label: "South African" },
+  { value: "South Korean", label: "South Korean" },
+  { value: "Spanish", label: "Spanish" },
+  { value: "Sri Lankan", label: "Sri Lankan" },
+  { value: "Sudanese", label: "Sudanese" },
+  { value: "Surinamer", label: "Surinamer" },
+  { value: "Swazi", label: "Swazi" },
+  { value: "Swedish", label: "Swedish" },
+  { value: "Swiss", label: "Swiss" },
+  { value: "Syrian", label: "Syrian" },
+  { value: "Taiwanese", label: "Taiwanese" },
+  { value: "Tajik", label: "Tajik" },
+  { value: "Tanzanian", label: "Tanzanian" },
+  { value: "Thai", label: "Thai" },
+  { value: "Togolese", label: "Togolese" },
+  { value: "Tongan", label: "Tongan" },
+  { value: "Trinidadian or Tobagonian", label: "Trinidadian or Tobagonian" },
+  { value: "Tunisian", label: "Tunisian" },
+  { value: "Turkish", label: "Turkish" },
+  { value: "Tuvaluan", label: "Tuvaluan" },
+  { value: "Ugandan", label: "Ugandan" },
+  { value: "Ukrainian", label: "Ukrainian" },
+  { value: "Uruguayan", label: "Uruguayan" },
+  { value: "Uzbekistani", label: "Uzbekistani" },
+  { value: "Venezuelan", label: "Venezuelan" },
+  { value: "Vietnamese", label: "Vietnamese" },
+  { value: "Welsh", label: "Welsh" },
+  { value: "Yemenite", label: "Yemenite" },
+  { value: "Zambian", label: "Zambian" },
+  { value: "Zimbabwean", label: "Zimbabwean" },
+];
 
 export default function GuestCheckin() {
   const [, setLocation] = useLocation();
@@ -35,7 +233,9 @@ export default function GuestCheckin() {
   const [editToken, setEditToken] = useState<string>("");
   const [editExpiresAt, setEditExpiresAt] = useState<Date | null>(null);
   const [canEdit, setCanEdit] = useState(false);
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string>("");
+  const [icDocumentUrl, setIcDocumentUrl] = useState<string>("");
+  const [passportDocumentUrl, setPassportDocumentUrl] = useState<string>("");
+  const [nationalityFilter, setNationalityFilter] = useState("");
 
   const form = useForm<GuestSelfCheckin>({
     resolver: zodResolver(guestSelfCheckinSchema),
@@ -43,15 +243,24 @@ export default function GuestCheckin() {
       nameAsInDocument: "",
       phoneNumber: "",
       gender: undefined,
-      nationality: "",
+      nationality: "Malaysian",
       icNumber: "",
       passportNumber: "",
       icDocumentUrl: "",
       passportDocumentUrl: "",
       paymentMethod: undefined,
-      profilePhotoUrl: "",
+      guestPaymentDescription: "",
     },
   });
+
+  const watchedPaymentMethod = form.watch("paymentMethod");
+  const watchedIcNumber = form.watch("icNumber");
+  const watchedPassportNumber = form.watch("passportNumber");
+
+  // Filter nationalities based on search input
+  const filteredNationalities = NATIONALITIES.filter(nationality =>
+    nationality.label.toLowerCase().includes(nationalityFilter.toLowerCase())
+  );
 
   useEffect(() => {
     // Get token from URL parameters
@@ -77,7 +286,7 @@ export default function GuestCheckin() {
       const response = await fetch(`/api/guest-tokens/${tokenValue}`);
       if (response.ok) {
         const data = await response.json();
-        let position = 'To be assigned based on gender';
+        let position = 'Available capsule will be assigned';
         
         if (data.capsuleNumber) {
           const capsuleNum = parseInt(data.capsuleNumber.replace('C', ''));
@@ -94,8 +303,13 @@ export default function GuestCheckin() {
           position: position
         });
 
-        // Pre-fill the form with guest name as placeholder
-        form.setValue("nameAsInDocument", "");
+        // Pre-fill form with existing information if available
+        if (data.guestName) {
+          form.setValue("nameAsInDocument", data.guestName);
+        }
+        if (data.phoneNumber) {
+          form.setValue("phoneNumber", data.phoneNumber);
+        }
       } else {
         toast({
           title: t.expiredLink,
@@ -120,7 +334,12 @@ export default function GuestCheckin() {
   const onSubmit = async (data: GuestSelfCheckin) => {
     setIsSubmitting(true);
     try {
-      const submitData = { ...data, profilePhotoUrl };
+      const submitData = { 
+        ...data, 
+        icDocumentUrl: icDocumentUrl || undefined,
+        passportDocumentUrl: passportDocumentUrl || undefined,
+      };
+      
       const response = await fetch(`/api/guest-checkin/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,20 +354,20 @@ export default function GuestCheckin() {
         setCanEdit(true);
         toast({
           title: t.checkInSuccess,
-          description: `${t.checkInSuccessDesc} ${guestInfo?.capsuleNumber}.`,
+          description: `${t.checkInSuccessDesc} ${result.capsuleNumber || 'your assigned capsule'}.`,
         });
       } else {
         const errorData = await response.json();
         toast({
           title: t.checkInFailed,
-          description: errorData.message || "Failed to complete check-in.",
+          description: errorData.message || "Please check all required fields and try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: t.error,
-        description: "Failed to submit check-in information.",
+        description: "Please check your internet connection and try again.",
         variant: "destructive",
       });
     }
@@ -167,17 +386,25 @@ export default function GuestCheckin() {
     };
   };
 
-  const handlePhotoUpload = (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+  const handleDocumentUpload = (result: UploadResult<Record<string, unknown>, Record<string, unknown>>, documentType: 'ic' | 'passport') => {
     if (result.successful && result.successful.length > 0) {
       const uploadedFile = result.successful[0];
       if (uploadedFile.uploadURL) {
         // Convert the upload URL to our object path format
         const objectPath = new URL(uploadedFile.uploadURL).pathname;
         const normalizedPath = `/objects${objectPath.split('/.private')[1]}`;
-        setProfilePhotoUrl(normalizedPath);
+        
+        if (documentType === 'ic') {
+          setIcDocumentUrl(normalizedPath);
+          form.setValue("icDocumentUrl", normalizedPath);
+        } else {
+          setPassportDocumentUrl(normalizedPath);
+          form.setValue("passportDocumentUrl", normalizedPath);
+        }
+        
         toast({
-          title: "Photo Uploaded",
-          description: "Your profile photo has been uploaded successfully.",
+          title: "Document Uploaded",
+          description: `Your ${documentType === 'ic' ? 'IC' : 'passport'} document has been uploaded successfully.`,
         });
       }
     }
@@ -262,7 +489,7 @@ export default function GuestCheckin() {
                     <span>🛌</span>
                     <span className="font-medium">{t.capsuleNumber}</span>
                     {guestInfo?.autoAssign ? (
-                      <span className="font-bold text-lg text-blue-600">Auto-assigned based on gender</span>
+                      <span className="font-bold text-lg text-blue-600">Assigned based on availability</span>
                     ) : (
                       <span className="font-bold text-lg text-orange-600">{guestInfo?.capsuleNumber} ({guestInfo?.position})</span>
                     )}
@@ -335,78 +562,28 @@ export default function GuestCheckin() {
               </div>
               {guestInfo && (
                 <div className="mt-4 space-y-2">
-                  <div className={`rounded-lg p-3 ${guestInfo.autoAssign ? 'bg-blue-50' : 'bg-orange-50'}`}>
-                    <div className={`flex items-center justify-center text-sm font-medium ${guestInfo.autoAssign ? 'text-blue-800' : 'text-orange-800'}`}>
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {guestInfo.autoAssign ? (
-                        <span>🤖 Auto Assignment: Capsule will be assigned based on your gender</span>
-                      ) : (
+                  {!guestInfo.autoAssign && (
+                    <div className="rounded-lg p-3 bg-orange-50">
+                      <div className="flex items-center justify-center text-sm font-medium text-orange-800">
+                        <MapPin className="h-4 w-4 mr-2" />
                         <span>{t.assignedCapsule}: {guestInfo.capsuleNumber} - {guestInfo.position}</span>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
-                    <div className="font-medium">{t.prefilledInfo}</div>
-                    <div>Name: {guestInfo.guestName}</div>
-                    <div>Phone: {guestInfo.phoneNumber}</div>
-                    {guestInfo.email && <div>Email: {guestInfo.email}</div>}
-                  </div>
+                  )}
+                  {(guestInfo.guestName || guestInfo.phoneNumber || guestInfo.email) && (
+                    <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
+                      <div className="font-medium">{t.prefilledInfo}</div>
+                      {guestInfo.guestName && <div>Name: {guestInfo.guestName}</div>}
+                      {guestInfo.phoneNumber && <div>Phone: {guestInfo.phoneNumber}</div>}
+                      {guestInfo.email && <div>Email: {guestInfo.email}</div>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Profile Photo Upload */}
-              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
-                  <ImageIcon className="mr-2 h-4 w-4" />
-                  Profile Photo (Optional)
-                </h3>
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-600">Upload a profile photo to personalize your stay</p>
-                  
-                  {profilePhotoUrl ? (
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={profilePhotoUrl}
-                        alt="Profile"
-                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-green-600">Photo uploaded successfully!</p>
-                        <ObjectUploader
-                          maxNumberOfFiles={1}
-                          maxFileSize={5242880} // 5MB
-                          allowedFileTypes={['.jpg', '.jpeg', '.png', '.gif', '.webp']}
-                          onGetUploadParameters={handleGetUploadParameters}
-                          onComplete={handlePhotoUpload}
-                          buttonClassName="mt-2"
-                        >
-                          <Camera className="h-4 w-4 mr-2" />
-                          Change Photo
-                        </ObjectUploader>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 border-2 border-dashed border-gray-300 rounded-lg">
-                      <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-500 mb-3">No profile photo yet</p>
-                      <ObjectUploader
-                        maxNumberOfFiles={1}
-                        maxFileSize={5242880} // 5MB
-                        allowedFileTypes={['.jpg', '.jpeg', '.png', '.gif', '.webp']}
-                        onGetUploadParameters={handleGetUploadParameters}
-                        onComplete={handlePhotoUpload}
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Upload Photo
-                      </ObjectUploader>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Personal Information */}
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
@@ -421,7 +598,7 @@ export default function GuestCheckin() {
                     <Input
                       id="nameAsInDocument"
                       type="text"
-                      placeholder={`${t.fullNamePlaceholder} (Expected: ${guestInfo?.guestName || 'Full Name'})`}
+                      placeholder={t.fullNamePlaceholder}
                       className="w-full mt-1"
                       {...form.register("nameAsInDocument")}
                     />
@@ -438,7 +615,7 @@ export default function GuestCheckin() {
                     <Input
                       id="phoneNumber"
                       type="tel"
-                      placeholder={`${t.contactNumberPlaceholder} (Expected: ${guestInfo?.phoneNumber || 'e.g., +60123456789'})`}
+                      placeholder={t.contactNumberPlaceholder}
                       className="w-full mt-1"
                       {...form.register("phoneNumber")}
                     />
@@ -472,13 +649,29 @@ export default function GuestCheckin() {
                     <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
                       {t.nationalityLabel}
                     </Label>
-                    <Input
-                      id="nationality"
-                      type="text"
-                      placeholder={t.nationalityPlaceholder}
-                      className="w-full mt-1"
-                      {...form.register("nationality")}
-                    />
+                    <Select
+                      value={form.watch("nationality") || "Malaysian"}
+                      onValueChange={(value) => form.setValue("nationality", value)}
+                    >
+                      <SelectTrigger className="w-full mt-1">
+                        <SelectValue placeholder="Select nationality" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="p-2">
+                          <Input
+                            placeholder="Search nationality..."
+                            value={nationalityFilter}
+                            onChange={(e) => setNationalityFilter(e.target.value)}
+                            className="mb-2"
+                          />
+                        </div>
+                        {filteredNationalities.map((nationality) => (
+                          <SelectItem key={nationality.value} value={nationality.value}>
+                            {nationality.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {form.formState.errors.nationality && (
                       <p className="text-red-500 text-sm mt-1">{form.formState.errors.nationality.message}</p>
                     )}
@@ -493,20 +686,23 @@ export default function GuestCheckin() {
                   {t.identityDocs}
                 </h3>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">{t.identityDocsDesc}</p>
+                  <p className="text-sm text-gray-600">Provide either IC number or passport number (not both required)</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="icNumber" className="text-sm font-medium text-hostel-text">
-                        {t.icNumberLabel}
+                        IC Number (e.g., 840816015291)
                       </Label>
                       <Input
                         id="icNumber"
                         type="text"
-                        placeholder={t.icNumberPlaceholder}
+                        placeholder="840816015291"
                         className="w-full mt-1"
                         {...form.register("icNumber")}
                       />
+                      {form.formState.errors.icNumber && (
+                        <p className="text-red-500 text-sm mt-1">{form.formState.errors.icNumber.message}</p>
+                      )}
                     </div>
                     
                     <div>
@@ -520,84 +716,197 @@ export default function GuestCheckin() {
                         className="w-full mt-1"
                         {...form.register("passportNumber")}
                       />
+                      {form.formState.errors.passportNumber && (
+                        <p className="text-red-500 text-sm mt-1">{form.formState.errors.passportNumber.message}</p>
+                      )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
-                        <Upload className="h-4 w-4" />
-                        {t.icPhotoLabel}
-                      </Label>
-                      <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 mb-2">{t.icPhotoDesc}</p>
-                        <Button type="button" variant="outline" size="sm" onClick={() => {
-                          // This would trigger file upload - simplified for demo
-                          toast({ title: "Photo Upload", description: "IC photo upload feature would be implemented here" });
-                        }}>
-                          {t.chooseFile}
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
-                        <Upload className="h-4 w-4" />
-                        {t.passportPhotoLabel}
-                      </Label>
-                      <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500 mb-2">{t.passportPhotoDesc}</p>
-                        <Button type="button" variant="outline" size="sm" onClick={() => {
-                          // This would trigger file upload - simplified for demo
-                          toast({ title: "Photo Upload", description: "Passport photo upload feature would be implemented here" });
-                        }}>
-                          {t.chooseFile}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Document Upload Section */}
+                  {(watchedIcNumber || watchedPassportNumber) && (
+                    <div className="space-y-4">
+                      {watchedIcNumber && (
+                        <div>
+                          <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
+                            <Upload className="h-4 w-4" />
+                            Upload IC Photo
+                          </Label>
+                          {icDocumentUrl ? (
+                            <div className="mt-2 p-3 bg-green-100 border border-green-300 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <span className="text-sm text-green-700">IC document uploaded successfully</span>
+                              </div>
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={10485760} // 10MB
+                                onGetUploadParameters={handleGetUploadParameters}
+                                onComplete={(result) => handleDocumentUpload(result, 'ic')}
+                                buttonClassName="mt-2"
+                              >
+                                <Camera className="h-4 w-4 mr-2" />
+                                Change IC Photo
+                              </ObjectUploader>
+                            </div>
+                          ) : (
+                            <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                              <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-sm text-gray-500 mb-2">Upload a clear photo of your IC</p>
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={10485760} // 10MB
+                                onGetUploadParameters={handleGetUploadParameters}
+                                onComplete={(result) => handleDocumentUpload(result, 'ic')}
+                              >
+                                <Camera className="h-4 w-4 mr-2" />
+                                Upload IC Photo
+                              </ObjectUploader>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                  {form.formState.errors.icNumber && (
-                    <p className="text-red-500 text-sm">{form.formState.errors.icNumber.message}</p>
+                      {watchedPassportNumber && (
+                        <div>
+                          <Label className="text-sm font-medium text-hostel-text flex items-center gap-2">
+                            <Upload className="h-4 w-4" />
+                            Upload Passport Photo
+                          </Label>
+                          {passportDocumentUrl ? (
+                            <div className="mt-2 p-3 bg-green-100 border border-green-300 rounded-lg">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <span className="text-sm text-green-700">Passport document uploaded successfully</span>
+                              </div>
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={10485760} // 10MB
+                                onGetUploadParameters={handleGetUploadParameters}
+                                onComplete={(result) => handleDocumentUpload(result, 'passport')}
+                                buttonClassName="mt-2"
+                              >
+                                <Camera className="h-4 w-4 mr-2" />
+                                Change Passport Photo
+                              </ObjectUploader>
+                            </div>
+                          ) : (
+                            <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                              <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-sm text-gray-500 mb-2">Upload a clear photo of your passport</p>
+                              <ObjectUploader
+                                maxNumberOfFiles={1}
+                                maxFileSize={10485760} // 10MB
+                                onGetUploadParameters={handleGetUploadParameters}
+                                onComplete={(result) => handleDocumentUpload(result, 'passport')}
+                              >
+                                <Camera className="h-4 w-4 mr-2" />
+                                Upload Passport Photo
+                              </ObjectUploader>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Payment Method */}
-              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              {/* Payment Information */}
+              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
-                  <Mail className="mr-2 h-4 w-4" />
-                  {t.paymentMethod}
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Payment Information
                 </h3>
-                <div>
-                  <Select
-                    value={form.watch("paymentMethod") || ""}
-                    onValueChange={(value) => form.setValue("paymentMethod", value as "cash" | "card" | "online_transfer")}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={t.paymentMethodPlaceholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">{t.cash}</SelectItem>
-                      <SelectItem value="card">{t.card}</SelectItem>
-                      <SelectItem value="online_transfer">{t.onlineTransfer}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.paymentMethod && (
-                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.paymentMethod.message}</p>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="paymentMethod" className="text-sm font-medium text-hostel-text">
+                      Payment Method
+                    </Label>
+                    <Select
+                      value={form.watch("paymentMethod") || ""}
+                      onValueChange={(value) => form.setValue("paymentMethod", value as "cash" | "guest" | "bank" | "online_platform")}
+                    >
+                      <SelectTrigger className="w-full mt-1">
+                        <SelectValue placeholder="Select payment method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">
+                          <div className="flex items-center gap-2">
+                            <Banknote className="h-4 w-4" />
+                            <span>Cash</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="guest">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>Paid to Guest/Person</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="bank">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            <span>Bank Transfer</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="online_platform">
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-4 w-4" />
+                            <span>Online Platform (Booking.com, Agoda, etc.)</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form.formState.errors.paymentMethod && (
+                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.paymentMethod.message}</p>
+                    )}
+                  </div>
+
+                  {/* Guest Payment Description */}
+                  {watchedPaymentMethod === "guest" && (
+                    <div>
+                      <Label htmlFor="guestPaymentDescription" className="text-sm font-medium text-hostel-text">
+                        Describe whom you gave the payment to
+                      </Label>
+                      <Textarea
+                        id="guestPaymentDescription"
+                        placeholder="e.g., Paid RM50 to Ahmad at the front desk"
+                        className="w-full mt-1"
+                        {...form.register("guestPaymentDescription")}
+                      />
+                      {form.formState.errors.guestPaymentDescription && (
+                        <p className="text-red-500 text-sm mt-1">{form.formState.errors.guestPaymentDescription.message}</p>
+                      )}
+                    </div>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">{t.paymentNote}</p>
+
+                  {/* Bank Transfer Details */}
+                  {watchedPaymentMethod === "bank" && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-medium text-blue-800 mb-3">Bank Account Details</h4>
+                      <div className="space-y-2 text-sm">
+                        <div><strong>Account Name:</strong> Pelangi Capsule Hostel</div>
+                        <div><strong>Account Number:</strong> 551128652007</div>
+                        <div><strong>Bank:</strong> Maybank</div>
+                      </div>
+                      <div className="mt-4 text-center">
+                        <p className="text-sm text-blue-700 mb-2">QR Code for Payment</p>
+                        <img 
+                          src={qrCodeImage} 
+                          alt="Payment QR Code" 
+                          className="w-32 h-auto mx-auto border border-gray-200 rounded"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <Button 
                 type="submit" 
-                className="w-full bg-hostel-secondary hover:bg-orange-700 text-white py-3"
+                className="w-full h-12 text-base bg-orange-600 hover:bg-orange-700"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? t.completingCheckIn : t.completeCheckInBtn}
+                {isSubmitting ? "Completing Check-in..." : "Complete Check-in"}
               </Button>
             </form>
           </CardContent>
