@@ -618,12 +618,20 @@ export class MemStorage implements IStorage {
   }
 
   async deleteGuestToken(id: string): Promise<boolean> {
-    for (const [token, guestToken] of this.guestTokens.entries()) {
+    // Find the token by iterating through the Map values
+    let tokenToDelete: string | null = null;
+    
+    this.guestTokens.forEach((guestToken, token) => {
       if (guestToken.id === id) {
-        this.guestTokens.delete(token);
-        return true;
+        tokenToDelete = token;
       }
+    });
+    
+    if (tokenToDelete) {
+      this.guestTokens.delete(tokenToDelete);
+      return true;
     }
+    
     return false;
   }
 
