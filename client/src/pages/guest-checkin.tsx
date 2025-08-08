@@ -399,14 +399,18 @@ export default function GuestCheckin() {
       if (uploadedFile.uploadURL) {
         // Convert the upload URL to our object path format
         const objectPath = new URL(uploadedFile.uploadURL).pathname;
-        const normalizedPath = `/objects${objectPath.split('/.private')[1]}`;
+        const objectId = objectPath.split('/').pop(); // Get the final part of the path (the object ID)
+        
+        // Construct full URL that points to our object serving endpoint
+        const baseUrl = window.location.origin;
+        const documentUrl = `${baseUrl}/objects/uploads/${objectId}`;
         
         if (documentType === 'ic') {
-          setIcDocumentUrl(normalizedPath);
-          form.setValue("icDocumentUrl", normalizedPath);
+          setIcDocumentUrl(documentUrl);
+          form.setValue("icDocumentUrl", documentUrl);
         } else {
-          setPassportDocumentUrl(normalizedPath);
-          form.setValue("passportDocumentUrl", normalizedPath);
+          setPassportDocumentUrl(documentUrl);
+          form.setValue("passportDocumentUrl", documentUrl);
         }
         
         toast({
