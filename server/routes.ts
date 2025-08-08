@@ -118,6 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: username, // Using username as email for backward compatibility
         username,
         password, // In production, this should be hashed
+        role: "admin", // Default role for admin registration
       });
 
       res.json({ message: "Admin user created successfully", userId: user.id });
@@ -931,12 +932,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         idNumber: validatedGuestData.icNumber || validatedGuestData.passportNumber || undefined,
         expectedCheckoutDate: guestToken.expectedCheckoutDate || undefined,
         paymentAmount: "0", // Will be updated at front desk
-        paymentMethod: validatedGuestData.paymentMethod,
+        paymentMethod: validatedGuestData.paymentMethod === "online_platform" ? "platform" : validatedGuestData.paymentMethod as "cash" | "bank" | "tng" | "platform",
         paymentCollector: "Self Check-in",
         isPaid: false,
-        profilePhotoUrl: validatedGuestData.profilePhotoUrl,
         selfCheckinToken: token, // Store the token for edit access
-        notes: `IC: ${validatedGuestData.icNumber || 'N/A'}, Passport: ${validatedGuestData.passportNumber || 'N/A'}${validatedGuestData.icDocumentUrl ? `, IC Doc: ${validatedGuestData.icDocumentUrl}` : ''}${validatedGuestData.passportDocumentUrl ? `, Passport Doc: ${validatedGuestData.passportDocumentUrl}` : ''}${validatedGuestData.profilePhotoUrl ? `, Profile Photo: ${validatedGuestData.profilePhotoUrl}` : ''}`,
+        notes: `IC: ${validatedGuestData.icNumber || 'N/A'}, Passport: ${validatedGuestData.passportNumber || 'N/A'}${validatedGuestData.icDocumentUrl ? `, IC Doc: ${validatedGuestData.icDocumentUrl}` : ''}${validatedGuestData.passportDocumentUrl ? `, Passport Doc: ${validatedGuestData.passportDocumentUrl}` : ''}${validatedGuestData.guestPaymentDescription ? `, Payment: ${validatedGuestData.guestPaymentDescription}` : ''}`,
       });
 
       // Mark token as used
@@ -986,8 +986,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Find the guest associated with this token
-      const guests = await storage.getAllGuests();
-      const guest = guests.find(g => g.selfCheckinToken === token);
+      const guestsResponse = await storage.getAllGuests();
+      const guest = guestsResponse.data.find(g => g.selfCheckinToken === token);
 
       if (!guest) {
         return res.status(404).json({ message: "Guest not found" });
@@ -1025,8 +1025,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Find the guest associated with this token
-      const guests = await storage.getAllGuests();
-      const guest = guests.find(g => g.selfCheckinToken === token);
+      const guestsResponse = await storage.getAllGuests();
+      const guest = guestsResponse.data.find(g => g.selfCheckinToken === token);
 
       if (!guest) {
         return res.status(404).json({ message: "Guest not found" });

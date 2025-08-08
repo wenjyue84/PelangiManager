@@ -334,11 +334,16 @@ export default function GuestCheckin() {
   const onSubmit = async (data: GuestSelfCheckin) => {
     setIsSubmitting(true);
     try {
+      // Update document URLs based on what's uploaded
       const submitData = { 
         ...data, 
         icDocumentUrl: icDocumentUrl || undefined,
         passportDocumentUrl: passportDocumentUrl || undefined,
       };
+      
+      // Log submission data for debugging
+      console.log("Submitting data:", submitData);
+      console.log("Form errors:", form.formState.errors);
       
       const response = await fetch(`/api/guest-checkin/${token}`, {
         method: 'POST',
@@ -358,6 +363,7 @@ export default function GuestCheckin() {
         });
       } else {
         const errorData = await response.json();
+        console.error("Server error:", errorData);
         toast({
           title: t.checkInFailed,
           description: errorData.message || "Please check all required fields and try again.",
@@ -365,6 +371,7 @@ export default function GuestCheckin() {
         });
       }
     } catch (error) {
+      console.error("Submission error:", error);
       toast({
         title: t.error,
         description: "Please check your internet connection and try again.",
@@ -583,7 +590,19 @@ export default function GuestCheckin() {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              // Manually set document URLs in form before validation
+              if (icDocumentUrl) {
+                form.setValue("icDocumentUrl", icDocumentUrl);
+              }
+              if (passportDocumentUrl) {
+                form.setValue("passportDocumentUrl", passportDocumentUrl);
+              }
+              
+              // Trigger form submission
+              form.handleSubmit(onSubmit)(e);
+            }} className="space-y-6">
               {/* Personal Information */}
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
@@ -686,12 +705,12 @@ export default function GuestCheckin() {
                   {t.identityDocs}
                 </h3>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">Provide either IC number or passport number (not both required)</p>
+                  <p className="text-sm text-gray-600">Provide either IC number OR passport number (only one required)</p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="icNumber" className="text-sm font-medium text-hostel-text">
-                        IC Number (e.g., 840816015291)
+                        IC Number (e.g., 840816015291) {!watchedPassportNumber && <span className="text-red-500">*</span>}
                       </Label>
                       <Input
                         id="icNumber"
@@ -707,7 +726,7 @@ export default function GuestCheckin() {
                     
                     <div>
                       <Label htmlFor="passportNumber" className="text-sm font-medium text-hostel-text">
-                        {t.passportNumberLabel}
+                        {t.passportNumberLabel} {!watchedIcNumber && <span className="text-red-500">*</span>}
                       </Label>
                       <Input
                         id="passportNumber"
@@ -874,6 +893,20 @@ export default function GuestCheckin() {
               >
                 {isSubmitting ? "Completing Check-in..." : "Complete Check-in"}
               </Button>
+              
+              {/* Show validation errors summary if form was submitted */}
+              {form.formState.isSubmitted && Object.keys(form.formState.errors).length > 0 && (
+                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {Object.entries(form.formState.errors).map(([field, error]) => (
+                      <li key={field} className="text-sm text-red-600">
+                        {error?.message || `Error in ${field} field`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>

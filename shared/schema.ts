@@ -406,29 +406,23 @@ export const guestSelfCheckinSchema = z.object({
   message: "Please provide either IC number or passport number",
   path: ["icNumber"],
 }).refine((data) => {
-  // Must provide either complete IC info OR complete passport info
-  const hasCompleteIC = data.icNumber && data.icDocumentUrl;
-  const hasCompletePassport = data.passportNumber && data.passportDocumentUrl;
-  
-  // Must have at least one complete set
-  if (!hasCompleteIC && !hasCompletePassport) {
-    return false;
-  }
-  
-  // If IC number provided, must have IC document
+  // If IC number is provided, IC document is required
   if (data.icNumber && !data.icDocumentUrl) {
     return false;
   }
-  
-  // If passport number provided, must have passport document
+  return true;
+}, {
+  message: "Please upload a photo of your IC if you provided IC number",
+  path: ["icDocumentUrl"],
+}).refine((data) => {
+  // If passport number is provided, passport document is required
   if (data.passportNumber && !data.passportDocumentUrl) {
     return false;
   }
-  
   return true;
 }, {
-  message: "Please upload a photo of your ID document",
-  path: ["icDocumentUrl"],
+  message: "Please upload a photo of your passport if you provided passport number",
+  path: ["passportDocumentUrl"],
 }).refine((data) => {
   // If cash payment method is selected, description is required
   if (data.paymentMethod === "cash" && !data.guestPaymentDescription?.trim()) {
