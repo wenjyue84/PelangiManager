@@ -881,6 +881,17 @@ class DatabaseStorage implements IStorage {
       .where(eq(guests.id, id))
       .returning();
     
+    // Update capsule cleaning status to 'to_be_cleaned' after checkout
+    if (result[0]?.capsuleNumber) {
+      await this.db
+        .update(capsules)
+        .set({ 
+          cleaningStatus: 'to_be_cleaned',
+          isAvailable: true 
+        })
+        .where(eq(capsules.number, result[0].capsuleNumber));
+    }
+    
     return result[0];
   }
 
@@ -949,6 +960,28 @@ class DatabaseStorage implements IStorage {
       .returning();
     
     return result[0];
+  }
+
+  // Capsule cleaning operations
+  async markCapsuleCleaned(capsuleNumber: string, cleanedBy: string): Promise<Capsule | undefined> {
+    const result = await this.db
+      .update(capsules)
+      .set({
+        cleaningStatus: 'cleaned',
+        lastCleanedAt: new Date(),
+        lastCleanedBy: cleanedBy
+      })
+      .where(eq(capsules.number, capsuleNumber))
+      .returning();
+    
+    return result[0];
+  }
+
+  async getCapsulesByCleaningStatus(status: 'cleaned' | 'to_be_cleaned'): Promise<Capsule[]> {
+    return await this.db
+      .select()
+      .from(capsules)
+      .where(eq(capsules.cleaningStatus, status));
   }
 
   async createCapsule(capsule: InsertCapsule): Promise<Capsule> {
@@ -1030,7 +1063,7 @@ class DatabaseStorage implements IStorage {
       .from(guestTokens)
       .where(and(
         eq(guestTokens.isUsed, false),
-        ne(guestTokens.expiresAt, null)
+        isNotNull(guestTokens.expiresAt)
       ))
       .orderBy(guestTokens.createdAt);
     // Filter out expired tokens
@@ -1140,5 +1173,5 @@ class DatabaseStorage implements IStorage {
   }
 }
 
-// Use memory storage for now to avoid database migration issues
-export const storage = new MemStorage();
+// Use database storage for persistent data
+export const storage = new DatabaseStorage();
