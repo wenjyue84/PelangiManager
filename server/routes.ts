@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema, updateSettingsSchema, updateGuestSchema, markCapsuleCleanedSchema } from "@shared/schema";
+import { insertGuestSchema, checkoutGuestSchema, loginSchema, createCapsuleProblemSchema, resolveProblemSchema, googleAuthSchema, insertUserSchema, guestSelfCheckinSchema, createTokenSchema, updateSettingsSchema, updateGuestSchema, markCapsuleCleanedSchema, insertCapsuleSchema, updateCapsuleSchema } from "@shared/schema";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
@@ -188,6 +188,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk checkout overdue guests
+  app.post("/api/guests/checkout-overdue", authenticateToken, async (_req: any, res) => {
+    try {
+      // Compute today's date boundary (YYYY-MM-DD)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const today = new Date(todayStr + 'T00:00:00');
+
+      // Get all currently checked-in guests (high limit to cover dev data)
+      const checkedInResponse = await storage.getCheckedInGuests({ page: 1, limit: 10000 });
+      const checkedIn = checkedInResponse.data || [];
+
+      // Filter overdue by comparing dates robustly
+      const overdue = checkedIn.filter(g => {
+        if (!g.expectedCheckoutDate) return false;
+        try {
+          const d = new Date(g.expectedCheckoutDate + 'T00:00:00');
+          return d.getTime() < today.getTime();
+        } catch {
+          return false;
+        }
+      });
+
+      const checkedOutIds: string[] = [];
+      for (const guest of overdue) {
+        const updated = await storage.checkoutGuest(guest.id);
+        if (updated) checkedOutIds.push(updated.id);
+      }
+
+      return res.json({ count: checkedOutIds.length, checkedOutIds });
+    } catch (error) {
+      console.error("Bulk checkout overdue failed:", error);
+      return res.status(500).json({ message: "Failed to bulk checkout overdue guests" });
+    }
+  });
+
   // Logout endpoint
   app.post("/api/auth/logout", authenticateToken, async (req: any, res) => {
     try {
@@ -342,7 +377,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update capsule status (for maintenance/problems)
-  app.patch("/api/capsules/:number", async (req, res) => {
+  // Create new capsule
+  app.post("/api/capsules", 
+    securityValidationMiddleware,
+    authenticateToken,
+    validateData(insertCapsuleSchema, 'body'),
+    async (req: any, res) => {
+    try {
+      const validatedData = req.body;
+      const capsule = await storage.createCapsule(validatedData);
+      res.json(capsule);
+    } catch (error: any) {
+      console.error("Error creating capsule:", error);
+      res.status(400).json({ message: error.message || "Failed to create capsule" });
+    }
+  });
+
+  app.patch("/api/capsules/:number", 
+    securityValidationMiddleware,
+    authenticateToken,
+    validateData(updateCapsuleSchema, 'body'),
+    async (req: any, res) => {
     try {
       const { number } = req.params;
       const updates = req.body;
@@ -353,8 +408,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json(capsule);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to update capsule" });
+    } catch (error: any) {
+      console.error("Error updating capsule:", error);
+      res.status(400).json({ message: error.message || "Failed to update capsule" });
+    }
+  });
+
+  // Delete capsule
+  app.delete("/api/capsules/:number", authenticateToken, async (req: any, res) => {
+    try {
+      const { number } = req.params;
+      
+      // Check if capsule has any guests or active problems first
+      const guests = await storage.getGuestsByCapsule(number);
+      if (guests.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete capsule with active guests. Please check out all guests first." 
+        });
+      }
+
+      const problems = await storage.getCapsuleProblems(number);
+      const activeProblems = problems.filter(p => !p.isResolved);
+      if (activeProblems.length > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete capsule with active problems. Please resolve or delete all problems first." 
+        });
+      }
+
+      const deleted = await storage.deleteCapsule(number);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Capsule not found" });
+      }
+
+      res.json({ message: "Capsule deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting capsule:", error);
+      res.status(400).json({ message: error.message || "Failed to delete capsule" });
     }
   });
 
@@ -409,6 +499,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       res.status(500).json({ message: "Failed to mark capsule as cleaned" });
+    }
+  });
+
+  // Bulk mark all capsules that need cleaning as cleaned
+  app.post("/api/capsules/mark-cleaned-all", authenticateToken, async (req: any, res) => {
+    try {
+      const cleanedBy = req.user?.username || req.user?.email || "System";
+      const toBeCleaned = await storage.getCapsulesByCleaningStatus("to_be_cleaned");
+      let count = 0;
+      for (const cap of toBeCleaned) {
+        const updated = await storage.markCapsuleCleaned(cap.number, cleanedBy);
+        if (updated) count++;
+      }
+      res.json({ count });
+    } catch (error) {
+      console.error("Bulk mark cleaned failed:", error);
+      res.status(500).json({ message: "Failed to mark all as cleaned" });
     }
   });
 
@@ -537,6 +644,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete problem
+  app.delete("/api/problems/:id", authenticateToken, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const deleted = await storage.deleteProblem(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Problem not found" });
+      }
+
+      res.json({ message: "Problem deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting problem:", error);
+      res.status(400).json({ message: error.message || "Failed to delete problem" });
+    }
+  });
+
   // Admin notification routes
   app.get("/api/admin/notifications", authenticateToken, async (req, res) => {
     try {
@@ -588,8 +713,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/settings", authenticateToken, async (req, res) => {
     try {
       const guestTokenExpirationHours = await storage.getGuestTokenExpirationHours();
+      const accommodationType = await storage.getSetting('accommodationType') || 'capsule';
+      // Load guide fields (fallback empty strings)
+      const getVal = async (k: string) => (await storage.getSetting(k))?.value || "";
       res.json({
         guestTokenExpirationHours,
+        accommodationType,
+        guideIntro: await getVal('guideIntro'),
+        guideAddress: await getVal('guideAddress'),
+        guideWifiName: await getVal('guideWifiName'),
+        guideWifiPassword: await getVal('guideWifiPassword'),
+        guideCheckin: await getVal('guideCheckin'),
+        guideOther: await getVal('guideOther'),
+        guideFaq: await getVal('guideFaq'),
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch settings" });
@@ -613,9 +749,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedBy
       );
 
+      // Update accommodation type setting
+      if (validatedData.accommodationType) {
+        await storage.setSetting(
+          'accommodationType',
+          validatedData.accommodationType,
+          'Type of accommodation (capsule, room, or house)',
+          updatedBy
+        );
+      }
+
+      // Upsert guide settings (optional fields)
+      const maybeSet = async (key: keyof typeof validatedData, desc: string) => {
+        const value = (validatedData as any)[key];
+        if (typeof value === 'string') {
+          await storage.setSetting(key as string, value, desc, updatedBy);
+        }
+      };
+      await maybeSet('guideIntro', 'Guest guide introduction');
+      await maybeSet('guideAddress', 'Hostel address');
+      await maybeSet('guideWifiName', 'WiFi SSID');
+      await maybeSet('guideWifiPassword', 'WiFi password');
+      await maybeSet('guideCheckin', 'How to check in instructions');
+      await maybeSet('guideOther', 'Other guidance');
+      await maybeSet('guideFaq', 'Guest FAQ');
+
       res.json({
         message: "Settings updated successfully",
         guestTokenExpirationHours: validatedData.guestTokenExpirationHours,
+        accommodationType: validatedData.accommodationType,
+        guideIntro: (validatedData as any).guideIntro,
+        guideAddress: (validatedData as any).guideAddress,
+        guideWifiName: (validatedData as any).guideWifiName,
+        guideWifiPassword: (validatedData as any).guideWifiPassword,
+        guideCheckin: (validatedData as any).guideCheckin,
+        guideOther: (validatedData as any).guideOther,
+        guideFaq: (validatedData as any).guideFaq,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -667,6 +836,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to check-out guest" });
+    }
+  });
+
+  // Re-checkin a guest (undo checkout)
+  app.post("/api/guests/recheckin", authenticateToken, async (req: any, res) => {
+    try {
+      const { id } = checkoutGuestSchema.parse(req.body);
+      const existing = await storage.getGuest(id);
+      if (!existing) {
+        return res.status(404).json({ message: "Guest not found" });
+      }
+
+      const updated = await storage.updateGuest(id, { isCheckedIn: true, checkoutTime: null });
+      if (!updated) {
+        return res.status(400).json({ message: "Failed to re-check in guest" });
+      }
+
+      // Mark capsule as occupied and cleaned (since it's currently in-use)
+      await storage.updateCapsule(updated.capsuleNumber, { isAvailable: false, cleaningStatus: 'cleaned' } as any);
+
+      return res.json({ message: "Guest re-checked in", guest: updated });
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      console.error("Re-checkin failed:", error);
+      return res.status(500).json({ message: "Failed to re-check in guest" });
     }
   });
 

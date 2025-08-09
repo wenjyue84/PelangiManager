@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,6 +26,8 @@ function getInitials(name: string): string {
 }
 
 export default function History() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   
@@ -32,6 +36,23 @@ export default function History() {
   });
   
   const guestHistory = guestHistoryResponse?.data || [];
+
+  const recheckinMutation = useMutation({
+    mutationFn: async (guestId: string) => {
+      const res = await apiRequest("POST", "/api/guests/recheckin", { id: guestId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guests/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/guests/checked-in"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules"] });
+      toast({ title: "Updated", description: "Guest moved back to checked-in." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error?.message || "Failed to re-check in guest", variant: "destructive" });
+    }
+  });
 
   const filteredHistory = guestHistory.filter(guest => {
     const matchesSearch = guest.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -139,7 +160,7 @@ export default function History() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className="bg-hostel-primary bg-opacity-10 text-hostel-primary">
+                        <Badge className="bg-blue-600 text-white">
                           {record.capsuleNumber}
                         </Badge>
                       </td>
@@ -167,9 +188,23 @@ export default function History() {
                         {record.checkoutTime ? formatDuration(record.checkinTime.toString(), record.checkoutTime.toString()) : 'Ongoing'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                          Completed
-                        </Badge>
+                        {record.checkoutTime ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                              Completed
+                            </Badge>
+                            <button
+                              onClick={() => recheckinMutation.mutate(record.id)}
+                              className="text-blue-600 hover:underline text-xs"
+                            >
+                              Undo (Re-check in)
+                            </button>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="bg-green-100 text-green-800">
+                            Ongoing
+                          </Badge>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -282,6 +282,25 @@ export const insertCapsuleSchema = createInsertSchema(capsules).omit({
     .optional(),
 });
 
+export const updateCapsuleSchema = z.object({
+  number: z.string()
+    .min(1, "Capsule number is required")
+    .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
+    .transform(val => val.toUpperCase())
+    .optional(),
+  section: z.enum(["back", "middle", "front"], {
+    required_error: "Section must be 'back', 'middle', or 'front'",
+  }).optional(),
+  isAvailable: z.boolean().optional(),
+  cleaningStatus: z.enum(["cleaned", "to_be_cleaned"], {
+    required_error: "Cleaning status must be 'cleaned' or 'to_be_cleaned'",
+  }).optional(),
+  problemDescription: z.string()
+    .max(500, "Problem description must not exceed 500 characters")
+    .transform(val => val?.trim())
+    .optional(),
+});
+
 export const checkoutGuestSchema = z.object({
   id: z.string().min(1, "Guest ID is required"),
 });
@@ -573,6 +592,9 @@ export const updateSettingsSchema = z.object({
     .default(24),
   
   // System Settings
+  accommodationType: z.enum(["capsule", "room", "house"], {
+    required_error: "Accommodation type must be capsule, room, or house",
+  }).default("capsule"),
   defaultUserRole: z.enum(["admin", "staff"], {
     required_error: "Default user role must be either 'admin' or 'staff'",
   }).default("staff"),
@@ -581,6 +603,36 @@ export const updateSettingsSchema = z.object({
     .max(365, "Maximum stay cannot exceed 365 days")
     .int("Maximum stay must be a whole number of days")
     .default(30),
+  
+  // Guest Guide Settings (all optional, editable in Settings > Guest Guide)
+  guideIntro: z.string()
+    .max(5000, "Introduction is too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideAddress: z.string()
+    .max(1000, "Address is too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideWifiName: z.string()
+    .max(200, "WiFi name too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideWifiPassword: z.string()
+    .max(200, "WiFi password too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideCheckin: z.string()
+    .max(5000, "Check-in guidance too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideOther: z.string()
+    .max(5000, "Other guidance too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideFaq: z.string()
+    .max(8000, "FAQ too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
   
   // Payment Settings
   defaultPaymentMethod: z.enum(["cash", "tng", "bank", "platform"], {

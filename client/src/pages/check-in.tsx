@@ -16,9 +16,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/components/auth-provider";
 import GuestTokenGenerator from "@/components/guest-token-generator";
+import { useAccommodationLabels } from "@/hooks/useAccommodationLabels";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
 
 export default function CheckIn() {
+  const labels = useAccommodationLabels();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -261,7 +263,7 @@ export default function CheckIn() {
               <h4 className="text-sm font-medium text-blue-800 mb-2">✨ Smart Features:</h4>
               <ul className="text-xs text-blue-700 space-y-1">
                 <li>• Auto-incrementing guest names (Guest1, Guest2...)</li>
-                <li>• Gender-based capsule assignment (Front for males, Back for females)</li>
+                <li>• Gender-based {labels.lowerSingular} assignment (Front for males, Back for females)</li>
                 <li>• Quick payment presets: RM45, RM48, RM650 (Monthly)</li>
                 <li>• Admin form: Only name, capsule & payment required</li>
               </ul>
@@ -330,12 +332,12 @@ export default function CheckIn() {
             </div>
 
             <div>
-              <Label htmlFor="capsuleNumber" className="flex items-center text-sm font-medium text-hostel-text mb-2">
+               <Label htmlFor="capsuleNumber" className="flex items-center text-sm font-medium text-hostel-text mb-2">
                 <Bed className="mr-2 h-4 w-4" />
-                Capsule Assignment *
+                 {labels.singular} Assignment *
               </Label>
               <p className="text-xs text-gray-600 mb-2">
-                💡 Smart Assignment: Select gender first for automatic capsule recommendation!
+                💡 Smart Assignment: Select gender first for automatic {labels.lowerSingular} recommendation!
               </p>
               {capsulesLoading ? (
                 <Skeleton className="w-full h-10" />
@@ -345,11 +347,11 @@ export default function CheckIn() {
                   onValueChange={(value) => form.setValue("capsuleNumber", value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select capsule (⭐ = bottom/preferred)" />
+                     <SelectValue placeholder={`Select ${labels.lowerSingular} (⭐ = bottom/preferred)`} />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableCapsules.length === 0 ? (
-                      <SelectItem value="no-capsules" disabled>No capsules available</SelectItem>
+                     {availableCapsules.length === 0 ? (
+                       <SelectItem value="no-capsules" disabled>No {labels.lowerPlural} available</SelectItem>
                     ) : (
                       // Sort capsules: bottom (even numbers) first, then top (odd numbers)
                       availableCapsules

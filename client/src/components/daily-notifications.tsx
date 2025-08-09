@@ -4,15 +4,17 @@ import { useVisibilityQuery } from "@/hooks/useVisibilityQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Calendar, Clock, User, UserMinus } from "lucide-react";
+import { Bell, Calendar, Clock, User, UserMinus, CheckCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/auth-provider";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CheckoutConfirmationDialog } from "./confirmation-dialog";
 import type { Guest, PaginatedResponse } from "@shared/schema";
+import { useAccommodationLabels } from "@/hooks/useAccommodationLabels";
 
 export default function DailyNotifications() {
+  const labels = useAccommodationLabels();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -52,6 +54,23 @@ export default function DailyNotifications() {
         description: "Failed to check out guest",
         variant: "destructive",
       });
+    },
+  });
+
+  const bulkCheckoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/guests/checkout-overdue", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guests/checked-in"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/occupancy"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/guests/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] });
+      toast({ title: "Success", description: "All overdue guests checked out." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to bulk checkout overdue guests", variant: "destructive" });
     },
   });
 
@@ -117,86 +136,98 @@ export default function DailyNotifications() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Today's Expected Checkouts */}
-        {checkingOutToday.length > 0 && (
-          <div className="bg-white rounded-lg p-4 border border-orange-200">
-            <h4 className="font-medium text-orange-800 mb-3 flex items-center">
-              <Calendar className="mr-2 h-4 w-4" />
-              Expected Checkouts Today ({checkingOutToday.length})
-            </h4>
-            <div className="space-y-2">
-              {checkingOutToday.map((guest) => (
-                <div key={guest.id} className="flex items-center justify-between p-2 bg-orange-50 rounded border">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
-                      <User className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">{guest.name}</div>
-                      <div className="text-sm text-gray-600">Capsule {guest.capsuleNumber}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
-                      Due Today
-                    </Badge>
-                    <Button
-                      size="sm"
-                      onClick={() => handleCheckout(guest)}
-                      disabled={checkoutMutation.isPending}
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
-                    >
-                      <UserMinus className="h-4 w-4 mr-1" />
-                      {checkoutMutation.isPending && checkoutMutation.variables === guest.id ? "Checking out..." : "Check Out"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Overdue Checkouts */}
-        {overdueCheckouts.length > 0 && (
-          <div className="bg-white rounded-lg p-4 border border-red-200">
-            <h4 className="font-medium text-red-800 mb-3 flex items-center">
-              <Bell className="mr-2 h-4 w-4" />
-              Overdue Checkouts ({overdueCheckouts.length})
-            </h4>
-            <div className="space-y-2">
-              {overdueCheckouts.map((guest) => (
-                <div key={guest.id} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                      <User className="h-4 w-4 text-red-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">{guest.name}</div>
-                      <div className="text-sm text-gray-600">Capsule {guest.capsuleNumber}</div>
-                      <div className="text-xs text-red-600">
-                        Expected: {new Date(guest.expectedCheckoutDate!).toLocaleDateString()}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Today's Expected Checkouts */}
+          {checkingOutToday.length > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-orange-200">
+              <h4 className="font-medium text-orange-800 mb-3 flex items-center">
+                <Calendar className="mr-2 h-4 w-4" />
+                Expected Checkouts Today ({checkingOutToday.length})
+              </h4>
+              <div className="space-y-2">
+                {checkingOutToday.map((guest) => (
+                  <div key={guest.id} className="flex items-center justify-between p-2 bg-orange-50 rounded border">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                        <User className="h-4 w-4 text-orange-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{guest.name}</div>
+                        <div className="text-sm text-gray-600">{labels.singular} {guest.capsuleNumber}</div>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
+                        Due Today
+                      </Badge>
+                      <Button
+                        size="sm"
+                        onClick={() => handleCheckout(guest)}
+                        disabled={checkoutMutation.isPending}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        <UserMinus className="h-4 w-4 mr-1" />
+                        {checkoutMutation.isPending && checkoutMutation.variables === guest.id ? "Checking out..." : "Check Out"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-red-600 text-white">
-                      Overdue
-                    </Badge>
-                    <Button
-                      size="sm"
-                      onClick={() => handleCheckout(guest)}
-                      disabled={checkoutMutation.isPending}
-                      variant="destructive"
-                    >
-                      <UserMinus className="h-4 w-4 mr-1" />
-                      {checkoutMutation.isPending && checkoutMutation.variables === guest.id ? "Checking out..." : "Check Out"}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Overdue Checkouts */}
+          {overdueCheckouts.length > 0 && (
+            <div className="bg-white rounded-lg p-4 border border-red-200">
+              <h4 className="font-medium text-red-800 mb-3 flex items-center justify-between">
+                <Bell className="mr-2 h-4 w-4" />
+                <span>Overdue Checkouts ({overdueCheckouts.length})</span>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => bulkCheckoutMutation.mutate()}
+                  disabled={bulkCheckoutMutation.isPending || overdueCheckouts.length === 0}
+                  className="ml-auto"
+                >
+                  <CheckCheck className="h-4 w-4 mr-1" />
+                  {bulkCheckoutMutation.isPending ? "Checking Out..." : "Check Out All"}
+                </Button>
+              </h4>
+              <div className="space-y-2">
+                {overdueCheckouts.map((guest) => (
+                  <div key={guest.id} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                        <User className="h-4 w-4 text-red-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{guest.name}</div>
+                        <div className="text-sm text-gray-600">{labels.singular} {guest.capsuleNumber}</div>
+                        <div className="text-xs text-red-600">
+                          Expected: {new Date(guest.expectedCheckoutDate!).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-red-600 text-white">
+                        Overdue
+                      </Badge>
+                      <Button
+                        size="sm"
+                        onClick={() => handleCheckout(guest)}
+                        disabled={checkoutMutation.isPending}
+                        variant="destructive"
+                      >
+                        <UserMinus className="h-4 w-4 mr-1" />
+                        {checkoutMutation.isPending && checkoutMutation.variables === guest.id ? "Checking out..." : "Check Out"}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {isNoonTime && (
           <div className="text-center text-sm text-orange-700 font-medium">

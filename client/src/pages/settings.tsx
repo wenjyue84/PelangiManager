@@ -9,14 +9,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Settings, Clock, Save, RotateCcw, Wrench, Users, MessageSquare, Plus, Trash2, Edit } from "lucide-react";
+import { Settings, Clock, Save, RotateCcw, Wrench, Users, MessageSquare, Plus, Trash2, Edit, Building } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
+import { useAccommodationLabels } from "@/hooks/useAccommodationLabels";
 import { useToast } from "@/hooks/use-toast";
 import { AuthContext } from "@/lib/auth";
-import { updateSettingsSchema, type UpdateSettings, type CapsuleProblem, type User, type InsertUser, insertUserSchema } from "@shared/schema";
+import { updateSettingsSchema, type UpdateSettings, type CapsuleProblem, type User, type InsertUser, insertUserSchema, type PaginatedResponse, type Capsule, insertCapsuleSchema, updateCapsuleSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Schema for self check-in message settings
@@ -32,17 +33,26 @@ export default function SettingsPage() {
   const authContext = useContext(AuthContext);
   const isAuthenticated = authContext?.isAuthenticated || false;
   const [activeTab, setActiveTab] = useState("general");
+  const labels = useAccommodationLabels();
 
   // General settings queries
-  const { data: settings, isLoading } = useQuery<{ guestTokenExpirationHours: number; selfCheckinSuccessMessage?: string }>({
+  const { data: settings, isLoading } = useQuery<{ guestTokenExpirationHours: number; accommodationType?: string; selfCheckinSuccessMessage?: string }>({
     queryKey: ["/api/settings"],
     enabled: isAuthenticated,
   });
 
   // Capsule problems queries
-  const { data: problems = [], isLoading: problemsLoading } = useQuery<CapsuleProblem[]>({
+  const { data: problemsResponse, isLoading: problemsLoading } = useQuery<PaginatedResponse<CapsuleProblem>>({
     queryKey: ["/api/problems"],
     enabled: isAuthenticated && activeTab === "maintenance",
+  });
+  
+  const problems = problemsResponse?.data || [];
+
+  // Capsules query for dropdown and capsules management
+  const { data: capsules = [] } = useQuery<Capsule[]>({
+    queryKey: ["/api/capsules"],
+    enabled: isAuthenticated && (activeTab === "maintenance" || activeTab === "capsules"),
   });
 
   // Users queries
@@ -55,12 +65,19 @@ export default function SettingsPage() {
     resolver: zodResolver(updateSettingsSchema),
     defaultValues: {
       guestTokenExpirationHours: settings?.guestTokenExpirationHours || 24,
+      accommodationType: (settings as any)?.accommodationType || "capsule",
     },
   });
 
   // Update form when settings are loaded
-  if (settings && form.getValues().guestTokenExpirationHours !== settings.guestTokenExpirationHours) {
-    form.reset({ guestTokenExpirationHours: settings.guestTokenExpirationHours });
+  if (settings && (
+    form.getValues().guestTokenExpirationHours !== settings.guestTokenExpirationHours ||
+    (form.getValues() as any).accommodationType !== (settings as any).accommodationType
+  )) {
+    form.reset({
+      guestTokenExpirationHours: settings.guestTokenExpirationHours,
+      accommodationType: (settings as any).accommodationType || "capsule",
+    } as any);
   }
 
   const updateSettingsMutation = useMutation({
@@ -90,6 +107,7 @@ export default function SettingsPage() {
 
   const resetToDefault = () => {
     form.setValue("guestTokenExpirationHours", 24);
+    (form as any).setValue?.("accommodationType", "capsule");
   };
 
   if (!isAuthenticated) {
@@ -117,10 +135,14 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             General
+          </TabsTrigger>
+          <TabsTrigger value="capsules" className="flex items-center gap-2">
+            <Building className="h-4 w-4" />
+            {labels.plural}
           </TabsTrigger>
           <TabsTrigger value="maintenance" className="flex items-center gap-2">
             <Wrench className="h-4 w-4" />
@@ -133,6 +155,10 @@ export default function SettingsPage() {
           <TabsTrigger value="messages" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Messages
+          </TabsTrigger>
+          <TabsTrigger value="guide" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Guest Guide
           </TabsTrigger>
         </TabsList>
 
@@ -147,9 +173,20 @@ export default function SettingsPage() {
           />
         </TabsContent>
 
+        <TabsContent value="capsules" className="space-y-6">
+          <CapsulesTab
+            capsules={capsules}
+            isLoading={isLoading}
+            queryClient={queryClient}
+            toast={toast}
+            labels={labels}
+          />
+        </TabsContent>
+
         <TabsContent value="maintenance" className="space-y-6">
           <MaintenanceTab
             problems={problems}
+            capsules={capsules}
             isLoading={problemsLoading}
             queryClient={queryClient}
             toast={toast}
@@ -171,6 +208,10 @@ export default function SettingsPage() {
             queryClient={queryClient}
             toast={toast}
           />
+        </TabsContent>
+
+        <TabsContent value="guide" className="space-y-6">
+          <GuestGuideTab settings={settings} form={form} updateSettingsMutation={updateSettingsMutation} />
         </TabsContent>
       </Tabs>
     </div>
@@ -198,6 +239,29 @@ function GeneralSettingsTab({ settings, isLoading, form, onSubmit, resetToDefaul
           ) : (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name={"accommodationType" as any}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Accommodation Term</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="max-w-xs">
+                          <SelectValue placeholder="Select term" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="capsule">Capsule</SelectItem>
+                          <SelectItem value="room">Room (Hotel)</SelectItem>
+                          <SelectItem value="house">House (Homestay)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="text-sm text-gray-600">
+                        This term will be used across the system (e.g., Check-in forms, Maintenance, Dashboard).
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="guestTokenExpirationHours"
@@ -295,8 +359,132 @@ function GeneralSettingsTab({ settings, isLoading, form, onSubmit, resetToDefaul
   );
 }
 
+// Guest Guide Tab Component
+function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-blue-600" />
+          Guest Guide Content
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data: any) => updateSettingsMutation.mutate(data))} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField name={"guideIntro" as any} control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Introduction</FormLabel>
+                  <Textarea rows={6} placeholder="Intro to your place..." {...field} />
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField name={"guideAddress" as any} control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <Textarea rows={4} placeholder="Address details..." {...field} />
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField name={"guideWifiName" as any} control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>WiFi Name (SSID)</FormLabel>
+                  <Input placeholder="e.g., PelangiHostel" {...field} />
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField name={"guideWifiPassword" as any} control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>WiFi Password</FormLabel>
+                  <Input placeholder="WiFi password" {...field} />
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            <FormField name={"guideCheckin" as any} control={form.control} render={({ field }) => (
+              <FormItem>
+                <FormLabel>How to Check In</FormLabel>
+                <Textarea rows={6} placeholder="Step-by-step check-in guidance..." {...field} />
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField name={"guideOther" as any} control={form.control} render={({ field }) => (
+              <FormItem>
+                <FormLabel>Other Guidance</FormLabel>
+                <Textarea rows={6} placeholder="House rules, notes, etc..." {...field} />
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField name={"guideFaq" as any} control={form.control} render={({ field }) => (
+              <FormItem>
+                <FormLabel>FAQ</FormLabel>
+                <Textarea rows={8} placeholder="Frequently asked questions..." {...field} />
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <div className="pt-2">
+              <Button type="submit" disabled={updateSettingsMutation.isPending} className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                {updateSettingsMutation.isPending ? "Saving..." : "Save Guide"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Capsules Tab Component (minimal version)
+function CapsulesTab({ capsules, queryClient, toast, labels }: any) {
+  const items = Array.isArray(capsules) ? capsules : [];
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building className="h-5 w-5 text-blue-600" />
+            {labels.plural} ({items.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {items.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Building className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p>No {labels.lowerPlural} found. You can add {labels.lowerPlural} here in the next step.</p>
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-3">
+              {items.map((c: any) => (
+                <Card key={c.number} className="p-4 flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-semibold">{c.number}</div>
+                    <div className="text-xs text-gray-500">Section: {c.section}</div>
+                  </div>
+                  <Badge variant={c.isAvailable ? "default" : "destructive"}>
+                    {c.isAvailable ? "Available" : "Unavailable"}
+                  </Badge>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Maintenance Tab Component
-function MaintenanceTab({ problems, isLoading, queryClient, toast }: any) {
+function MaintenanceTab({ problems, capsules, isLoading, queryClient, toast }: any) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProblem, setSelectedProblem] = useState<CapsuleProblem | null>(null);
@@ -386,8 +574,8 @@ function MaintenanceTab({ problems, isLoading, queryClient, toast }: any) {
     setEditDialogOpen(true);
   };
 
-  const activeProblem = problems.filter((p: CapsuleProblem) => !p.isResolved);
-  const resolvedProblems = problems.filter((p: CapsuleProblem) => p.isResolved);
+  const activeProblem = Array.isArray(problems) ? problems.filter((p: CapsuleProblem) => !p.isResolved) : [];
+  const resolvedProblems = Array.isArray(problems) ? problems.filter((p: CapsuleProblem) => p.isResolved) : [];
 
   return (
     <div className="space-y-6">
@@ -423,11 +611,9 @@ function MaintenanceTab({ problems, isLoading, queryClient, toast }: any) {
                         <SelectValue placeholder="Select capsule" />
                       </SelectTrigger>
                       <SelectContent>
-                        {["A-01", "A-02", "A-03", "A-04", "A-05", "A-06", "A-07", "A-08",
-                          "B-01", "B-02", "B-03", "B-04", "B-05", "B-06", "B-07", "B-08",
-                          "C-01", "C-02", "C-03", "C-04", "C-05", "C-06", "C-07", "C-08"].map((capsule) => (
-                          <SelectItem key={capsule} value={capsule}>
-                            {capsule}
+                        {Array.isArray(capsules) && capsules.map((capsule) => (
+                          <SelectItem key={capsule.number} value={capsule.number}>
+                            {capsule.number}
                           </SelectItem>
                         ))}
                       </SelectContent>

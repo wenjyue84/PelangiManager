@@ -43,14 +43,68 @@ app.use((req, res, next) => {
   await initializeConfig(storage);
   AppConfig.initialize(getConfig(), getConfigUtils());
   
+  // Seed default staff users on each start (idempotent by username)
+  try {
+    const existing = await storage.getAllUsers();
+    const ensureUser = async (username: string, password: string) => {
+      const found = existing.find(u => u.username === username);
+      if (!found) {
+        await storage.createUser({
+          email: `${username.toLowerCase()}@pelangi.local`,
+          username,
+          password,
+          role: "staff",
+        } as any);
+      }
+    };
+    await ensureUser("Jay", "Jay123");
+    await ensureUser("Le", "Le123");
+    await ensureUser("Alston", "Alston123");
+  } catch (e) {
+    console.warn("Warning: could not seed default users:", e);
+  }
+
+  // Seed a few active capsule problems if none exist
+  try {
+    const activeProblems = await storage.getActiveProblems({ page: 1, limit: 1 });
+    if ((activeProblems.pagination.total || 0) === 0) {
+      const candidates = await storage.getAllCapsules();
+      const sampleCaps = candidates.slice(0, 3).map(c => c.number);
+      const descriptions = [
+        "Light not working properly",
+        "Keycard sensor intermittent",
+        "Air ventilation is weak",
+      ];
+      for (let i = 0; i < sampleCaps.length; i++) {
+        await storage.createCapsuleProblem({
+          capsuleNumber: sampleCaps[i],
+          description: descriptions[i] || "Minor maintenance required",
+          reportedBy: "System",
+        } as any);
+      }
+    }
+  } catch (e) {
+    console.warn("Warning: could not seed sample problems:", e);
+  }
+
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    const status = err?.status || err?.statusCode || 500;
+    const message = err?.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Log the error with context, but DO NOT rethrow (rethrowing crashes the server)
+    console.error("Unhandled server error:", {
+      status,
+      message,
+      method: req.method,
+      url: req.originalUrl,
+      stack: err?.stack,
+    });
+
+    if (!res.headersSent) {
+      res.status(status).json({ message });
+    }
   });
 
   // importantly only setup vite in development and after

@@ -2,7 +2,7 @@ import { type User, type InsertUser, type Guest, type InsertGuest, type Capsule,
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, ne, and, lte, isNotNull } from "drizzle-orm";
+import { eq, ne, and, lte, isNotNull, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User management methods
@@ -38,8 +38,10 @@ export interface IStorage {
   getCapsule(number: string): Promise<Capsule | undefined>;
   updateCapsule(number: string, updates: Partial<Capsule>): Promise<Capsule | undefined>;
   createCapsule(capsule: InsertCapsule): Promise<Capsule>;
+  deleteCapsule(number: string): Promise<boolean>;
   markCapsuleCleaned(capsuleNumber: string, cleanedBy: string): Promise<Capsule | undefined>;
   getCapsulesByCleaningStatus(status: "cleaned" | "to_be_cleaned"): Promise<Capsule[]>;
+  getGuestsByCapsule(capsuleNumber: string): Promise<Guest[]>;
   
   // Capsule problem management
   createCapsuleProblem(problem: InsertCapsuleProblem): Promise<CapsuleProblem>;
@@ -47,6 +49,7 @@ export interface IStorage {
   getActiveProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>>;
   getAllProblems(pagination?: PaginationParams): Promise<PaginatedResponse<CapsuleProblem>>;
   resolveProblem(problemId: string, resolvedBy: string, notes?: string): Promise<CapsuleProblem | undefined>;
+  deleteProblem(problemId: string): Promise<boolean>;
 
   // Guest token management methods
   createGuestToken(token: InsertGuestToken): Promise<GuestToken>;
@@ -479,6 +482,30 @@ export class MemStorage implements IStorage {
     return capsule;
   }
 
+  async deleteCapsule(number: string): Promise<boolean> {
+    const exists = this.capsules.has(number);
+    if (exists) {
+      this.capsules.delete(number);
+      
+      // Also remove any associated problems
+      const problemsToDelete = Array.from(this.capsuleProblems.entries())
+        .filter(([_, problem]) => problem.capsuleNumber === number)
+        .map(([id, _]) => id);
+      
+      for (const problemId of problemsToDelete) {
+        this.capsuleProblems.delete(problemId);
+      }
+      
+      return true;
+    }
+    return false;
+  }
+
+  async getGuestsByCapsule(capsuleNumber: string): Promise<Guest[]> {
+    return Array.from(this.guests.values())
+      .filter(guest => guest.capsuleNumber === capsuleNumber && !guest.checkedOutAt);
+  }
+
   // Cleaning management methods
   async markCapsuleCleaned(capsuleNumber: string, cleanedBy: string): Promise<Capsule | undefined> {
     const capsule = this.capsules.get(capsuleNumber);
@@ -572,6 +599,30 @@ export class MemStorage implements IStorage {
       return problem;
     }
     return undefined;
+  }
+
+  async deleteProblem(problemId: string): Promise<boolean> {
+    const problem = this.capsuleProblems.get(problemId);
+    if (problem) {
+      // Remove the problem
+      this.capsuleProblems.delete(problemId);
+      
+      // Check if there are any other active problems for this capsule
+      const activeProblems = Array.from(this.capsuleProblems.values())
+        .filter(p => p.capsuleNumber === problem.capsuleNumber && !p.isResolved);
+      
+      // If no other active problems, mark capsule as available
+      if (activeProblems.length === 0) {
+        const capsule = this.capsules.get(problem.capsuleNumber);
+        if (capsule) {
+          capsule.isAvailable = true;
+          this.capsules.set(problem.capsuleNumber, capsule);
+        }
+      }
+      
+      return true;
+    }
+    return false;
   }
 
   // Guest token management methods
@@ -1010,6 +1061,36 @@ class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async deleteCapsule(number: string): Promise<boolean> {
+    try {
+      // First delete associated problems
+      await this.db
+        .delete(capsuleProblems)
+        .where(eq(capsuleProblems.capsuleNumber, number));
+
+      // Then delete the capsule
+      const result = await this.db
+        .delete(capsules)
+        .where(eq(capsules.number, number))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting capsule:", error);
+      return false;
+    }
+  }
+
+  async getGuestsByCapsule(capsuleNumber: string): Promise<Guest[]> {
+    return await this.db
+      .select()
+      .from(guests)
+      .where(and(
+        eq(guests.capsuleNumber, capsuleNumber),
+        isNull(guests.checkedOutAt)
+      ));
+  }
+
   // Capsule problem methods for DatabaseStorage
   async createCapsuleProblem(problem: InsertCapsuleProblem): Promise<CapsuleProblem> {
     const result = await this.db.insert(capsuleProblems).values(problem).returning();
@@ -1054,6 +1135,20 @@ class DatabaseStorage implements IStorage {
       .returning();
     
     return result[0];
+  }
+
+  async deleteProblem(problemId: string): Promise<boolean> {
+    try {
+      const result = await this.db
+        .delete(capsuleProblems)
+        .where(eq(capsuleProblems.id, problemId))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting problem:", error);
+      return false;
+    }
   }
 
   // Guest token methods for DatabaseStorage
@@ -1209,5 +1304,5 @@ class DatabaseStorage implements IStorage {
   }
 }
 
-// Use DatabaseStorage for persistent data storage
-export const storage = new DatabaseStorage();
+// Use MemStorage for development, DatabaseStorage for production
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();

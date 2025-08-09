@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Clock, CheckCircle, User } from "lucide-react";
+import { Sparkles, Clock, CheckCircle, User, CheckCheck } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { Capsule } from "@shared/schema";
 import {
@@ -194,6 +194,21 @@ export default function CapsuleCleaningStatus() {
     ]);
   };
 
+  const { toast } = useToast();
+  const bulkCleanMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/capsules/mark-cleaned-all", {});
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      handleRefresh();
+      toast({ title: "Success", description: `Marked ${data.count} as cleaned.` });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to mark all as cleaned", variant: "destructive" });
+    },
+  });
+
   if (loadingToClean || loadingCleaned) {
     return (
       <Card>
@@ -229,9 +244,18 @@ export default function CapsuleCleaningStatus() {
       <CardContent className="space-y-6">
         {/* Capsules needing cleaning */}
         <div>
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 justify-between">
             <Clock className="h-5 w-5 text-orange-500" />
             <h3 className="font-semibold text-lg">Needs Cleaning ({capsulesToClean.length})</h3>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => bulkCleanMutation.mutate()}
+              disabled={bulkCleanMutation.isPending || capsulesToClean.length === 0}
+            >
+              <CheckCheck className="h-4 w-4 mr-1" />
+              {bulkCleanMutation.isPending ? "Marking..." : "Mark Cleaned for All"}
+            </Button>
           </div>
           
           {capsulesToClean.length === 0 ? (

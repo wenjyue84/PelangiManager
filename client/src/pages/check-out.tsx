@@ -127,18 +127,18 @@ export default function CheckOut() {
                     {guests.map((guest) => (
                       <tr key={guest.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 bg-hostel-primary bg-opacity-10 rounded-full flex items-center justify-center mr-4">
-                              <span className="text-hostel-primary font-medium">{getInitials(guest.name)}</span>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-hostel-text">{guest.name}</div>
-                              <div className="text-sm text-gray-500">ID: #{guest.id.slice(0, 8)}</div>
-                            </div>
-                          </div>
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center mr-4">
+                          <span className="text-white font-medium">{getInitials(guest.name)}</span>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-hostel-text">{guest.name}</div>
+                          <div className="text-sm text-gray-500">ID: #{guest.id.slice(0, 8)}</div>
+                        </div>
+                      </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge className="bg-hostel-primary bg-opacity-10 text-hostel-primary">
+                          <Badge className="bg-blue-600 text-white">
                             {guest.capsuleNumber}
                           </Badge>
                         </td>
