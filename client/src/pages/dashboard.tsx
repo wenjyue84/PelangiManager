@@ -2,7 +2,6 @@ import SortableGuestTable from "@/components/sortable-guest-table";
 import DailyNotifications from "@/components/daily-notifications";
 import AdminNotifications from "@/components/admin-notifications";
 import OccupancyCalendar from "@/components/occupancy-calendar";
-import CapsuleCleaningStatus from "@/components/capsule-cleaning-status";
 
 export default function Dashboard() {
   return (
@@ -12,7 +11,6 @@ export default function Dashboard() {
         <DailyNotifications />
         <AdminNotifications />
       </div>
-      <CapsuleCleaningStatus />
       <OccupancyCalendar />
     </div>
   );

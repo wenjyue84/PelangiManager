@@ -18,6 +18,7 @@ import { useAuth } from "@/components/auth-provider";
 import GuestTokenGenerator from "@/components/guest-token-generator";
 import { useAccommodationLabels } from "@/hooks/useAccommodationLabels";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
+import { NATIONALITIES } from "@/lib/nationalities";
 
 export default function CheckIn() {
   const labels = useAccommodationLabels();
@@ -26,6 +27,7 @@ export default function CheckIn() {
   const { user } = useAuth();
   const [showCheckinConfirmation, setShowCheckinConfirmation] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState<InsertGuest | null>(null);
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
   
   const { data: availableCapsules = [], isLoading: capsulesLoading } = useVisibilityQuery<Capsule[]>({
     queryKey: ["/api/capsules/available"],
@@ -121,7 +123,7 @@ export default function CheckIn() {
       paymentMethod: "cash" as const,
       paymentCollector: "",
       gender: undefined,
-      nationality: "",
+      nationality: "Malaysian",
       phoneNumber: "",
       email: "",
       idNumber: "",
@@ -209,6 +211,10 @@ export default function CheckIn() {
   };
 
   const handleClear = () => {
+    setShowClearConfirmation(true);
+  };
+
+  const confirmClear = () => {
     form.reset({
       name: getNextGuestNumber(),
       capsuleNumber: "",
@@ -216,7 +222,7 @@ export default function CheckIn() {
       paymentMethod: "cash" as const,
       paymentCollector: getDefaultCollector(),
       gender: undefined,
-      nationality: "",
+      nationality: "Malaysian",
       phoneNumber: "",
       email: "",
       idNumber: "",
@@ -224,6 +230,11 @@ export default function CheckIn() {
       emergencyPhone: "",
       age: "",
       expectedCheckoutDate: getNextDayDate(),
+    });
+    setShowClearConfirmation(false);
+    toast({
+      title: "Form Cleared",
+      description: "All fields have been reset to default values",
     });
   };
 
@@ -254,20 +265,8 @@ export default function CheckIn() {
       <Card className="shadow-sm">
         <CardHeader>
           <div className="text-center">
-            <div className="w-16 h-16 bg-hostel-secondary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <UserPlus className="text-hostel-secondary h-8 w-8" />
-            </div>
             <CardTitle className="text-2xl font-bold text-hostel-text">Guest Check-In</CardTitle>
             <p className="text-gray-600 mt-2">Smart check-in with auto-assignment and preset payment options</p>
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">✨ Smart Features:</h4>
-              <ul className="text-xs text-blue-700 space-y-1">
-                <li>• Auto-incrementing guest names (Guest1, Guest2...)</li>
-                <li>• Gender-based {labels.lowerSingular} assignment (Front for males, Back for females)</li>
-                <li>• Quick payment presets: RM45, RM48, RM650 (Monthly)</li>
-                <li>• Admin form: Only name, capsule & payment required</li>
-              </ul>
-            </div>
             <div className="flex justify-center mt-4">
               <GuestTokenGenerator onTokenCreated={() => queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] })} />
             </div>
@@ -584,13 +583,21 @@ export default function CheckIn() {
                   <Label htmlFor="nationality" className="text-sm font-medium text-hostel-text">
                     Nationality
                   </Label>
-                  <Input
-                    id="nationality"
-                    type="text"
-                    placeholder="e.g., Malaysian"
-                    className="mt-1"
-                    {...form.register("nationality")}
-                  />
+                  <Select
+                    value={form.watch("nationality") || "Malaysian"}
+                    onValueChange={(value) => form.setValue("nationality", value)}
+                  >
+                    <SelectTrigger className="w-full mt-1">
+                      <SelectValue placeholder="Select nationality" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NATIONALITIES.map((n) => (
+                        <SelectItem key={n.value} value={n.value}>
+                          {n.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {form.formState.errors.nationality && (
                     <p className="text-hostel-error text-sm mt-1">{form.formState.errors.nationality.message}</p>
                   )}
@@ -659,6 +666,44 @@ export default function CheckIn() {
             {/* Additional Notes */}
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <h3 className="text-sm font-medium text-hostel-text mb-3">Additional Notes (Optional)</h3>
+              
+              {/* Early/Late Check-in Options */}
+              <div className="mb-3 flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    className="mr-2 rounded border-gray-300"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const currentNotes = form.getValues("notes") || "";
+                        form.setValue("notes", currentNotes + (currentNotes ? "\n" : "") + "Early check-in requested at: ");
+                      } else {
+                        const currentNotes = form.getValues("notes") || "";
+                        form.setValue("notes", currentNotes.replace(/\nEarly check-in requested at:.*/, "").replace(/^Early check-in requested at:.*/, ""));
+                      }
+                    }}
+                  />
+                  <span className="text-sm">Early Check-in</span>
+                </label>
+                
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    className="mr-2 rounded border-gray-300"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const currentNotes = form.getValues("notes") || "";
+                        form.setValue("notes", currentNotes + (currentNotes ? "\n" : "") + "Late check-in requested at: ");
+                      } else {
+                        const currentNotes = form.getValues("notes") || "";
+                        form.setValue("notes", currentNotes.replace(/\nLate check-in requested at:.*/, "").replace(/^Late check-in requested at:.*/, ""));
+                      }
+                    }}
+                  />
+                  <span className="text-sm">Late Check-in</span>
+                </label>
+              </div>
+              
               <div>
                 <Label htmlFor="notes" className="text-sm font-medium text-hostel-text">
                   Special Requirements or Notes
@@ -728,6 +773,17 @@ export default function CheckIn() {
             </div>
           </form>
           </Form>
+          
+          {/* Smart Features - Moved to bottom */}
+          <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="text-sm font-medium text-blue-800 mb-2">✨ Smart Features:</h4>
+            <ul className="text-xs text-blue-700 space-y-1">
+              <li>• Auto-incrementing guest names (Guest1, Guest2...)</li>
+              <li>• Gender-based {labels.lowerSingular} assignment (Front for males, Back for females)</li>
+              <li>• Quick payment presets: RM45, RM48, RM650 (Monthly)</li>
+              <li>• Admin form: Only name, capsule & payment required</li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
 
@@ -746,6 +802,18 @@ export default function CheckIn() {
           isLoading={checkinMutation.isPending}
         />
       )}
+      
+      {/* Clear Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showClearConfirmation}
+        onOpenChange={setShowClearConfirmation}
+        title="Clear Form"
+        description="Are you sure you want to clear all fields? This will reset the form to default values."
+        confirmText="Yes, Clear Form"
+        cancelText="Cancel"
+        onConfirm={confirmClear}
+        variant="warning"
+      />
     </div>
   );
 }

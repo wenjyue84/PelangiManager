@@ -1,16 +1,17 @@
 import { useContext, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Home, UserPlus, UserX, History, AlertTriangle, Settings, Clock } from "lucide-react";
+import { Home, UserPlus, UserX, History, Settings, Clock, LayoutGrid, LogOut, ChevronRightCircle, CalendarDays, ListChecks } from "lucide-react";
 import { AuthContext } from "../lib/auth";
 import { useQuery } from "@tanstack/react-query";
 
 const navigationItems = [
-  { path: "/", label: "Dashboard", icon: Home },
-  { path: "/check-in", label: "Check In", icon: UserPlus, requireAuth: true },
-  { path: "/check-out", label: "Check Out", icon: UserX, requireAuth: true },
-  { path: "/history", label: "History", icon: History },
-  { path: "/settings", label: "Settings", icon: Settings, requireAuth: true },
+  { path: "/", label: "Dashboard", icon: LayoutGrid, color: "text-indigo-600 bg-indigo-50" },
+  { path: "/check-in", label: "Check In", icon: UserPlus, color: "text-green-600 bg-green-50", requireAuth: true },
+  { path: "/check-out", label: "Check Out", icon: UserX, color: "text-red-600 bg-red-50", requireAuth: true },
+  { path: "/cleaning", label: "Cleaning", icon: ListChecks, color: "text-emerald-600 bg-emerald-50", requireAuth: true },
+  { path: "/history", label: "History", icon: ListChecks, color: "text-orange-600 bg-orange-50" },
+  { path: "/settings", label: "Settings", icon: Settings, color: "text-blue-600 bg-blue-50", requireAuth: true },
 ];
 
 export default function Navigation() {
@@ -60,17 +61,19 @@ export default function Navigation() {
               variant={isActive ? "default" : "ghost"}
               size="sm"
               disabled={!canAccess}
-              className={`flex items-center gap-1 text-xs px-2 py-1 whitespace-nowrap ${
-                isActive 
-                  ? "bg-orange-600 text-white hover:bg-orange-700" 
-                  : canAccess 
-                    ? "text-gray-700 hover:text-orange-600" 
+              className={`flex items-center gap-2 text-xs px-2 py-1 whitespace-nowrap rounded-md ${
+                isActive
+                  ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow" 
+                  : canAccess
+                    ? `hover:bg-gray-50 ${item.color}`
                     : "text-gray-400"
               }`}
               title={!canAccess ? "Login required" : ""}
             >
-              <item.icon className="h-3 w-3" />
-              <span className="hidden sm:inline">
+              <div className={`flex items-center justify-center h-5 w-5 rounded-full ${isActive ? "bg-white/20" : item.color?.replace("text-", "bg-")}`}>
+                <item.icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : item.color}`}/>
+              </div>
+              <span className="hidden sm:inline font-medium">
                 {item.label}
               </span>
             </Button>

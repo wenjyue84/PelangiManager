@@ -449,6 +449,16 @@ export const guestSelfCheckinSchema = z.object({
   guestPaymentDescription: z.string()
     .max(200, "Payment description must not exceed 200 characters")
     .optional(),
+  emergencyContact: z.string()
+    .max(100, "Emergency contact name must not exceed 100 characters")
+    .optional(),
+  emergencyPhone: z.string()
+    .max(20, "Emergency phone must not exceed 20 characters")
+    .regex(/^[+]?[\d\s\-\(\)]*$/, "Please enter a valid phone number")
+    .optional(),
+  notes: z.string()
+    .max(500, "Notes must not exceed 500 characters")
+    .optional(),
 }).refine((data) => data.icNumber || data.passportNumber, {
   message: "Please provide either IC number or passport number",
   path: ["icNumber"],
@@ -633,6 +643,14 @@ export const updateSettingsSchema = z.object({
     .max(8000, "FAQ too long")
     .optional()
     .transform((v) => (v ?? '').trim()),
+
+  // Guest Guide visibility toggles
+  guideShowIntro: z.boolean().default(true),
+  guideShowAddress: z.boolean().default(true),
+  guideShowWifi: z.boolean().default(true),
+  guideShowCheckin: z.boolean().default(true),
+  guideShowOther: z.boolean().default(true),
+  guideShowFaq: z.boolean().default(true),
   
   // Payment Settings
   defaultPaymentMethod: z.enum(["cash", "tng", "bank", "platform"], {

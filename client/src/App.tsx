@@ -14,6 +14,7 @@ import Dashboard from "./pages/dashboard";
 import CheckIn from "./pages/check-in";
 import CheckOut from "./pages/check-out";
 import History from "./pages/history";
+import Cleaning from "./pages/cleaning";
 import Settings from "./pages/settings";
 import GuestCheckin from "./pages/guest-checkin";
 import GuestEdit from "./pages/guest-edit";
@@ -38,6 +39,11 @@ function Router() {
           <Route path="/check-out">
             <ProtectedRoute requireAuth={true}>
               <CheckOut />
+            </ProtectedRoute>
+          </Route>
+          <Route path="/cleaning">
+            <ProtectedRoute requireAuth={true}>
+              <Cleaning />
             </ProtectedRoute>
           </Route>
           <Route path="/history" component={History} />

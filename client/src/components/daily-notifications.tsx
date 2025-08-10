@@ -136,19 +136,19 @@ export default function DailyNotifications() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Today's Expected Checkouts */}
           {checkingOutToday.length > 0 && (
-            <div className="bg-white rounded-lg p-4 border border-orange-200">
-              <h4 className="font-medium text-orange-800 mb-3 flex items-center">
+            <div className="bg-white rounded-lg p-4 border border-orange-200 flex flex-col">
+              <h4 className="font-medium text-orange-800 mb-3 flex items-center justify-between">
                 <Calendar className="mr-2 h-4 w-4" />
                 Expected Checkouts Today ({checkingOutToday.length})
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                 {checkingOutToday.map((guest) => (
-                  <div key={guest.id} className="flex items-center justify-between p-2 bg-orange-50 rounded border">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                  <div key={guest.id} className="flex items-center justify-between p-3 bg-orange-50 rounded border">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
                         <User className="h-4 w-4 text-orange-600" />
                       </div>
                       <div>
@@ -178,7 +178,7 @@ export default function DailyNotifications() {
 
           {/* Overdue Checkouts */}
           {overdueCheckouts.length > 0 && (
-            <div className="bg-white rounded-lg p-4 border border-red-200">
+            <div className="bg-white rounded-lg p-4 border border-red-200 flex flex-col">
               <h4 className="font-medium text-red-800 mb-3 flex items-center justify-between">
                 <Bell className="mr-2 h-4 w-4" />
                 <span>Overdue Checkouts ({overdueCheckouts.length})</span>
@@ -193,11 +193,11 @@ export default function DailyNotifications() {
                   {bulkCheckoutMutation.isPending ? "Checking Out..." : "Check Out All"}
                 </Button>
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                 {overdueCheckouts.map((guest) => (
-                  <div key={guest.id} className="flex items-center justify-between p-2 bg-red-50 rounded border border-red-200">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                  <div key={guest.id} className="flex items-center justify-between p-3 bg-red-50 rounded border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
                         <User className="h-4 w-4 text-red-600" />
                       </div>
                       <div>

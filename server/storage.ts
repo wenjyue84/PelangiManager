@@ -127,21 +127,30 @@ export class MemStorage implements IStorage {
   }
 
   private initializeSampleGuests() {
-    const sampleGuests = [
+    // In production, keep static dates to avoid confusion
+    const now = new Date();
+    const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 14, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+    const dayAfter = new Date(today); dayAfter.setDate(today.getDate() + 2);
+
+    const fmtDate = (d: Date) => d.toISOString().split('T')[0];
+
+    const sampleGuests = isDev ? [
+      { name: "Keong", capsule: "C1", phone: "017-6632979", checkin: today.toISOString(), checkout: fmtDate(tomorrow), nights: 1 },
+      { name: "Prem", capsule: "C4", phone: "019-7418889", checkin: today.toISOString(), checkout: fmtDate(tomorrow), nights: 1 },
+      { name: "Jeevan", capsule: "C5", phone: "010-5218906", checkin: today.toISOString(), checkout: fmtDate(tomorrow), nights: 1 },
+      { name: "Ahmad", capsule: "C25", phone: "012-3456789", checkin: today.toISOString(), checkout: fmtDate(dayAfter), nights: 2 },
+      { name: "Wei Ming", capsule: "C26", phone: "011-9876543", checkin: today.toISOString(), checkout: fmtDate(dayAfter), nights: 2 },
+      { name: "Raj", capsule: "C11", phone: "013-2468135", checkin: today.toISOString(), checkout: fmtDate(tomorrow), nights: 1 },
+      { name: "Hassan", capsule: "C12", phone: "014-3579246", checkin: today.toISOString(), checkout: fmtDate(tomorrow), nights: 1 },
+      { name: "Li Wei", capsule: "C13", phone: "015-4681357", checkin: today.toISOString(), checkout: fmtDate(dayAfter), nights: 2 },
+    ] : [
+      // Fallback static dataset (production)
       { name: "Keong", capsule: "C1", phone: "017-6632979", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
       { name: "Prem", capsule: "C4", phone: "019-7418889", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
       { name: "Jeevan", capsule: "C5", phone: "010-5218906", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
       { name: "Ahmad", capsule: "C25", phone: "012-3456789", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
-      { name: "Wei Ming", capsule: "C26", phone: "011-9876543", checkin: "2025-08-07T15:00:00", checkout: "2025-08-09", nights: 2 },
-      { name: "Raj", capsule: "C11", phone: "013-2468135", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
-      { name: "Hassan", capsule: "C12", phone: "014-3579246", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
-      { name: "Li Wei", capsule: "C13", phone: "015-4681357", checkin: "2025-08-07T15:00:00", checkout: "2025-08-10", nights: 3 },
-      { name: "Muthu", capsule: "C14", phone: "016-5792468", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
-      { name: "Chen", capsule: "C15", phone: "017-6813579", checkin: "2025-08-06T15:00:00", checkout: "2025-08-09", nights: 3 },
-      { name: "Kumar", capsule: "C17", phone: "018-8135792", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
-      { name: "Farid", capsule: "C18", phone: "019-9246813", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
-      { name: "Ibrahim", capsule: "C21", phone: "012-3579135", checkin: "2025-08-07T15:00:00", checkout: "2025-08-08", nights: 1 },
-      { name: "Wong", capsule: "C22", phone: "013-4681246", checkin: "2025-08-06T15:00:00", checkout: "2025-08-08", nights: 2 },
     ];
 
     sampleGuests.forEach(guest => {
@@ -820,6 +829,13 @@ export class MemStorage implements IStorage {
       'Q: What are the check-in and check-out times?\nA: Standard check-in is at [insert time], and check-out is at [insert time]. Early/late options may be arranged based on availability.\n\nQ: Are towels and toiletries provided?\nA: Yes, fresh towels and basic toiletries are provided.\n\nQ: Is there parking available?\nA: [Insert parking information].\n\nQ: Can I store my luggage after check-out?\nA: Yes, complimentary luggage storage is available at the front desk.\n\nQ: Are there quiet hours?\nA: Yes, quiet hours are observed from [insert time] to [insert time].',
       'Frequently asked questions'
     );
+    // Default visibility: show all sections to guests
+    this.setSetting('guideShowIntro', 'true', 'Show intro to guests');
+    this.setSetting('guideShowAddress', 'true', 'Show address to guests');
+    this.setSetting('guideShowWifi', 'true', 'Show WiFi to guests');
+    this.setSetting('guideShowCheckin', 'true', 'Show check-in guidance');
+    this.setSetting('guideShowOther', 'true', 'Show other guidance');
+    this.setSetting('guideShowFaq', 'true', 'Show FAQ');
   }
 
   // Helper function for pagination

@@ -1,4 +1,5 @@
 import { Bed, Users, Percent, DoorOpen } from "lucide-react";
+import { useAccommodationLabels } from "@/hooks/useAccommodationLabels";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ interface OccupancyData {
 }
 
 export default function OccupancyCards() {
+  const labels = useAccommodationLabels();
   const { data: occupancy, isLoading } = useQuery<OccupancyData>({
     queryKey: ["/api/occupancy"],
   });
@@ -39,21 +41,21 @@ export default function OccupancyCards() {
 
   const cards = [
     {
-      title: "Total Capsules",
+      title: `Total ${labels.plural}`,
       value: occupancy?.total || 0,
       icon: Bed,
       bgColor: "bg-hostel-primary bg-opacity-10",
       iconColor: "text-hostel-primary",
     },
     {
-      title: "Current Guests",
+      title: `Occupied ${labels.plural}`,
       value: occupancy?.occupied || 0,
       icon: Users,
       bgColor: "bg-hostel-secondary bg-opacity-10",
       iconColor: "text-hostel-secondary",
     },
     {
-      title: "Available",
+      title: `Available ${labels.plural}`,
       value: occupancy?.available || 0,
       icon: DoorOpen,
       bgColor: "bg-gray-100",

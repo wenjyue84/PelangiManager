@@ -143,6 +143,20 @@ export default function GuestDetailsModal({ guest, isOpen, onClose }: GuestDetai
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Summary strip for speed reading */}
+          <div className="p-3 rounded-lg border bg-gray-50">
+            <div className="flex flex-col gap-2 text-sm">
+              <div><span className="font-medium">Name:</span> {guest.name}</div>
+              <div className="flex flex-wrap gap-4">
+                <span><span className="font-medium">Phone:</span> {guest.phoneNumber || '—'}</span>
+                <span><span className="font-medium">Check‑in:</span> {formatDate(guest.checkinTime)}</span>
+                <span><span className="font-medium">Expected Checkout:</span> {guest.expectedCheckoutDate ? new Date(guest.expectedCheckoutDate.toString()).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}) : '—'}</span>
+                <span><span className="font-medium">Payment:</span> RM {guest.paymentAmount} • {guest.paymentMethod?.toUpperCase()}</span>
+                <span><span className="font-medium">Status:</span> {guest.isPaid ? 'Paid' : 'Outstanding'}</span>
+              </div>
+            </div>
+          </div>
+
           {/* Check-in Method Indicator */}
           <div className={`rounded-lg p-3 border ${
             guest.paymentCollector === 'Self Check-in' 

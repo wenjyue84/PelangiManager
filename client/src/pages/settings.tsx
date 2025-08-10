@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -127,15 +128,19 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Settings className="h-6 w-6" />
-          Settings
-        </h1>
-        <p className="text-gray-600 mt-1">Configure system settings and preferences</p>
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+            <Settings className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+            <p className="text-gray-600 mt-1">Configure system settings and preferences</p>
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="general" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             General
@@ -159,6 +164,10 @@ export default function SettingsPage() {
           <TabsTrigger value="guide" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
             Guest Guide
+          </TabsTrigger>
+          <TabsTrigger value="tests" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Tests
           </TabsTrigger>
         </TabsList>
 
@@ -212,6 +221,10 @@ export default function SettingsPage() {
 
         <TabsContent value="guide" className="space-y-6">
           <GuestGuideTab settings={settings} form={form} updateSettingsMutation={updateSettingsMutation} />
+        </TabsContent>
+
+        <TabsContent value="tests" className="space-y-6">
+          <TestsTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -361,6 +374,55 @@ function GeneralSettingsTab({ settings, isLoading, form, onSubmit, resetToDefaul
 
 // Guest Guide Tab Component
 function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
+  const guideTemplates: Array<{ id: string; name: string; intro: string; checkin: string; other: string; faq: string; }>
+    = [
+      {
+        id: 'capsule_standard',
+        name: 'Capsule Hostel – Standard',
+        intro:
+          'Welcome to Pelangi Capsule Hostel! Enjoy private sleeping pods with fresh linens, personal light, and power socket. Shared bathrooms are cleaned multiple times daily. Quiet hours are from 10:00 PM to 7:00 AM. Reception is available from 8:00 AM–10:00 PM; night staff is on call.',
+        checkin:
+          '1) Proceed to the front desk with your IC/passport.\n2) Provide your booking name or show the self check-in token.\n3) Make payment if applicable and receive your capsule number and locker key.\n4) Locate your capsule following the signage (Front/Middle/Back).\n5) Check-out time is 12:00 PM. Late check-out is subject to availability and charges.',
+        other:
+          'House Rules:\n- No smoking inside the building.\n- Keep noise to a minimum, especially during quiet hours.\n- Food is allowed in the pantry only.\nAmenities:\n- Free high-speed Wi‑Fi throughout the hostel.\n- Pantry with kettle, microwave, and fridge (label your items).\n- Laundry service (self-service machines on Level 2).',
+        faq:
+          'Q: What time are check-in/check-out?\nA: Check-in 2:00 PM, Check-out 12:00 PM.\n\nQ: Where can I store luggage?\nA: Free luggage storage at reception before check-in or after check-out.\n\nQ: Are towels provided?\nA: Yes, one towel per guest per stay.\n\nQ: Do you have parking?\nA: Limited street parking nearby; public car park is 3 minutes’ walk.',
+      },
+      {
+        id: 'homestay_budget',
+        name: 'Budget Homestay',
+        intro:
+          'Welcome to our cozy homestay. Perfect for short stays with essential comforts. Please treat the home with care and respect the neighbors.',
+        checkin:
+          'Self Check‑in:\n1) We will send a smart-lock PIN on the day of arrival.\n2) Enter the PIN and press “✓”.\n3) Wi‑Fi details are on the fridge.\n4) On check‑out, please place keys on the table and lock the door behind you.',
+        other:
+          'House Rules:\n- No parties or loud music after 9:00 PM.\n- No shoes inside the house.\n- Switch off air‑cond and lights when leaving.\nFacilities:\n- Kitchenette: basic cookware, microwave, kettle.\n- Drinking water filter in pantry.\n- Laundry: washer and dryer (usage instructions provided).',
+        faq:
+          'Q: Early check‑in available?\nA: Subject to housekeeping; we will try our best.\n\nQ: Extra bedding?\nA: One foldable mattress can be arranged with advance notice.\n\nQ: Parking?\nA: Free street parking; please do not block neighbors’ gates.',
+      },
+      {
+        id: 'city_hotel',
+        name: 'City Hotel',
+        intro:
+          'Thank you for choosing Pelangi City Hotel. We offer comfortable rooms, 24‑hour reception, and easy access to attractions, dining, and public transport.',
+        checkin:
+          '1) Present your IC/passport at reception.\n2) A refundable deposit will be collected.\n3) You will receive key‑card(s) and breakfast coupons (if included).\n4) Breakfast is served 7:00–10:00 AM at the café on Level 1.\n5) Check‑out is 12:00 PM; late check‑out until 2:00 PM may be arranged.',
+        other:
+          'Facilities:\n- Fitness room (6:00 AM–10:00 PM).\n- Business corner with printer (Level 2).\n- Airport shuttle available on request.\nPolicies:\n- No smoking in rooms (penalty applies).\n- Lost key‑card fee RM20.',
+        faq:
+          'Q: Can I store luggage after check‑out?\nA: Yes, complimentary at reception.\n\nQ: Connecting rooms?\nA: Limited rooms; please request during booking.\n\nQ: Late check‑in?\nA: Our reception is 24‑hour; you may arrive anytime.',
+      },
+    ];
+
+  const applyTemplate = (tplId: string) => {
+    const tpl = guideTemplates.find((t) => t.id === tplId);
+    if (!tpl) return;
+    form.setValue('guideIntro' as any, tpl.intro);
+    form.setValue('guideCheckin' as any, tpl.checkin);
+    form.setValue('guideOther' as any, tpl.other);
+    form.setValue('guideFaq' as any, tpl.faq);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -370,8 +432,118 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Templates Loader */}
+        <div className="p-3 mb-4 rounded border bg-gray-50">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-gray-700">Quick Templates:</span>
+            {guideTemplates.map((t) => (
+              <Button key={t.id} type="button" variant="outline" size="sm" onClick={() => applyTemplate(t.id)}>
+                {t.name}
+              </Button>
+            ))}
+            <span className="text-xs text-gray-500">Click a template to populate Introduction, How to Check‑in, Other Guidance, and FAQ.</span>
+          </div>
+        </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data: any) => updateSettingsMutation.mutate(data))} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 bg-gray-50 rounded border">
+              <div className="space-y-2">
+                <FormField name={"guideShowIntro" as any} control={form.control} render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <TooltipProvider delayDuration={100} skipDelayDuration={0} disableHoverableContent={false}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label className="text-sm cursor-help select-none" tabIndex={0}>Show Introduction</Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="start">
+                          When enabled, the Introduction text will be shown to guests right after they submit their check-in information.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <input type="checkbox" checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </FormItem>
+                )} />
+                <FormField name={"guideShowAddress" as any} control={form.control} render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <TooltipProvider delayDuration={100} skipDelayDuration={0} disableHoverableContent={false}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label className="text-sm cursor-help select-none" tabIndex={0}>Show Address</Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="start">
+                          Enable to include your address and contact info in the post check-in guide so guests can find you easily.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <input type="checkbox" checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </FormItem>
+                )} />
+              </div>
+              <div className="space-y-2">
+                <FormField name={"guideShowWifi" as any} control={form.control} render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <TooltipProvider delayDuration={100} skipDelayDuration={0} disableHoverableContent={false}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label className="text-sm cursor-help select-none" tabIndex={0}>Show WiFi</Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="start">
+                          Display WiFi name and password to guests after check-in.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <input type="checkbox" checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </FormItem>
+                )} />
+                <FormField name={"guideShowCheckin" as any} control={form.control} render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <TooltipProvider delayDuration={100} skipDelayDuration={0} disableHoverableContent={false}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label className="text-sm cursor-help select-none" tabIndex={0}>Show How to Check In</Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="start">
+                          Provide step-by-step instructions (front desk, token usage, ID) shown right after guest submits their details.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <input type="checkbox" checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </FormItem>
+                )} />
+              </div>
+              <div className="space-y-2">
+                <FormField name={"guideShowOther" as any} control={form.control} render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <TooltipProvider delayDuration={100} skipDelayDuration={0} disableHoverableContent={false}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label className="text-sm cursor-help select-none" tabIndex={0}>Show Other Guidance</Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="start">
+                          House rules, amenities overview, and helpful tips will be included in the guest-facing guide.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <input type="checkbox" checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </FormItem>
+                )} />
+                <FormField name={"guideShowFaq" as any} control={form.control} render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <TooltipProvider delayDuration={100} skipDelayDuration={0} disableHoverableContent={false}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label className="text-sm cursor-help select-none" tabIndex={0}>Show FAQ</Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" align="start">
+                          Common questions like parking, towels, luggage storage, and quiet hours shown after check-in.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <input type="checkbox" checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  </FormItem>
+                )} />
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField name={"guideIntro" as any} control={form.control} render={({ field }) => (
                 <FormItem>
@@ -443,6 +615,68 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
   );
 }
 
+function TestsTab() {
+  const { toast } = useToast();
+  const [isRunning, setIsRunning] = useState(false);
+
+  const runTests = async (watch = false) => {
+    try {
+      setIsRunning(true);
+      const res = await fetch(`/api/tests/run?watch=${watch ? '1' : '0'}`, { 
+        method: 'POST',
+        headers: {
+          'Accept': 'text/plain',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const contentType = res.headers.get('content-type');
+      const text = await res.text();
+      
+      // Check if we got HTML instead of plain text
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error('Server returned HTML. The test endpoint may not be properly configured.');
+      }
+      if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('createHotContext')) {
+        throw new Error('Server returned HTML content. Please restart the server and try again.');
+      }
+      
+      toast({ 
+        title: res.ok ? 'Tests completed' : 'Tests failed', 
+        description: text.slice(0, 200),
+        variant: res.ok ? 'default' : 'destructive'
+      });
+    } catch (e: any) {
+      toast({ 
+        title: 'Error running tests', 
+        description: e?.message || 'Failed to run tests', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-blue-600" />
+          Test Runner
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-gray-600">Run the automated test suite before/after making changes to prevent regressions.</p>
+        <div className="flex gap-3">
+          <Button onClick={() => runTests(false)} disabled={isRunning}>Run Tests</Button>
+          <Button variant="outline" onClick={() => runTests(true)} disabled={isRunning}>Run in Watch Mode</Button>
+        </div>
+        <p className="text-xs text-gray-500">Output will appear as a toast summary. Use terminal for full logs.</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 // Capsules Tab Component (minimal version)
 function CapsulesTab({ capsules, queryClient, toast, labels }: any) {
   const items = Array.isArray(capsules) ? capsules : [];
@@ -488,6 +722,7 @@ function MaintenanceTab({ problems, capsules, isLoading, queryClient, toast }: a
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedProblem, setSelectedProblem] = useState<CapsuleProblem | null>(null);
+  const [concise, setConcise] = useState(false);
 
   const createProblemForm = useForm({
     defaultValues: {
@@ -642,6 +877,9 @@ function MaintenanceTab({ problems, capsules, isLoading, queryClient, toast }: a
                 </form>
               </DialogContent>
             </Dialog>
+            <Button variant={concise ? "default" : "outline"} size="sm" onClick={() => setConcise(!concise)}>
+              {concise ? 'Detailed View' : 'Concise View'}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -655,41 +893,77 @@ function MaintenanceTab({ problems, capsules, isLoading, queryClient, toast }: a
                   <p>No active problems reported. All capsules are in good condition!</p>
                 </div>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {activeProblem.map((problem: CapsuleProblem) => (
-                    <Card key={problem.id} className="border-red-200 bg-red-50">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-semibold text-lg">{problem.capsuleNumber}</h4>
-                            <Badge variant="destructive">Active Problem</Badge>
+                concise ? (
+                  <div className="overflow-x-auto rounded border">
+                    <table className="w-full text-sm">
+                      <thead className="bg-red-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left">Capsule</th>
+                          <th className="px-4 py-2 text-left">Description</th>
+                          <th className="px-4 py-2 text-left">Reported By</th>
+                          <th className="px-4 py-2 text-left">Date</th>
+                          <th className="px-4 py-2 text-left">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activeProblem.map((problem: CapsuleProblem) => (
+                          <tr key={problem.id} className="border-t">
+                            <td className="px-4 py-2 font-medium">{problem.capsuleNumber}</td>
+                            <td className="px-4 py-2">{problem.description}</td>
+                            <td className="px-4 py-2">{problem.reportedBy}</td>
+                            <td className="px-4 py-2">{new Date(problem.reportedAt).toLocaleDateString()}</td>
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" variant="outline" onClick={() => handleEditProblem(problem)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => deleteProblemMutation.mutate(problem.id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {activeProblem.map((problem: CapsuleProblem) => (
+                      <Card key={problem.id} className="border-red-200 bg-red-50">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h4 className="font-semibold text-lg">{problem.capsuleNumber}</h4>
+                              <Badge variant="destructive">Active Problem</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditProblem(problem)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => deleteProblemMutation.mutate(problem.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEditProblem(problem)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => deleteProblemMutation.mutate(problem.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <p className="text-sm text-gray-700 mb-2">{problem.description}</p>
+                          <div className="text-xs text-gray-500">
+                            <p>Reported by: {problem.reportedBy}</p>
+                            <p>Date: {new Date(problem.reportedAt).toLocaleDateString()}</p>
                           </div>
-                        </div>
-                        <p className="text-sm text-gray-700 mb-2">{problem.description}</p>
-                        <div className="text-xs text-gray-500">
-                          <p>Reported by: {problem.reportedBy}</p>
-                          <p>Date: {new Date(problem.reportedAt).toLocaleDateString()}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )
               )}
             </div>
 

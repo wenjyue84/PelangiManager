@@ -16,202 +16,8 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ObjectUploader } from "@/components/ObjectUploader";
 import type { UploadResult } from "@uppy/core";
 import qrCodeImage from "@assets/WhatsApp Image 2025-08-08 at 19.49.44_5bbbcb18_1754653834112.jpg";
+import { NATIONALITIES } from "@/lib/nationalities";
 
-// Comprehensive nationality list
-const NATIONALITIES = [
-  { value: "Malaysian", label: "Malaysian" },
-  { value: "Singaporean", label: "Singaporean" },
-  // Alphabetical order for the rest
-  { value: "Afghan", label: "Afghan" },
-  { value: "Albanian", label: "Albanian" },
-  { value: "Algerian", label: "Algerian" },
-  { value: "American", label: "American" },
-  { value: "Andorran", label: "Andorran" },
-  { value: "Angolan", label: "Angolan" },
-  { value: "Argentine", label: "Argentine" },
-  { value: "Armenian", label: "Armenian" },
-  { value: "Australian", label: "Australian" },
-  { value: "Austrian", label: "Austrian" },
-  { value: "Azerbaijani", label: "Azerbaijani" },
-  { value: "Bahamian", label: "Bahamian" },
-  { value: "Bahraini", label: "Bahraini" },
-  { value: "Bangladeshi", label: "Bangladeshi" },
-  { value: "Barbadian", label: "Barbadian" },
-  { value: "Belarusian", label: "Belarusian" },
-  { value: "Belgian", label: "Belgian" },
-  { value: "Belizean", label: "Belizean" },
-  { value: "Beninese", label: "Beninese" },
-  { value: "Bhutanese", label: "Bhutanese" },
-  { value: "Bolivian", label: "Bolivian" },
-  { value: "Bosnian", label: "Bosnian" },
-  { value: "Botswanan", label: "Botswanan" },
-  { value: "Brazilian", label: "Brazilian" },
-  { value: "British", label: "British" },
-  { value: "Bruneian", label: "Bruneian" },
-  { value: "Bulgarian", label: "Bulgarian" },
-  { value: "Burkinabe", label: "Burkinabe" },
-  { value: "Burmese", label: "Burmese" },
-  { value: "Burundian", label: "Burundian" },
-  { value: "Cambodian", label: "Cambodian" },
-  { value: "Cameroonian", label: "Cameroonian" },
-  { value: "Canadian", label: "Canadian" },
-  { value: "Cape Verdean", label: "Cape Verdean" },
-  { value: "Central African", label: "Central African" },
-  { value: "Chadian", label: "Chadian" },
-  { value: "Chilean", label: "Chilean" },
-  { value: "Chinese", label: "Chinese" },
-  { value: "Colombian", label: "Colombian" },
-  { value: "Comoran", label: "Comoran" },
-  { value: "Congolese", label: "Congolese" },
-  { value: "Costa Rican", label: "Costa Rican" },
-  { value: "Croatian", label: "Croatian" },
-  { value: "Cuban", label: "Cuban" },
-  { value: "Cypriot", label: "Cypriot" },
-  { value: "Czech", label: "Czech" },
-  { value: "Danish", label: "Danish" },
-  { value: "Djiboutian", label: "Djiboutian" },
-  { value: "Dominican", label: "Dominican" },
-  { value: "Dutch", label: "Dutch" },
-  { value: "East Timorese", label: "East Timorese" },
-  { value: "Ecuadorean", label: "Ecuadorean" },
-  { value: "Egyptian", label: "Egyptian" },
-  { value: "Emirian", label: "Emirian" },
-  { value: "Equatorial Guinean", label: "Equatorial Guinean" },
-  { value: "Eritrean", label: "Eritrean" },
-  { value: "Estonian", label: "Estonian" },
-  { value: "Ethiopian", label: "Ethiopian" },
-  { value: "Fijian", label: "Fijian" },
-  { value: "Filipino", label: "Filipino" },
-  { value: "Finnish", label: "Finnish" },
-  { value: "French", label: "French" },
-  { value: "Gabonese", label: "Gabonese" },
-  { value: "Gambian", label: "Gambian" },
-  { value: "Georgian", label: "Georgian" },
-  { value: "German", label: "German" },
-  { value: "Ghanaian", label: "Ghanaian" },
-  { value: "Greek", label: "Greek" },
-  { value: "Grenadian", label: "Grenadian" },
-  { value: "Guatemalan", label: "Guatemalan" },
-  { value: "Guinea-Bissauan", label: "Guinea-Bissauan" },
-  { value: "Guinean", label: "Guinean" },
-  { value: "Guyanese", label: "Guyanese" },
-  { value: "Haitian", label: "Haitian" },
-  { value: "Herzegovinian", label: "Herzegovinian" },
-  { value: "Honduran", label: "Honduran" },
-  { value: "Hungarian", label: "Hungarian" },
-  { value: "Icelandic", label: "Icelandic" },
-  { value: "Indian", label: "Indian" },
-  { value: "Indonesian", label: "Indonesian" },
-  { value: "Iranian", label: "Iranian" },
-  { value: "Iraqi", label: "Iraqi" },
-  { value: "Irish", label: "Irish" },
-  { value: "Israeli", label: "Israeli" },
-  { value: "Italian", label: "Italian" },
-  { value: "Ivorian", label: "Ivorian" },
-  { value: "Jamaican", label: "Jamaican" },
-  { value: "Japanese", label: "Japanese" },
-  { value: "Jordanian", label: "Jordanian" },
-  { value: "Kazakhstani", label: "Kazakhstani" },
-  { value: "Kenyan", label: "Kenyan" },
-  { value: "Kittian and Nevisian", label: "Kittian and Nevisian" },
-  { value: "Kuwaiti", label: "Kuwaiti" },
-  { value: "Kyrgyz", label: "Kyrgyz" },
-  { value: "Laotian", label: "Laotian" },
-  { value: "Latvian", label: "Latvian" },
-  { value: "Lebanese", label: "Lebanese" },
-  { value: "Liberian", label: "Liberian" },
-  { value: "Libyan", label: "Libyan" },
-  { value: "Liechtensteiner", label: "Liechtensteiner" },
-  { value: "Lithuanian", label: "Lithuanian" },
-  { value: "Luxembourgish", label: "Luxembourgish" },
-  { value: "Macedonian", label: "Macedonian" },
-  { value: "Malagasy", label: "Malagasy" },
-  { value: "Malawian", label: "Malawian" },
-  { value: "Maldivan", label: "Maldivan" },
-  { value: "Malian", label: "Malian" },
-  { value: "Maltese", label: "Maltese" },
-  { value: "Marshallese", label: "Marshallese" },
-  { value: "Mauritanian", label: "Mauritanian" },
-  { value: "Mauritian", label: "Mauritian" },
-  { value: "Mexican", label: "Mexican" },
-  { value: "Micronesian", label: "Micronesian" },
-  { value: "Moldovan", label: "Moldovan" },
-  { value: "Monacan", label: "Monacan" },
-  { value: "Mongolian", label: "Mongolian" },
-  { value: "Moroccan", label: "Moroccan" },
-  { value: "Mosotho", label: "Mosotho" },
-  { value: "Motswana", label: "Motswana" },
-  { value: "Mozambican", label: "Mozambican" },
-  { value: "Namibian", label: "Namibian" },
-  { value: "Nauruan", label: "Nauruan" },
-  { value: "Nepalese", label: "Nepalese" },
-  { value: "New Zealander", label: "New Zealander" },
-  { value: "Ni-Vanuatu", label: "Ni-Vanuatu" },
-  { value: "Nicaraguan", label: "Nicaraguan" },
-  { value: "Nigerian", label: "Nigerian" },
-  { value: "Nigerien", label: "Nigerien" },
-  { value: "North Korean", label: "North Korean" },
-  { value: "Northern Irish", label: "Northern Irish" },
-  { value: "Norwegian", label: "Norwegian" },
-  { value: "Omani", label: "Omani" },
-  { value: "Pakistani", label: "Pakistani" },
-  { value: "Palauan", label: "Palauan" },
-  { value: "Panamanian", label: "Panamanian" },
-  { value: "Papua New Guinean", label: "Papua New Guinean" },
-  { value: "Paraguayan", label: "Paraguayan" },
-  { value: "Peruvian", label: "Peruvian" },
-  { value: "Polish", label: "Polish" },
-  { value: "Portuguese", label: "Portuguese" },
-  { value: "Qatari", label: "Qatari" },
-  { value: "Romanian", label: "Romanian" },
-  { value: "Russian", label: "Russian" },
-  { value: "Rwandan", label: "Rwandan" },
-  { value: "Saint Lucian", label: "Saint Lucian" },
-  { value: "Salvadoran", label: "Salvadoran" },
-  { value: "Samoan", label: "Samoan" },
-  { value: "San Marinese", label: "San Marinese" },
-  { value: "Sao Tomean", label: "Sao Tomean" },
-  { value: "Saudi", label: "Saudi" },
-  { value: "Scottish", label: "Scottish" },
-  { value: "Senegalese", label: "Senegalese" },
-  { value: "Serbian", label: "Serbian" },
-  { value: "Seychellois", label: "Seychellois" },
-  { value: "Sierra Leonean", label: "Sierra Leonean" },
-  { value: "Slovak", label: "Slovak" },
-  { value: "Slovenian", label: "Slovenian" },
-  { value: "Solomon Islander", label: "Solomon Islander" },
-  { value: "Somali", label: "Somali" },
-  { value: "South African", label: "South African" },
-  { value: "South Korean", label: "South Korean" },
-  { value: "Spanish", label: "Spanish" },
-  { value: "Sri Lankan", label: "Sri Lankan" },
-  { value: "Sudanese", label: "Sudanese" },
-  { value: "Surinamer", label: "Surinamer" },
-  { value: "Swazi", label: "Swazi" },
-  { value: "Swedish", label: "Swedish" },
-  { value: "Swiss", label: "Swiss" },
-  { value: "Syrian", label: "Syrian" },
-  { value: "Taiwanese", label: "Taiwanese" },
-  { value: "Tajik", label: "Tajik" },
-  { value: "Tanzanian", label: "Tanzanian" },
-  { value: "Thai", label: "Thai" },
-  { value: "Togolese", label: "Togolese" },
-  { value: "Tongan", label: "Tongan" },
-  { value: "Trinidadian or Tobagonian", label: "Trinidadian or Tobagonian" },
-  { value: "Tunisian", label: "Tunisian" },
-  { value: "Turkish", label: "Turkish" },
-  { value: "Tuvaluan", label: "Tuvaluan" },
-  { value: "Ugandan", label: "Ugandan" },
-  { value: "Ukrainian", label: "Ukrainian" },
-  { value: "Uruguayan", label: "Uruguayan" },
-  { value: "Uzbekistani", label: "Uzbekistani" },
-  { value: "Venezuelan", label: "Venezuelan" },
-  { value: "Vietnamese", label: "Vietnamese" },
-  { value: "Welsh", label: "Welsh" },
-  { value: "Yemenite", label: "Yemenite" },
-  { value: "Zambian", label: "Zambian" },
-  { value: "Zimbabwean", label: "Zimbabwean" },
-];
 
 export default function GuestCheckin() {
   const [, setLocation] = useLocation();
@@ -250,6 +56,9 @@ export default function GuestCheckin() {
       passportDocumentUrl: "",
       paymentMethod: undefined,
       guestPaymentDescription: "",
+      emergencyContact: "",
+      emergencyPhone: "",
+      notes: "",
     },
   });
 
@@ -594,11 +403,9 @@ export default function GuestCheckin() {
         <Card>
           <CardHeader className="text-center pb-6">
             <div>
-              <div className="w-16 h-16 bg-hostel-secondary bg-opacity-10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <UserPlus className="text-hostel-secondary h-8 w-8" />
-              </div>
               <CardTitle className="text-2xl font-bold text-hostel-text">{t.welcomeTitle}</CardTitle>
-              <p className="text-gray-600 mt-2">{t.completeCheckIn}</p>
+              <p className="text-lg font-medium text-gray-700 mt-2">Self Check-in Form</p>
+              <p className="text-gray-600 mt-1">{t.completeCheckIn}</p>
               <div className="mt-4">
                 <LanguageSwitcher variant="compact" className="mx-auto" />
               </div>
@@ -840,6 +647,67 @@ export default function GuestCheckin() {
                         </div>
                       )}
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Emergency Contact */}
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <h3 className="text-sm font-medium text-hostel-text mb-3 flex items-center">
+                  <Users className="mr-2 h-4 w-4" />
+                  Emergency Contact
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="emergencyContact" className="text-sm font-medium text-hostel-text">
+                      Emergency Contact Name
+                    </Label>
+                    <Input
+                      id="emergencyContact"
+                      type="text"
+                      placeholder="Full name of emergency contact"
+                      className="mt-1"
+                      {...form.register("emergencyContact")}
+                    />
+                    {form.formState.errors.emergencyContact && (
+                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.emergencyContact.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="emergencyPhone" className="text-sm font-medium text-hostel-text">
+                      Emergency Contact Phone
+                    </Label>
+                    <Input
+                      id="emergencyPhone"
+                      type="tel"
+                      placeholder="Emergency contact phone number"
+                      className="mt-1"
+                      {...form.register("emergencyPhone")}
+                    />
+                    {form.formState.errors.emergencyPhone && (
+                      <p className="text-red-500 text-sm mt-1">{form.formState.errors.emergencyPhone.message}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <h3 className="text-sm font-medium text-hostel-text mb-3">Additional Notes</h3>
+                <div>
+                  <Label htmlFor="notes" className="text-sm font-medium text-hostel-text">
+                    Special Requirements or Notes
+                  </Label>
+                  <Textarea
+                    id="notes"
+                    rows={3}
+                    placeholder="Any special requirements, allergies, accessibility needs, or additional notes..."
+                    className="mt-1"
+                    {...form.register("notes")}
+                  />
+                  {form.formState.errors.notes && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
                   )}
                 </div>
               </div>

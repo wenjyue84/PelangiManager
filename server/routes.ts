@@ -674,6 +674,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Simple health check endpoint to verify API is working
+  app.get('/api/health', (req, res) => {
+    res.type('text/plain').send('OK');
+  });
+
+  // Test runner endpoint - returns plain text only
+  app.post('/api/tests/run', async (req, res) => {
+    // Immediately set text/plain to avoid any HTML interception
+    res.type('text/plain');
+    
+    try {
+      // Simple approach - just run the tests and return the output
+      const { execSync } = await import('child_process');
+      
+      try {
+        const output = execSync('npx jest --passWithNoTests --no-colors', {
+          encoding: 'utf8',
+          stdio: 'pipe',
+          env: { ...process.env, CI: 'true' }
+        });
+        
+        // Extract summary from output
+        const lines = output.split('\n');
+        const summaryLine = lines.find(line => line.includes('Tests:')) || 'Tests completed';
+        const timeLine = lines.find(line => line.includes('Time:')) || '';
+        
+        res.send(`${summaryLine}\n${timeLine}`.trim());
+      } catch (error: any) {
+        // Test failures still have output we can use
+        const output = error.stdout || error.stderr || error.message || 'Test run failed';
+        const lines = output.split('\n');
+        const summaryLine = lines.find(line => line.includes('Tests:')) || 'Tests failed';
+        
+        res.status(500).send(summaryLine);
+      }
+    } catch (e: any) {
+      res.status(500).send('Unable to run tests: ' + (e.message || 'Unknown error'));
+    }
+  });
+
+  // Guests CRM-like profiles (derived from guest records, keyed by ID/passport). Blacklist stored in settings.
+  app.get('/api/guests/profiles', authenticateToken, async (_req, res) => {
+    try {
+      const all = await storage.getAllGuests();
+      const map = new Map<string, any>();
+      for (const g of all.data) {
+        const idNumber = (g.idNumber || '').trim();
+        if (!idNumber) continue;
+        const current = map.get(idNumber) || {
+          idNumber,
+          name: g.name,
+          nationality: g.nationality,
+          phoneNumber: g.phoneNumber,
+          email: g.email,
+          totalStays: 0,
+          lastSeen: undefined as any,
+        };
+        current.totalStays += 1;
+        const t = g.checkoutTime || g.checkinTime;
+        if (!current.lastSeen || new Date(t) > new Date(current.lastSeen)) {
+          current.lastSeen = t;
+          current.name = g.name || current.name;
+          current.nationality = g.nationality || current.nationality;
+          current.phoneNumber = g.phoneNumber || current.phoneNumber;
+          current.email = g.email || current.email;
+        }
+        map.set(idNumber, current);
+      }
+      // attach blacklist flags from settings
+      const profiles = await Promise.all(Array.from(map.values()).map(async (p) => {
+        const bl = await storage.getSetting(`blacklist:${p.idNumber}`);
+        const note = await storage.getSetting(`blacklistNote:${p.idNumber}`);
+        return { ...p, isBlacklisted: bl?.value === 'true', blacklistNote: note?.value || '' };
+      }));
+      res.json({ data: profiles });
+    } catch (e) {
+      res.status(500).json({ message: 'Failed to load guest profiles' });
+    }
+  });
+
+  app.get('/api/guests/profiles/:idNumber', authenticateToken, async (req, res) => {
+    try {
+      const idNumber = (req.params.idNumber || '').trim();
+      const all = await storage.getAllGuests();
+      const records = all.data.filter(g => (g.idNumber || '').trim() === idNumber);
+      if (records.length === 0) return res.status(404).json({ message: 'Profile not found' });
+      const latest = records.sort((a, b) => new Date((b.checkoutTime || b.checkinTime) as any).getTime() - new Date((a.checkoutTime || a.checkinTime) as any).getTime())[0];
+      const bl = await storage.getSetting(`blacklist:${idNumber}`);
+      const note = await storage.getSetting(`blacklistNote:${idNumber}`);
+      res.json({
+        idNumber,
+        name: latest.name,
+        nationality: latest.nationality,
+        phoneNumber: latest.phoneNumber,
+        email: latest.email,
+        totalStays: records.length,
+        lastSeen: latest.checkoutTime || latest.checkinTime,
+        isBlacklisted: bl?.value === 'true',
+        blacklistNote: note?.value || ''
+      });
+    } catch (e) {
+      res.status(500).json({ message: 'Failed to load profile' });
+    }
+  });
+
+  app.patch('/api/guests/profiles/:idNumber', authenticateToken, async (req: any, res) => {
+    try {
+      const idNumber = (req.params.idNumber || '').trim();
+      const { isBlacklisted, blacklistNote } = req.body || {};
+      const updatedBy = req.user?.username || req.user?.email || 'Unknown';
+      if (typeof isBlacklisted === 'boolean') {
+        await storage.setSetting(`blacklist:${idNumber}`, String(isBlacklisted), 'Blacklist flag', updatedBy);
+      }
+      if (typeof blacklistNote === 'string') {
+        await storage.setSetting(`blacklistNote:${idNumber}`, blacklistNote, 'Blacklist note', updatedBy);
+      }
+      res.json({ message: 'Profile updated' });
+    } catch (e) {
+      res.status(500).json({ message: 'Failed to update profile' });
+    }
+  });
+
   app.get("/api/admin/notifications/unread", authenticateToken, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
@@ -726,6 +848,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guideCheckin: await getVal('guideCheckin'),
         guideOther: await getVal('guideOther'),
         guideFaq: await getVal('guideFaq'),
+        guideShowIntro: (await storage.getSetting('guideShowIntro'))?.value === 'true',
+        guideShowAddress: (await storage.getSetting('guideShowAddress'))?.value === 'true',
+        guideShowWifi: (await storage.getSetting('guideShowWifi'))?.value === 'true',
+        guideShowCheckin: (await storage.getSetting('guideShowCheckin'))?.value === 'true',
+        guideShowOther: (await storage.getSetting('guideShowOther'))?.value === 'true',
+        guideShowFaq: (await storage.getSetting('guideShowFaq'))?.value === 'true',
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch settings" });
@@ -773,6 +901,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await maybeSet('guideCheckin', 'How to check in instructions');
       await maybeSet('guideOther', 'Other guidance');
       await maybeSet('guideFaq', 'Guest FAQ');
+      // Visibility toggles
+      const setBool = async (key: string, val: any, desc: string) => {
+        if (typeof val === 'boolean') {
+          await storage.setSetting(key, String(val), desc, updatedBy);
+        }
+      };
+      await setBool('guideShowIntro', (validatedData as any).guideShowIntro, 'Show intro to guests');
+      await setBool('guideShowAddress', (validatedData as any).guideShowAddress, 'Show address to guests');
+      await setBool('guideShowWifi', (validatedData as any).guideShowWifi, 'Show WiFi to guests');
+      await setBool('guideShowCheckin', (validatedData as any).guideShowCheckin, 'Show check-in guidance');
+      await setBool('guideShowOther', (validatedData as any).guideShowOther, 'Show other guidance');
+      await setBool('guideShowFaq', (validatedData as any).guideShowFaq, 'Show FAQ');
 
       res.json({
         message: "Settings updated successfully",
@@ -785,6 +925,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         guideCheckin: (validatedData as any).guideCheckin,
         guideOther: (validatedData as any).guideOther,
         guideFaq: (validatedData as any).guideFaq,
+        guideShowIntro: (validatedData as any).guideShowIntro,
+        guideShowAddress: (validatedData as any).guideShowAddress,
+        guideShowWifi: (validatedData as any).guideShowWifi,
+        guideShowCheckin: (validatedData as any).guideShowCheckin,
+        guideShowOther: (validatedData as any).guideShowOther,
+        guideShowFaq: (validatedData as any).guideShowFaq,
       });
     } catch (error: any) {
       if (error instanceof z.ZodError) {

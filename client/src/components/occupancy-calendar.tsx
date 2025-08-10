@@ -105,21 +105,21 @@ export default function OccupancyCalendar() {
           <CalendarDays className="h-5 w-5" />
           Occupancy Calendar
         </CardTitle>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm">
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <span>Check-ins</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-500 rounded-full"></div>
               <span>Check-outs</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <div className="w-6 h-2 bg-orange-400 rounded"></div>
               <span>80%+ Occupied</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2">
               <div className="w-6 h-2 bg-red-500 rounded"></div>
               <span>Full</span>
             </div>
@@ -138,21 +138,21 @@ export default function OccupancyCalendar() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
               month={currentMonth}
               onMonthChange={setCurrentMonth}
-              className="w-full"
+              className="w-full rounded-md border"
               components={{
                 DayContent: ({ date }) => getDayContent(date),
               }}
             />
           </div>
-          <div className="space-y-4">
+          <div className="space-y-4 md:sticky md:top-20">
             {selectedDateData ? (
               <>
                 <Card>
