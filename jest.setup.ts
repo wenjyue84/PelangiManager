@@ -1,4 +1,4 @@
-import 'jest';
+// No imports needed for Jest globals in CommonJS setup
 
 // Mock environment variables for testing
 process.env.NODE_ENV = 'test';

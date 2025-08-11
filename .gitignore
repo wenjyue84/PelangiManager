@@ -29,3 +29,11 @@ Thumbs.db
 # IDE files
 .vscode/
 .idea/
+
+# User uploads and attached files
+uploads/
+attached_assets/
+
+# Test coverage
+coverage/
+.nyc_output

@@ -20,13 +20,16 @@ import GuestCheckin from "./pages/guest-checkin";
 import GuestEdit from "./pages/guest-edit";
 import Header from "./components/header";
 import Navigation from "./components/navigation";
+import MobileBottomNav from "./components/mobile-bottom-nav";
 import { VisibilityIndicator } from "./components/visibility-indicator";
 import { toast } from "@/hooks/use-toast";
+import GlobalTopProgress from "./components/global-top-progress";
 
 function Router() {
   return (
     <div className="min-h-screen bg-hostel-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <GlobalTopProgress />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-24 md:pb-4 animate-fade-in">
         <Navigation />
         <Switch>
           <Route path="/" component={Dashboard} />
@@ -58,6 +61,7 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

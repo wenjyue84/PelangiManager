@@ -28,6 +28,8 @@ export default function CheckIn() {
   const [showCheckinConfirmation, setShowCheckinConfirmation] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState<InsertGuest | null>(null);
   const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [completed, setCompleted] = useState(false);
   
   const { data: availableCapsules = [], isLoading: capsulesLoading } = useVisibilityQuery<Capsule[]>({
     queryKey: ["/api/capsules/available"],
@@ -200,10 +202,12 @@ export default function CheckIn() {
   const onSubmit = (data: InsertGuest) => {
     setFormDataToSubmit(data);
     setShowCheckinConfirmation(true);
+    setCurrentStep(2);
   };
 
   const confirmCheckin = () => {
     if (formDataToSubmit) {
+      setCurrentStep(3);
       checkinMutation.mutate(formDataToSubmit);
       setShowCheckinConfirmation(false);
       setFormDataToSubmit(null);
@@ -267,6 +271,27 @@ export default function CheckIn() {
           <div className="text-center">
             <CardTitle className="text-2xl font-bold text-hostel-text">Guest Check-In</CardTitle>
             <p className="text-gray-600 mt-2">Smart check-in with auto-assignment and preset payment options</p>
+            <div className="mt-4">
+              <div className="flex items-center justify-center gap-3 text-xs text-gray-600">
+                <div className={`flex items-center gap-2`}>
+                  <span className={`h-2.5 w-2.5 rounded-full ${currentStep >= 1 ? 'bg-blue-600' : 'bg-gray-300'}`}></span>
+                  <span>Details</span>
+                </div>
+                <div className={`h-[2px] w-10 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2`}>
+                  <span className={`h-2.5 w-2.5 rounded-full ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></span>
+                  <span>Payment</span>
+                </div>
+                <div className={`h-[2px] w-10 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                <div className={`flex items-center gap-2`}>
+                  <span className={`h-2.5 w-2.5 rounded-full ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></span>
+                  <span>Confirm</span>
+                </div>
+              </div>
+              {completed && (
+                <div className="mt-2 text-green-700 text-sm">Completed successfully!</div>
+              )}
+            </div>
             <div className="flex justify-center mt-4">
               <GuestTokenGenerator onTokenCreated={() => queryClient.invalidateQueries({ queryKey: ["/api/capsules/available"] })} />
             </div>
@@ -757,10 +782,11 @@ export default function CheckIn() {
               <Button 
                 type="submit"
                 disabled={checkinMutation.isPending || availableCapsules.length === 0}
+                isLoading={checkinMutation.isPending}
                 className="flex-1 bg-hostel-secondary hover:bg-green-600 text-white font-medium"
               >
                 <UserPlus className="mr-2 h-4 w-4" />
-                {checkinMutation.isPending ? "Processing..." : "Complete Check-In"}
+                Complete Check-In
               </Button>
               <Button 
                 type="button"

@@ -374,7 +374,7 @@ export const guestSelfCheckinSchema = z.object({
     .max(20, "Phone number must not exceed 20 characters")
     .regex(/^[+]?[\d\s\-\(\)]+$/, "Please enter a valid phone number (may include +, spaces, dashes, parentheses)")
     .transform(val => val.replace(/\s/g, "")),
-  gender: z.enum(["male", "female"], { 
+  gender: z.enum(["male", "female", "other", "prefer-not-to-say"], { 
     required_error: "Please select your gender" 
   }),
   nationality: z.string()
@@ -528,6 +528,14 @@ export const createTokenSchema = z.object({
     .min(1, "Token must expire in at least 1 hour")
     .max(168, "Token cannot expire later than 168 hours (7 days)")
     .default(24),
+  // Optional per-token overrides for Guest Guide visibility
+  guideOverrideEnabled: z.boolean().optional(),
+  guideShowIntro: z.boolean().optional(),
+  guideShowAddress: z.boolean().optional(),
+  guideShowWifi: z.boolean().optional(),
+  guideShowCheckin: z.boolean().optional(),
+  guideShowOther: z.boolean().optional(),
+  guideShowFaq: z.boolean().optional(),
 }).refine((data) => {
   // Either capsuleNumber or autoAssign must be provided, but not both
   const hasCapsuleNumber = data.capsuleNumber && data.capsuleNumber.length > 0;
@@ -641,6 +649,44 @@ export const updateSettingsSchema = z.object({
     .transform((v) => (v ?? '').trim()),
   guideFaq: z.string()
     .max(8000, "FAQ too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideImportantReminders: z.string()
+    .max(2000, "Important reminders too long")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+
+  // Quick Links Settings
+  guideHostelPhotosUrl: z.string()
+    .url("Hostel photos URL must be a valid URL")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideGoogleMapsUrl: z.string()
+    .url("Google Maps URL must be a valid URL")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+  guideCheckinVideoUrl: z.string()
+    .url("Check-in video URL must be a valid URL")
+    .optional()
+    .transform((v) => (v ?? '').trim()),
+
+  // Guest Guide Time and Access Settings
+  guideCheckinTime: z.string()
+    .max(100, "Check-in time description too long")
+    .optional()
+    .transform((v) => (v ?? 'From 3:00 PM').trim()),
+  guideCheckoutTime: z.string()
+    .max(100, "Check-out time description too long")
+    .optional()
+    .transform((v) => (v ?? 'Before 12:00 PM').trim()),
+  guideDoorPassword: z.string()
+    .max(50, "Door password too long")
+    .optional()
+    .transform((v) => (v ?? '1270#').trim()),
+
+  // Guest Guide Styling Settings
+  guideCustomStyles: z.string()
+    .max(10000, "Custom styles too long")
     .optional()
     .transform((v) => (v ?? '').trim()),
 

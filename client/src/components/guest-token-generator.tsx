@@ -23,6 +23,14 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
   const [email, setEmail] = useState("");
   const [expectedCheckoutDate, setExpectedCheckoutDate] = useState("");
   const [expiresInHours, setExpiresInHours] = useState("24");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [overrideGuide, setOverrideGuide] = useState(false);
+  const [guideShowIntro, setGuideShowIntro] = useState<boolean | undefined>(undefined);
+  const [guideShowAddress, setGuideShowAddress] = useState<boolean | undefined>(undefined);
+  const [guideShowWifi, setGuideShowWifi] = useState<boolean | undefined>(undefined);
+  const [guideShowCheckin, setGuideShowCheckin] = useState<boolean | undefined>(undefined);
+  const [guideShowOther, setGuideShowOther] = useState<boolean | undefined>(undefined);
+  const [guideShowFaq, setGuideShowFaq] = useState<boolean | undefined>(undefined);
   const [generatedToken, setGeneratedToken] = useState<{
     token: string;
     link: string;
@@ -121,6 +129,14 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
       email: email.trim() || undefined,
       expectedCheckoutDate: expectedCheckoutDate || undefined,
       expiresInHours: parseInt(expiresInHours),
+      // Optional per-token guide overrides
+      guideOverrideEnabled: overrideGuide || undefined,
+      guideShowIntro: overrideGuide ? guideShowIntro : undefined,
+      guideShowAddress: overrideGuide ? guideShowAddress : undefined,
+      guideShowWifi: overrideGuide ? guideShowWifi : undefined,
+      guideShowCheckin: overrideGuide ? guideShowCheckin : undefined,
+      guideShowOther: overrideGuide ? guideShowOther : undefined,
+      guideShowFaq: overrideGuide ? guideShowFaq : undefined,
     });
   };
 
@@ -176,7 +192,7 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
         </DialogHeader>
 
         {!generatedToken ? (
-          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 pb-24">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <div className="sm:col-span-2">
                 <Label htmlFor="guestName">Guest Name (Optional - guest will fill during check-in)</Label>
@@ -306,13 +322,48 @@ export default function GuestTokenGenerator({ onTokenCreated }: TokenGeneratorPr
               </Select>
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-12 sm:h-10 text-sm sm:text-base bg-orange-600 hover:bg-orange-700"
-              disabled={createTokenMutation.isPending || !selectedCapsule}
-            >
-              {createTokenMutation.isPending ? "Generating..." : "Generate Check-in Link"}
-            </Button>
+            {/* Advanced: Guest Guide Override */}
+            <div className="border rounded-md">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(v => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                aria-expanded={showAdvanced}
+              >
+                <span>Advanced (Override Guest Guide Content)</span>
+                <span className="text-xs text-gray-500">Optional</span>
+              </button>
+              {showAdvanced && (
+                <div className="px-3 pb-3 space-y-3">
+                  <div className="flex items-center gap-2 mt-1">
+                    <input id="overrideGuide" type="checkbox" checked={overrideGuide} onChange={(e) => setOverrideGuide(e.target.checked)} />
+                    <Label htmlFor="overrideGuide">Enable one-time override for this link</Label>
+                  </div>
+                  {overrideGuide && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={!!guideShowIntro} onChange={(e)=> setGuideShowIntro(e.target.checked)} /> Show Introduction</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={!!guideShowAddress} onChange={(e)=> setGuideShowAddress(e.target.checked)} /> Show Address</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={!!guideShowWifi} onChange={(e)=> setGuideShowWifi(e.target.checked)} /> Show WiFi</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={!!guideShowCheckin} onChange={(e)=> setGuideShowCheckin(e.target.checked)} /> Show How to Check In</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={!!guideShowOther} onChange={(e)=> setGuideShowOther(e.target.checked)} /> Show Other Guidance</label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={!!guideShowFaq} onChange={(e)=> setGuideShowFaq(e.target.checked)} /> Show FAQ</label>
+                      <p className="sm:col-span-3 text-xs text-gray-500">If none selected, default Guest Guide settings will be used.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 -mx-6 px-6 py-3 bg-gradient-to-t from-background via-background/95 to-transparent">
+              <Button 
+                type="submit" 
+                className="w-full h-12 sm:h-10 text-sm sm:text-base bg-orange-600 hover:bg-orange-700"
+                disabled={createTokenMutation.isPending || !selectedCapsule}
+                isLoading={createTokenMutation.isPending}
+              >
+                Generate Check-in Link
+              </Button>
+            </div>
           </form>
         ) : (
           <div className="space-y-4">

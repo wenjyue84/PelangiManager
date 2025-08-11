@@ -191,6 +191,86 @@
 
 ---
 
+### 005 - IC Photo Upload Failed: "Failed to construct 'URL': Invalid URL" (SOLVED)
+
+**Date Solved:** January 2025  
+**Symptoms:**
+- Clicking "Upload IC photo" in Self Check-in form shows error: "Failed to construct 'URL': Invalid URL"
+- Console shows Uppy error: `[Uppy] Failed to construct 'URL': Invalid URL`
+- Upload fails in local development environment using localhost
+- Files are actually uploaded to `uploads/` directory but client fails to process the response
+
+**Root Cause:**
+- Server returned relative URL `/api/objects/dev-upload/{id}` for local development
+- Uppy AWS S3 plugin expects a full URL (with protocol and host) not a relative path
+- The AWS S3 plugin tries to construct a URL object from the relative path, which fails
+
+**Solution Steps:**
+1. **Update server to return full URLs for dev uploads:**
+   ```typescript
+   // server/routes.ts - in /api/objects/upload endpoint
+   // Before: const uploadURL = `/api/objects/dev-upload/${id}`;
+   // After:
+   const protocol = req.protocol;
+   const host = req.get('host');
+   const uploadURL = `${protocol}://${host}/api/objects/dev-upload/${id}`;
+   ```
+
+2. **Add CORS headers for dev upload endpoint:**
+   ```typescript
+   // Handle OPTIONS preflight
+   app.options("/api/objects/dev-upload/:id", (req, res) => {
+     res.header('Access-Control-Allow-Origin', '*');
+     res.header('Access-Control-Allow-Methods', 'PUT, OPTIONS');
+     res.header('Access-Control-Allow-Headers', 'Content-Type');
+     res.sendStatus(200);
+   });
+
+   // Add headers to PUT endpoint
+   app.put("/api/objects/dev-upload/:id", async (req, res) => {
+     res.header('Access-Control-Allow-Origin', '*');
+     res.header('Access-Control-Allow-Methods', 'PUT, OPTIONS');
+     res.header('Access-Control-Allow-Headers', 'Content-Type');
+     // ... rest of handler
+   });
+   ```
+
+3. **Update client to handle dev upload URLs properly:**
+   ```typescript
+   // client/src/pages/guest-checkin.tsx
+   if (uploadURL.includes('/api/objects/dev-upload/')) {
+     // Dev upload URL (can be full or relative)
+     const parts = uploadURL.split('/api/objects/dev-upload/');
+     objectId = parts[parts.length - 1];
+   }
+   ```
+
+**Technical Fix Applied:**
+- Modified server to return full URLs instead of relative paths for dev environment
+- Added CORS headers and OPTIONS preflight handling for cross-origin PUT requests
+- Enhanced client-side URL parsing to handle both full and relative URLs
+- Added comprehensive logging to debug upload flow
+- Fixed nested `<a>` tag warning in mobile navigation (bonus fix)
+
+**Files Modified:**
+- `server/routes.ts` - Return full URLs and add CORS headers
+- `client/src/pages/guest-checkin.tsx` - Enhanced URL parsing and error handling
+- `client/src/components/mobile-bottom-nav.tsx` - Fixed nested anchor tag issue
+
+**Verification:**
+- Upload IC photo → Should show "Document Uploaded" success
+- Check `uploads/` directory → File should be saved with metadata
+- Console should show full URL like `http://localhost:5000/api/objects/dev-upload/{id}`
+- No CORS errors in browser console
+
+**Prevention:**
+- Always return full URLs from server when dealing with file upload libraries
+- Test file uploads in local development environment
+- Add proper CORS headers for development endpoints
+- Use browser DevTools to debug upload flow
+
+---
+
 ## Common Issues Reference
 
 ### Network/Connection Errors
@@ -293,7 +373,7 @@ npm run dev
 
 **Document Control:**
 - **Maintained By:** Development Team
-- **Last Updated:** August 9, 2025
+- **Last Updated:** January 2025
 - **Next Review:** When new issues arise
 
 *This guide captures proven solutions for recurring issues in PelangiManager development and deployment.*

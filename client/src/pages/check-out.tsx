@@ -160,6 +160,7 @@ export default function CheckOut() {
                           <Button 
                             onClick={() => handleCheckout(guest.id)}
                             disabled={checkoutMutation.isPending}
+                            isLoading={checkoutMutation.isPending && checkoutMutation.variables === guest.id}
                             className="bg-hostel-error hover:bg-red-600 text-white font-medium"
                           >
                             <UserMinus className="mr-2 h-4 w-4" />

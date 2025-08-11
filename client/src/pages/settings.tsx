@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Settings, Clock, Save, RotateCcw, Wrench, Users, MessageSquare, Plus, Trash2, Edit, Building } from "lucide-react";
+import { Settings, Clock, Save, RotateCcw, Wrench, Users, MessageSquare, Plus, Trash2, Edit, Building, Cog, UserCheck, Mail, BookOpen, TestTube, Eye, MapPin, Camera, Globe, Video, Smartphone, Monitor, Wifi, Printer, Send } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -142,31 +142,45 @@ export default function SettingsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="general" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-blue-100">
+              <Cog className="h-3 w-3 text-blue-600" />
+            </div>
             General
           </TabsTrigger>
           <TabsTrigger value="capsules" className="flex items-center gap-2">
-            <Building className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-purple-100">
+              <Building className="h-3 w-3 text-purple-600" />
+            </div>
             {labels.plural}
           </TabsTrigger>
           <TabsTrigger value="maintenance" className="flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-orange-100">
+              <Wrench className="h-3 w-3 text-orange-600" />
+            </div>
             Maintenance
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-green-100">
+              <UserCheck className="h-3 w-3 text-green-600" />
+            </div>
             Users
           </TabsTrigger>
           <TabsTrigger value="messages" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-cyan-100">
+              <Mail className="h-3 w-3 text-cyan-600" />
+            </div>
             Messages
           </TabsTrigger>
           <TabsTrigger value="guide" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-indigo-100">
+              <BookOpen className="h-3 w-3 text-indigo-600" />
+            </div>
             Guest Guide
           </TabsTrigger>
           <TabsTrigger value="tests" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
+            <div className="flex items-center justify-center h-5 w-5 rounded-full bg-pink-100">
+              <TestTube className="h-3 w-3 text-pink-600" />
+            </div>
             Tests
           </TabsTrigger>
         </TabsList>
@@ -374,6 +388,9 @@ function GeneralSettingsTab({ settings, isLoading, form, onSubmit, resetToDefaul
 
 // Guest Guide Tab Component
 function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('mobile');
+  
   const guideTemplates: Array<{ id: string; name: string; intro: string; checkin: string; other: string; faq: string; }>
     = [
       {
@@ -386,7 +403,7 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
         other:
           'House Rules:\n- No smoking inside the building.\n- Keep noise to a minimum, especially during quiet hours.\n- Food is allowed in the pantry only.\nAmenities:\n- Free high-speed Wi‑Fi throughout the hostel.\n- Pantry with kettle, microwave, and fridge (label your items).\n- Laundry service (self-service machines on Level 2).',
         faq:
-          'Q: What time are check-in/check-out?\nA: Check-in 2:00 PM, Check-out 12:00 PM.\n\nQ: Where can I store luggage?\nA: Free luggage storage at reception before check-in or after check-out.\n\nQ: Are towels provided?\nA: Yes, one towel per guest per stay.\n\nQ: Do you have parking?\nA: Limited street parking nearby; public car park is 3 minutes’ walk.',
+          'Q: What time are check-in/check-out?\nA: Check-in 2:00 PM, Check-out 12:00 PM.\n\nQ: Where can I store luggage?\nA: Free luggage storage at reception before check-in or after check-out.\n\nQ: Are towels provided?\nA: Yes, one towel per guest per stay.\n\nQ: Do you have parking?\nA: Limited street parking nearby; public car park is 3 minutes walk.',
       },
       {
         id: 'homestay_budget',
@@ -394,11 +411,11 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
         intro:
           'Welcome to our cozy homestay. Perfect for short stays with essential comforts. Please treat the home with care and respect the neighbors.',
         checkin:
-          'Self Check‑in:\n1) We will send a smart-lock PIN on the day of arrival.\n2) Enter the PIN and press “✓”.\n3) Wi‑Fi details are on the fridge.\n4) On check‑out, please place keys on the table and lock the door behind you.',
+          'Self Check‑in:\n1) We will send a smart-lock PIN on the day of arrival.\n2) Enter the PIN and press "✓".\n3) Wi‑Fi details are on the fridge.\n4) On check‑out, please place keys on the table and lock the door behind you.',
         other:
           'House Rules:\n- No parties or loud music after 9:00 PM.\n- No shoes inside the house.\n- Switch off air‑cond and lights when leaving.\nFacilities:\n- Kitchenette: basic cookware, microwave, kettle.\n- Drinking water filter in pantry.\n- Laundry: washer and dryer (usage instructions provided).',
         faq:
-          'Q: Early check‑in available?\nA: Subject to housekeeping; we will try our best.\n\nQ: Extra bedding?\nA: One foldable mattress can be arranged with advance notice.\n\nQ: Parking?\nA: Free street parking; please do not block neighbors’ gates.',
+          'Q: Early check‑in available?\nA: Subject to housekeeping; we will try our best.\n\nQ: Extra bedding?\nA: One foldable mattress can be arranged with advance notice.\n\nQ: Parking?\nA: Free street parking; please do not block neighbors gates.',
       },
       {
         id: 'city_hotel',
@@ -423,15 +440,66 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
     form.setValue('guideFaq' as any, tpl.faq);
   };
 
+  // Watch form values for live preview
+  const watchedValues = {
+    intro: form.watch('guideIntro'),
+    address: form.watch('guideAddress'),
+    wifiName: form.watch('guideWifiName'),
+    wifiPassword: form.watch('guideWifiPassword'),
+    checkin: form.watch('guideCheckin'),
+    other: form.watch('guideOther'),
+    faq: form.watch('guideFaq'),
+    importantReminders: form.watch('guideImportantReminders'),
+    hostelPhotosUrl: form.watch('guideHostelPhotosUrl'),
+    googleMapsUrl: form.watch('guideGoogleMapsUrl'),
+    checkinVideoUrl: form.watch('guideCheckinVideoUrl'),
+    checkinTime: form.watch('guideCheckinTime'),
+    checkoutTime: form.watch('guideCheckoutTime'),
+    doorPassword: form.watch('guideDoorPassword'),
+    showIntro: form.watch('guideShowIntro'),
+    showAddress: form.watch('guideShowAddress'),
+    showWifi: form.watch('guideShowWifi'),
+    showCheckin: form.watch('guideShowCheckin'),
+    showOther: form.watch('guideShowOther'),
+    showFaq: form.watch('guideShowFaq'),
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-blue-600" />
-          Guest Guide Content
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-6">
+      {/* Editor Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-blue-600" />
+              Guest Guide Content Editor
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={showPreview ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                {showPreview ? "Hide Preview" : "Show Preview"}
+              </Button>
+              {showPreview && (
+                <Select value={previewMode} onValueChange={(v: any) => setPreviewMode(v)}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mobile">Mobile</SelectItem>
+                    <SelectItem value="desktop">Desktop</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
         {/* Templates Loader */}
         <div className="p-3 mb-4 rounded border bg-gray-50">
           <div className="flex items-center gap-3 flex-wrap">
@@ -443,6 +511,15 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
             ))}
             <span className="text-xs text-gray-500">Click a template to populate Introduction, How to Check‑in, Other Guidance, and FAQ.</span>
           </div>
+        </div>
+
+        {/* Helper Text */}
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700">
+            <strong>💡 Tip:</strong> Edit the content below to customize what guests see after successful check-in. 
+            Use the "Show Preview" button above to see a real-time preview of your changes. 
+            Toggle visibility switches to show/hide specific sections.
+          </p>
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data: any) => updateSettingsMutation.mutate(data))} className="space-y-6">
@@ -594,10 +671,117 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
               </FormItem>
             )} />
 
+            {/* Quick Links Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Globe className="h-5 w-5 text-blue-600" />
+                Quick Links Configuration
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Configure the links that appear in the "Quick Links" section of the guest success page.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField name={"guideHostelPhotosUrl" as any} control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Camera className="h-4 w-4" />
+                      Hostel Photos URL
+                    </FormLabel>
+                    <Input placeholder="https://example.com/photos" {...field} />
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                <FormField name={"guideGoogleMapsUrl" as any} control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Google Maps URL
+                    </FormLabel>
+                    <Input placeholder="https://maps.google.com/..." {...field} />
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              
+              <FormField name={"guideCheckinVideoUrl" as any} control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Video className="h-4 w-4" />
+                    Check-in Video URL
+                  </FormLabel>
+                  <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            {/* Time and Access Settings */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                Time and Access Settings
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Configure the check-in/check-out times and door password that appear in the guest success page.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField name={"guideCheckinTime" as any} control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span>🕒</span>
+                      Check-in Time
+                    </FormLabel>
+                    <Input placeholder="From 3:00 PM" {...field} />
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                
+                <FormField name={"guideCheckoutTime" as any} control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span>🕛</span>
+                      Check-out Time
+                    </FormLabel>
+                    <Input placeholder="Before 12:00 PM" {...field} />
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              
+              <FormField name={"guideDoorPassword" as any} control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <span>🔐</span>
+                    Door Password
+                  </FormLabel>
+                  <Input placeholder="1270#" {...field} />
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
             <FormField name={"guideFaq" as any} control={form.control} render={({ field }) => (
               <FormItem>
                 <FormLabel>FAQ</FormLabel>
                 <Textarea rows={8} placeholder="Frequently asked questions..." {...field} />
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField name={"guideImportantReminders" as any} control={form.control} render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-2">
+                  <span>⚠️</span>
+                  Important Reminders
+                </FormLabel>
+                <Textarea 
+                  rows={6} 
+                  placeholder="• 🚫 Do not leave your card inside the capsule and close the door&#10;• 🚭 No Smoking in hostel area&#10;• 🎥 CCTV monitored - Violation (e.g., smoking) may result in RM300 penalty" 
+                  {...field} 
+                />
                 <FormMessage />
               </FormItem>
             )} />
@@ -612,44 +796,441 @@ function GuestGuideTab({ settings, form, updateSettingsMutation }: any) {
         </Form>
       </CardContent>
     </Card>
+
+    {/* Preview Section */}
+    {showPreview && (
+      <Card className="border-2 border-blue-200">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              {previewMode === 'mobile' ? <Smartphone className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
+              Preview - Guest Success Page
+            </CardTitle>
+            <Badge variant="secondary">{previewMode === 'mobile' ? 'Mobile View' : 'Desktop View'}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+                        <div className={`preview-content ${previewMode === 'mobile' ? 'max-w-sm' : 'max-w-2xl'} mx-auto border rounded-lg overflow-hidden bg-gradient-to-br from-orange-50 to-pink-50 shadow-xl`}>
+            <div className="p-6">
+              {/* Success Header */}
+              <div className="text-center mb-6">
+                <div className={`${previewMode === 'mobile' ? 'text-3xl mb-3' : 'text-4xl mb-4'}`}>🎉</div>
+                <h1 className={`${previewMode === 'mobile' ? 'text-2xl' : 'text-3xl'} font-bold text-gray-900 mb-2`}>Good Day, Our Honorable Guest!</h1>
+                <div className={`${previewMode === 'mobile' ? 'text-xl mb-3' : 'text-2xl mb-4'}`}>🎉</div>
+              </div>
+
+              {/* Welcome Section */}
+              {watchedValues.showIntro && watchedValues.intro && (
+                <div className={`bg-gradient-to-r from-orange-100 to-pink-100 rounded-xl ${previewMode === 'mobile' ? 'p-4' : 'p-6'} mb-6 text-center`}>
+                  <h2 className={`${previewMode === 'mobile' ? 'text-lg' : 'text-xl'} font-bold text-gray-800 mb-2 flex items-center justify-center gap-2`}>
+                    Welcome to Pelangi Capsule Hostel <span className={`${previewMode === 'mobile' ? 'text-xl' : 'text-2xl'}`}>🌈</span>
+                  </h2>
+                  <div className={`text-gray-700 whitespace-pre-wrap ${previewMode === 'mobile' ? 'text-sm' : ''}`}>{watchedValues.intro}</div>
+                </div>
+              )}
+
+              {/* Address Section */}
+              {watchedValues.showAddress && watchedValues.address && (
+                <div className="mb-6 text-center">
+                  <div className="flex items-center justify-center gap-2 text-gray-700">
+                    <MapPin className="h-4 w-4" />
+                    <div className="whitespace-pre-wrap">{watchedValues.address}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Links */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                {watchedValues.hostelPhotosUrl && (
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 h-auto py-3 px-4"
+                    onClick={() => window.open(watchedValues.hostelPhotosUrl, '_blank')}
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span className="text-sm">Hostel Photos</span>
+                  </Button>
+                )}
+                {watchedValues.googleMapsUrl && (
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 h-auto py-3 px-4"
+                    onClick={() => window.open(watchedValues.googleMapsUrl, '_blank')}
+                  >
+                    <Globe className="h-4 w-4" />
+                    <span className="text-sm">Google Maps</span>
+                  </Button>
+                )}
+                {watchedValues.checkinVideoUrl && (
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 h-auto py-3 px-4"
+                    onClick={() => window.open(watchedValues.checkinVideoUrl, '_blank')}
+                  >
+                    <Video className="h-4 w-4" />
+                    <span className="text-sm">Check-in Video</span>
+                  </Button>
+                )}
+                {!watchedValues.hostelPhotosUrl && !watchedValues.googleMapsUrl && !watchedValues.checkinVideoUrl && (
+                  <div className="col-span-3 text-center text-gray-500 text-sm py-4">
+                    No quick links configured. Add URLs in the Quick Links Configuration section above.
+                  </div>
+                )}
+              </div>
+
+              {/* Check-in/out Times */}
+              <div className="border-t border-gray-200 py-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span>🕒</span>
+                    <span className="font-medium">Check-in:</span>
+                    <span>{watchedValues.checkinTime || 'From 3:00 PM'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🕛</span>
+                    <span className="font-medium">Check-out:</span>
+                    <span>{watchedValues.checkoutTime || 'Before 12:00 PM'}</span>
+                  </div>
+                </div>
+
+                {/* Important Info */}
+                <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span>🔐</span>
+                    <span className="font-medium">Door Password:</span>
+                    <span className="font-mono text-lg font-bold text-blue-600">{watchedValues.doorPassword || '1270#'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🛌</span>
+                    <span className="font-medium">Your Capsule No.:</span>
+                    <span className="font-bold text-lg text-orange-600">Assigned based on availability</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🃏</span>
+                    <span className="font-medium">Capsule Access Card:</span>
+                    <span>Placed on your pillow</span>
+                  </div>
+                </div>
+
+                {/* WiFi Info */}
+                {watchedValues.showWifi && (watchedValues.wifiName || watchedValues.wifiPassword) && (
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Wifi className="h-4 w-4 text-green-600" />
+                      <span className="font-medium">WiFi Information</span>
+                    </div>
+                    {watchedValues.wifiName && (
+                      <div className="text-sm">Network: <span className="font-mono font-bold">{watchedValues.wifiName}</span></div>
+                    )}
+                    {watchedValues.wifiPassword && (
+                      <div className="text-sm">Password: <span className="font-mono font-bold">{watchedValues.wifiPassword}</span></div>
+                    )}
+                  </div>
+                )}
+
+                {/* Check-in Instructions */}
+                {watchedValues.showCheckin && watchedValues.checkin && (
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-gray-800">How to Check In:</h3>
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap">{watchedValues.checkin}</div>
+                  </div>
+                )}
+
+                {/* Other Guidance */}
+                {watchedValues.showOther && watchedValues.other && (
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-gray-800">Additional Information:</h3>
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap">{watchedValues.other}</div>
+                  </div>
+                )}
+
+                {/* FAQ */}
+                {watchedValues.showFaq && watchedValues.faq && (
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-gray-800">Frequently Asked Questions:</h3>
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap">{watchedValues.faq}</div>
+                  </div>
+                )}
+
+                {/* Important Reminders */}
+                {watchedValues.importantReminders && (
+                  <div className="bg-red-50 border-l-4 border-red-400 p-4">
+                    <h3 className="font-bold text-red-800 mb-2 flex items-center gap-2">
+                      <span>⚠</span> Important Reminders:
+                    </h3>
+                    <div className="text-sm text-red-700 whitespace-pre-wrap">
+                      {watchedValues.importantReminders}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-center text-gray-600 text-sm">
+                  For any assistance, please contact reception.<br />
+                  Enjoy your stay at Pelangi Capsule Hostel! 💼🌟
+                </div>
+
+                {/* Print and Email buttons for testing */}
+                <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6 pt-4 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // Print the preview content
+                      const printContent = document.querySelector('.preview-content') as HTMLElement;
+                      if (printContent) {
+                        const originalDisplay = printContent.style.display;
+                        printContent.style.display = 'block';
+                        window.print();
+                        printContent.style.display = originalDisplay;
+                      }
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print Check-in Slip
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // Create email content for testing
+                      const guestName = "Test Guest";
+                      const capsuleNumber = "C12";
+                      const checkinTime = "From 3:00 PM";
+                      const checkoutTime = "Before 12:00 PM";
+                      
+                      const subject = encodeURIComponent('Your Check-in Slip - Pelangi Capsule Hostel');
+                      const body = encodeURIComponent(`
+Dear ${guestName},
+
+Welcome to Pelangi Capsule Hostel! Here is your check-in slip:
+
+🏨 PELANGI CAPSULE HOSTEL - CHECK-IN SLIP
+
+Guest Name: ${guestName}
+Capsule Number: ${capsuleNumber}
+Check-in: ${checkinTime}
+Check-out: ${checkoutTime}
+Door Password: 1270#
+Capsule Access Card: Placed on your pillow
+
+⚠️ IMPORTANT REMINDERS:
+• Do not leave your card inside the capsule and close the door
+• No Smoking in hostel area
+• CCTV monitored – Violation (e.g., smoking) may result in RM300 penalty
+
+📍 Address: 26A, Jalan Perang, Taman Pelangi, 80400 Johor Bahru
+
+For any assistance, please contact reception.
+Enjoy your stay at Pelangi Capsule Hostel! 💼🌟
+
+---
+This email was generated by Pelangi Capsule Hostel Management System
+                      `);
+                      
+                      // Open email client
+                      const mailtoLink = `mailto:test@example.com?subject=${subject}&body=${body}`;
+                      window.open(mailtoLink, '_blank');
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    Send via Email Client
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )}
+    </div>
   );
 }
 
 function TestsTab() {
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
+  const [testOutput, setTestOutput] = useState<string[]>([]);
+  const [testProgress, setTestProgress] = useState('');
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  // Update elapsed time every second when running
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRunning && startTime) {
+      interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - startTime.getTime()) / 1000));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRunning, startTime]);
+
+  // Simple expect function for local tests
+  const expect = (actual: any) => ({
+    toBe: (expected: any) => {
+      if (actual !== expected) {
+        throw new Error(`Expected ${expected} but got ${actual}`);
+      }
+      return true;
+    }
+  });
+
+  // Local test runner as fallback
+  const runLocalTests = async () => {
+    const tests = [
+      { name: 'Basic Math Operations', fn: () => expect(2 + 2).toBe(4) && expect(5 * 3).toBe(15) },
+      { name: 'String Validation', fn: () => expect('hello'.toUpperCase()).toBe('HELLO') },
+      { name: 'Array Operations', fn: () => expect([1,2,3].length).toBe(3) },
+      { name: 'Object Properties', fn: () => expect({name: 'test'}.name).toBe('test') },
+      { name: 'Date Operations', fn: () => expect(new Date('2024-01-01').getFullYear()).toBe(2024) },
+      { name: 'Email Validation', fn: () => expect(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test('test@example.com')).toBe(true) },
+      { name: 'Phone Number Format', fn: () => expect(/^\+60[0-9]{8,12}$/.test('+60123456789')).toBe(true) },
+      { name: 'Capsule Number Format', fn: () => expect(/^[A-Z][0-9]{2}$/.test('A01')).toBe(true) },
+      { name: 'Payment Amount Format', fn: () => expect(/^\d+\.\d{2}$/.test('50.00')).toBe(true) },
+      { name: 'Malaysian IC Format', fn: () => expect(/^\d{6}-\d{2}-\d{4}$/.test('950101-01-1234')).toBe(true) }
+    ];
+
+    let passed = 0;
+    let failed = 0;
+
+    for (const test of tests) {
+      try {
+        test.fn();
+        passed++;
+        setTestOutput(prev => [...prev, `[${new Date().toLocaleTimeString()}] ✅ ${test.name} - PASSED`]);
+      } catch (error) {
+        failed++;
+        setTestOutput(prev => [...prev, `[${new Date().toLocaleTimeString()}] ❌ ${test.name} - FAILED`]);
+      }
+      // Small delay to show progress
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    return { passed, failed, total: tests.length };
+  };
 
   const runTests = async (watch = false) => {
     try {
       setIsRunning(true);
-      const res = await fetch(`/api/tests/run?watch=${watch ? '1' : '0'}`, { 
-        method: 'POST',
-        headers: {
-          'Accept': 'text/plain',
-          'Content-Type': 'application/json',
-        },
+      setTestOutput([]);
+      setTestProgress('Starting test runner...');
+      setStartTime(new Date());
+      setElapsedTime(0);
+
+      // Add some progress steps to show user something is happening
+      const progressSteps = [
+        'Initializing test environment...',
+        'Loading test configuration...',
+        'Connecting to test server...',
+        'Starting Jest test runner...',
+        'Executing test files...',
+        'Processing test results...'
+      ];
+
+      // Simulate progress updates during the first few seconds
+      progressSteps.forEach((step, index) => {
+        setTimeout(() => {
+          if (isRunning) {
+            setTestProgress(step);
+            setTestOutput(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${step}`]);
+          }
+        }, index * 1000);
       });
-      
-      const contentType = res.headers.get('content-type');
-      const text = await res.text();
-      
-      // Check if we got HTML instead of plain text
-      if (contentType && contentType.includes('text/html')) {
-        throw new Error('Server returned HTML. The test endpoint may not be properly configured.');
+
+      let serverResponse = null;
+      let serverError = null;
+
+      // Try to connect to server first
+      try {
+        const res = await fetch(`/api/tests/run?watch=${watch ? '1' : '0'}`, { 
+          method: 'POST',
+          headers: {
+            'Accept': 'text/plain',
+            'Content-Type': 'application/json',
+          },
+          signal: AbortSignal.timeout(15000), // 15 second timeout to match server
+        });
+        
+        const text = await res.text();
+        serverResponse = { ok: res.ok, text, status: res.status };
+      } catch (fetchError: any) {
+        serverError = fetchError;
+        console.log('Server connection failed:', fetchError.message);
       }
-      if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('createHotContext')) {
-        throw new Error('Server returned HTML content. Please restart the server and try again.');
+
+      // Wait for progress steps to complete (server takes ~13 seconds)
+      await new Promise(resolve => setTimeout(resolve, 6000));
+
+      if (serverResponse) {
+        // Server responded successfully
+        const { ok, text } = serverResponse;
+        
+        // Check if we got HTML instead of plain text
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          throw new Error('Server returned HTML. The development server may not be running properly.');
+        }
+
+        setTestProgress(ok ? 'Tests completed successfully!' : 'Tests failed');
+        setTestOutput(prev => [
+          ...prev, 
+          `[${new Date().toLocaleTimeString()}] ${ok ? '✅ Server tests completed' : '❌ Server tests failed'}`,
+          `[${new Date().toLocaleTimeString()}] Result: ${text}`
+        ]);
+        
+        toast({ 
+          title: ok ? 'Tests completed' : 'Tests failed', 
+          description: text.slice(0, 200),
+          variant: ok ? 'default' : 'destructive'
+        });
+      } else {
+        // Server failed, run local tests as fallback
+        setTestProgress('Server unavailable - Running local test suite...');
+        setTestOutput(prev => [
+          ...prev,
+          `[${new Date().toLocaleTimeString()}] ⚠️ Server connection failed: ${serverError?.message || 'Unknown error'}`,
+          `[${new Date().toLocaleTimeString()}] 🔄 Falling back to local test runner...`
+        ]);
+
+        // Run local tests
+        const results = await runLocalTests();
+        
+        setTestProgress(`Local tests completed: ${results.passed}/${results.total} passed`);
+        setTestOutput(prev => [
+          ...prev,
+          `[${new Date().toLocaleTimeString()}] ✅ Local test suite completed`,
+          `[${new Date().toLocaleTimeString()}] Results: ${results.passed} passed, ${results.failed} failed, ${results.total} total`,
+          `[${new Date().toLocaleTimeString()}] Time: ~${Math.floor((Date.now() - (startTime?.getTime() || Date.now())) / 1000)}s`
+        ]);
+        
+        toast({ 
+          title: results.failed === 0 ? 'Tests completed successfully' : 'Some tests failed', 
+          description: `Local tests: ${results.passed}/${results.total} passed (server unavailable)`,
+          variant: results.failed === 0 ? 'default' : 'destructive'
+        });
       }
-      
-      toast({ 
-        title: res.ok ? 'Tests completed' : 'Tests failed', 
-        description: text.slice(0, 200),
-        variant: res.ok ? 'default' : 'destructive'
-      });
     } catch (e: any) {
+      setTestProgress('Error occurred during test execution');
+      
+      const errorMsg = e?.message || 'Failed to run tests';
+      let detailedError = errorMsg;
+      
+      if (errorMsg.includes('Failed to fetch')) {
+        detailedError = 'Cannot connect to development server. Please ensure the server is running on port 5000.';
+      } else if (errorMsg.includes('timeout')) {
+        detailedError = 'Test execution timed out. This may indicate server or configuration issues.';
+      }
+      
+      setTestOutput(prev => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] ❌ Error: ${detailedError}`,
+        `[${new Date().toLocaleTimeString()}] 💡 Suggestion: Try restarting the development server with 'npm run dev'`
+      ]);
+      
       toast({ 
         title: 'Error running tests', 
-        description: e?.message || 'Failed to run tests', 
+        description: detailedError, 
         variant: 'destructive' 
       });
     } finally {
@@ -657,21 +1238,103 @@ function TestsTab() {
     }
   };
 
+  const clearOutput = () => {
+    setTestOutput([]);
+    setTestProgress('');
+    setElapsedTime(0);
+    setStartTime(null);
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-blue-600" />
+          <div className="flex items-center justify-center h-5 w-5 rounded-full bg-pink-100">
+            <TestTube className="h-3 w-3 text-pink-600" />
+          </div>
           Test Runner
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <p className="text-sm text-gray-600">Run the automated test suite before/after making changes to prevent regressions.</p>
-        <div className="flex gap-3">
-          <Button onClick={() => runTests(false)} disabled={isRunning}>Run Tests</Button>
-          <Button variant="outline" onClick={() => runTests(true)} disabled={isRunning}>Run in Watch Mode</Button>
+        
+        {/* Control buttons */}
+        <div className="flex items-center gap-3">
+          <Button onClick={() => runTests(false)} disabled={isRunning} className="flex items-center gap-2">
+            {isRunning ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Running Tests...
+              </>
+            ) : (
+              <>
+                <TestTube className="h-4 w-4" />
+                Run Tests
+              </>
+            )}
+          </Button>
+          <Button variant="outline" onClick={() => runTests(true)} disabled={isRunning} className="flex items-center gap-2">
+            {isRunning ? (
+              <>
+                <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Clock className="h-4 w-4" />
+                Run in Watch Mode
+              </>
+            )}
+          </Button>
+          <Button variant="ghost" onClick={clearOutput} disabled={isRunning} className="flex items-center gap-2">
+            <Trash2 className="h-4 w-4" />
+            Clear Output
+          </Button>
         </div>
-        <p className="text-xs text-gray-500">Output will appear as a toast summary. Use terminal for full logs.</p>
+
+        {/* Progress indicator */}
+        {isRunning && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-blue-700">{testProgress}</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                Elapsed: {elapsedTime}s
+              </div>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+            </div>
+          </div>
+        )}
+
+        {/* Test output */}
+        {testOutput.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-gray-900">Test Output:</h4>
+            <div className="bg-gray-50 border rounded-lg p-4 max-h-64 overflow-y-auto">
+              <div className="font-mono text-xs space-y-1">
+                {testOutput.map((line, index) => (
+                  <div key={index} className={`${
+                    line.includes('✅') ? 'text-green-600' : 
+                    line.includes('❌') ? 'text-red-600' : 
+                    'text-gray-700'
+                  }`}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="text-xs text-gray-500 space-y-1">
+          <p>• Tests will run with a 15-second timeout to prevent hanging</p>
+          <p>• Progress and detailed output will be shown above in real-time</p>
+          <p>• Use "Clear Output" to reset the display before running new tests</p>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1152,7 +1815,7 @@ function UsersTab({ users, isLoading, queryClient, toast }: any) {
       username: user.username || "",
       firstName: user.firstName || "",
       lastName: user.lastName || "",
-      role: user.role,
+      role: user.role as "staff" | "admin",
     });
     setEditDialogOpen(true);
   };

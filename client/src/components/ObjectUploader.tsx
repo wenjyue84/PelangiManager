@@ -7,6 +7,7 @@ import "@uppy/dashboard/dist/style.min.css";
 import AwsS3 from "@uppy/aws-s3";
 import type { UploadResult } from "@uppy/core";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
@@ -56,14 +57,16 @@ interface ObjectUploaderProps {
  */
 export function ObjectUploader({
   maxNumberOfFiles = 1,
-  maxFileSize = 10485760, // 10MB default
-  allowedFileTypes = ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
+  maxFileSize = 15728640, // 15MB default
+  // Accept common image MIME types and HEIC/HEIF for iPhone
+  allowedFileTypes = ['image/*', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', 'image/heic', 'image/heif'],
   onGetUploadParameters,
   onComplete,
   buttonClassName,
   children,
   disabled = false,
 }: ObjectUploaderProps) {
+  const { toast } = useToast();
   const [showModal, setShowModal] = useState(false);
   const [uppy] = useState(() =>
     new Uppy({
@@ -76,11 +79,42 @@ export function ObjectUploader({
     })
       .use(AwsS3, {
         shouldUseMultipart: false,
-        getUploadParameters: onGetUploadParameters,
+        getUploadParameters: async (file: any) => {
+          const base = await onGetUploadParameters();
+          console.log('Upload parameters:', base); // Debug logging
+          return {
+            ...base,
+            headers: {
+              'Content-Type': file?.type || 'application/octet-stream',
+            },
+          } as any;
+        },
       })
       .on("complete", (result) => {
+        console.log('Uppy complete event:', result); // Debug logging
         onComplete?.(result);
         setShowModal(false);
+      })
+      .on('restriction-failed', (_file, error) => {
+        toast({
+          title: 'File not allowed',
+          description: error?.message || 'Please choose a supported image under 15MB (HEIC/HEIF/JPG/PNG).',
+          variant: 'destructive',
+        });
+      })
+      .on('upload-error', (_file, error, _resp) => {
+        toast({
+          title: 'Upload failed',
+          description: (error as any)?.message || 'Please check your internet and try again.',
+          variant: 'destructive',
+        });
+      })
+      .on('error', (error) => {
+        toast({
+          title: 'Unexpected error',
+          description: (error as any)?.message || 'Something went wrong while preparing the upload.',
+          variant: 'destructive',
+        });
       })
   );
 

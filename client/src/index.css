@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,6 +38,7 @@
   --sidebar-border: hsl(214.3 31.8% 91.4%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
   --font-sans: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Poppins', system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
   --radius: 0.5rem;
@@ -87,10 +89,44 @@
     background-color: var(--hostel-background);
     color: var(--hostel-text);
     font-family: var(--font-sans);
+    letter-spacing: 0.01em;
+  }
+
+  h1 {
+    @apply font-heading text-3xl sm:text-4xl font-semibold tracking-tight leading-tight;
+  }
+  h2 {
+    @apply font-heading text-2xl sm:text-3xl font-semibold tracking-tight leading-snug;
+  }
+  h3 {
+    @apply font-heading text-xl sm:text-2xl font-semibold tracking-tight leading-snug;
+  }
+  h4 {
+    @apply font-heading text-lg sm:text-xl font-medium tracking-tight leading-snug;
+  }
+  h5 {
+    @apply font-heading text-base sm:text-lg font-medium tracking-tight;
+  }
+  h6 {
+    @apply font-heading text-sm sm:text-base font-medium tracking-wide uppercase;
   }
 }
 
 @layer utilities {
+  .animate-fade-in {
+    animation: fade-in 220ms ease-out;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hover-card-pop {
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .hover-card-pop:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  }
   .text-hostel-primary {
     color: var(--hostel-primary);
   }
@@ -198,3 +234,69 @@
     @apply text-sm sm:text-base font-medium;
   }
 }
+
+  /* Print styles for check-in slip */
+  @media print {
+    /* Hide everything except the check-in slip */
+    body * {
+      visibility: hidden;
+    }
+    
+    /* Show only the check-in slip content */
+    .min-h-screen .max-w-2xl,
+    .min-h-screen .max-w-2xl *,
+    .preview-content,
+    .preview-content * {
+      visibility: visible;
+    }
+    
+    /* Position the slip at the top of the page */
+    .min-h-screen .max-w-2xl,
+    .preview-content {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+    }
+    
+    /* Remove shadows and backgrounds for cleaner print */
+    .shadow-xl {
+      box-shadow: none !important;
+    }
+    
+    /* Ensure colors print well */
+    .bg-gradient-to-br {
+      background: white !important;
+    }
+    
+    /* Hide interactive elements */
+    button {
+      display: none !important;
+    }
+    
+    /* Adjust padding and margins for print */
+    .p-8, .p-6 {
+      padding: 16px !important;
+    }
+    
+    /* Ensure text is black for better print quality */
+    .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600 {
+      color: black !important;
+    }
+    
+    /* Keep important colored text */
+    .text-blue-600, .text-orange-600 {
+      font-weight: bold !important;
+    }
+    
+    /* Page break settings */
+    @page {
+      margin: 0.5in;
+      size: A4;
+    }
+    
+    /* Remove edit section in print */
+    .bg-yellow-50 {
+      display: none !important;
+    }
+  }

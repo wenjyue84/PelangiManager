@@ -48,7 +48,7 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="flex space-x-1 mb-4 bg-white p-2 rounded-lg shadow-sm overflow-x-auto">
+    <nav className="hidden md:flex space-x-1 mb-4 bg-white p-2 rounded-lg shadow-sm overflow-x-auto">
       {navigationItems.map((item) => {
         const isActive = location === item.path;
         const canAccess = !item.requireAuth || isAuthenticated;
@@ -59,9 +59,9 @@ export default function Navigation() {
           <Link key={item.path} href={canAccess ? item.path : "/login"}>
             <Button
               variant={isActive ? "default" : "ghost"}
-              size="sm"
+              size="default"
               disabled={!canAccess}
-              className={`flex items-center gap-2 text-xs px-2 py-1 whitespace-nowrap rounded-md ${
+              className={`flex items-center gap-2 text-sm px-3 py-2 whitespace-nowrap rounded-lg min-h-[44px] ${
                 isActive
                   ? "bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow" 
                   : canAccess
@@ -70,8 +70,8 @@ export default function Navigation() {
               }`}
               title={!canAccess ? "Login required" : ""}
             >
-              <div className={`flex items-center justify-center h-5 w-5 rounded-full ${isActive ? "bg-white/20" : item.color?.replace("text-", "bg-")}`}>
-                <item.icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : item.color}`}/>
+              <div className={`flex items-center justify-center h-6 w-6 rounded-full ${isActive ? "bg-white/20" : item.color?.replace("text-", "bg-")}`}>
+                <item.icon className={`h-4 w-4 ${isActive ? "text-white" : item.color}`}/>
               </div>
               <span className="hidden sm:inline font-medium">
                 {item.label}

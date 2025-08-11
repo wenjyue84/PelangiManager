@@ -503,7 +503,7 @@ export default function SortableGuestTable() {
             <p>No guests currently checked in or pending check-ins</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto hidden md:block">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -635,6 +635,7 @@ export default function SortableGuestTable() {
                             size="sm"
                             onClick={() => handleCheckout(guest.id)}
                             disabled={checkoutMutation.isPending}
+                            isLoading={checkoutMutation.isPending && checkoutMutation.variables === guest.id}
                             className="text-hostel-error hover:text-red-700 font-medium p-1"
                           >
                             <UserMinus className="h-3 w-3" />
@@ -720,6 +721,97 @@ export default function SortableGuestTable() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Mobile card view */}
+        {sortedData.length > 0 && (
+          <div className="md:hidden space-y-3">
+            {sortedData.map((item) => {
+              if (item.type === 'guest') {
+                const guest = item.data as Guest;
+                const isGuestCheckingOut = checkoutGuest?.id === guest.id;
+                const genderIcon = getGenderIcon(guest.gender || undefined);
+                return (
+                  <Card key={`guest-${guest.id}`} className="p-3 hover-card-pop">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 ${genderIcon.bgColor} rounded-full flex items-center justify-center text-sm font-semibold ${genderIcon.textColor}`}>
+                          {getFirstInitial(guest.name)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">{guest.capsuleNumber}</Badge>
+                            <span className="font-medium">{guest.name}</span>
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            In: {formatShortDateTime(guest.checkinTime.toString())}
+                            {guest.expectedCheckoutDate && (
+                              <span className="ml-2">Out: {formatShortDate(guest.expectedCheckoutDate)}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          className="h-11 w-11 rounded-full"
+                          onClick={() => setSelectedGuest(guest)}
+                          title="Details"
+                        >
+                          i
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          className="h-11 w-11 rounded-full"
+                          onClick={() => handleCheckout(guest.id)}
+                          disabled={isGuestCheckingOut}
+                          title="Checkout"
+                        >
+                          <UserMinus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              } else {
+                const pendingData = item.data;
+                return (
+                  <Card key={`pending-${pendingData.id}`} className="p-3 bg-orange-50/60 hover-card-pop">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-sm font-semibold text-orange-600">
+                          P
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-orange-500 text-white border-orange-500">{pendingData.capsuleNumber}</Badge>
+                            <span className="font-medium">{pendingData.name}</span>
+                          </div>
+                          <div className="text-xs text-orange-700 mt-1">
+                            In: {formatShortDateTime(pendingData.createdAt)}
+                            <span className="ml-2">Expires: {formatShortDate(pendingData.expiresAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isAuthenticated ? (
+                          <Button 
+                            variant="outline"
+                            className="h-11 px-4 rounded-full"
+                            onClick={() => cancelTokenMutation.mutate(pendingData.id)}
+                          >
+                            Cancel
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-orange-600">Pending</span>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                );
+              }
+            })}
           </div>
         )}
       </CardContent>

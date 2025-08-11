@@ -164,6 +164,7 @@ export default function DailyNotifications() {
                         size="sm"
                         onClick={() => handleCheckout(guest)}
                         disabled={checkoutMutation.isPending}
+                        isLoading={checkoutMutation.isPending && checkoutMutation.variables === guest.id}
                         className="bg-orange-600 hover:bg-orange-700 text-white"
                       >
                         <UserMinus className="h-4 w-4 mr-1" />
@@ -216,6 +217,7 @@ export default function DailyNotifications() {
                         size="sm"
                         onClick={() => handleCheckout(guest)}
                         disabled={checkoutMutation.isPending}
+                        isLoading={checkoutMutation.isPending && checkoutMutation.variables === guest.id}
                         variant="destructive"
                       >
                         <UserMinus className="h-4 w-4 mr-1" />
