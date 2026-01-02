@@ -12,7 +12,7 @@ import { Sparkles, Clock, CheckCircle, User, CheckCheck, Undo2 } from "lucide-re
 import { useAccommodationLabels } from "@/hooks/useAccommodationLabels";
 import { apiRequest } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Capsule } from "@shared/schema";
+import type { Capsule, Guest } from "@shared/schema";
 import {
   Dialog,
   DialogContent,
@@ -189,9 +189,10 @@ function UndoCleanedDialog({ capsule, onSuccess }: UndoCleanedDialogProps) {
 interface CapsuleCleaningCardProps {
   capsule: Capsule;
   onRefresh: () => void;
+  lastGuest?: Guest | null;
 }
 
-function CapsuleCleaningCard({ capsule, onRefresh }: CapsuleCleaningCardProps) {
+function CapsuleCleaningCard({ capsule, onRefresh, lastGuest }: CapsuleCleaningCardProps) {
   const isClean = capsule.cleaningStatus === "cleaned";
   const needsCleaning = capsule.cleaningStatus === "to_be_cleaned";
   const isUnavailable = !capsule.isAvailable;
@@ -249,6 +250,30 @@ function CapsuleCleaningCard({ capsule, onRefresh }: CapsuleCleaningCardProps) {
             <div className="flex items-center gap-2 text-sm text-green-600">
               <User className="h-4 w-4" />
               <span>By {capsule.lastCleanedBy}</span>
+            </div>
+          )}
+
+          {/* Last Guest Information */}
+          {isClean && lastGuest && (
+            <div className="mt-2 p-2 bg-white/60 rounded-md border border-green-100">
+              <div className="text-xs font-medium text-gray-600 mb-1">Last Guest:</div>
+              <div className="text-sm font-semibold text-gray-800">{lastGuest.name}</div>
+              {lastGuest.nationality && (
+                <div className="text-xs text-gray-600">Nationality: {lastGuest.nationality}</div>
+              )}
+              {lastGuest.checkinTime && (
+                <div className="text-xs text-gray-500">
+                  Check-in: {new Date(lastGuest.checkinTime).toLocaleDateString()}
+                </div>
+              )}
+              {lastGuest.checkoutTime && (
+                <div className="text-xs text-gray-500">
+                  Check-out: {new Date(lastGuest.checkoutTime).toLocaleDateString()}
+                </div>
+              )}
+              {lastGuest.phoneNumber && (
+                <div className="text-xs text-gray-500">Phone: {lastGuest.phoneNumber}</div>
+              )}
             </div>
           )}
           
@@ -312,6 +337,26 @@ export default function CapsuleCleaningStatus() {
     refetchOnWindowFocus: true,
     enabled: true, // Ensure query is enabled
   });
+
+  // Fetch recently checked out guests to show alongside cleaned capsules
+  const { data: guestHistoryResponse } = useQuery<{ data: Guest[]; pagination: any }>({
+    queryKey: ["/api/guests/history", { limit: 100 }],
+    staleTime: 30000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
+
+  // Create a map of capsule number to most recent guest (checked out)
+  const getLastGuestForCapsule = (capsuleNumber: string): Guest | null => {
+    if (!guestHistoryResponse?.data) return null;
+    
+    // Find the most recent checked out guest for this capsule
+    const guests = guestHistoryResponse.data
+      .filter(g => g.capsuleNumber === capsuleNumber && !g.isCheckedIn && g.checkoutTime)
+      .sort((a, b) => new Date(b.checkoutTime!).getTime() - new Date(a.checkoutTime!).getTime());
+    
+    return guests[0] || null;
+  };
 
   const handleRefresh = async () => {
     // Explicitly refetch both queries
@@ -466,29 +511,47 @@ export default function CapsuleCleaningStatus() {
               <TableRow>
                 <TableHead>Capsule</TableHead>
                 <TableHead>Section</TableHead>
-                <TableHead>To Rent</TableHead>
+                <TableHead>Last Guest</TableHead>
+                <TableHead>Check-in</TableHead>
+                <TableHead>Check-out</TableHead>
                 <TableHead>Cleaned At</TableHead>
                 <TableHead>Cleaned By</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cleanedCapsules.map((capsule) => (
-                <TableRow key={capsule.id}>
-                  <TableCell>{capsule.number}</TableCell>
-                  <TableCell>{capsule.section}</TableCell>
-                  <TableCell>
-                    <Badge className={capsule.toRent !== false ? "bg-green-600 text-white" : "bg-red-500 text-white"}>
-                      {capsule.toRent !== false ? "Yes" : "No"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{capsule.lastCleanedAt ? new Date(capsule.lastCleanedAt).toLocaleString() : 'Never'}</TableCell>
-                  <TableCell>{capsule.lastCleanedBy}</TableCell>
-                  <TableCell>
-                    <UndoCleanedDialog capsule={capsule} onSuccess={handleRefresh} />
-                  </TableCell>
-                </TableRow>
-              ))}
+              {cleanedCapsules.map((capsule) => {
+                const lastGuest = getLastGuestForCapsule(capsule.number);
+                return (
+                  <TableRow key={capsule.id}>
+                    <TableCell className="font-semibold">{capsule.number}</TableCell>
+                    <TableCell className="capitalize">{capsule.section}</TableCell>
+                    <TableCell>
+                      {lastGuest ? (
+                        <div>
+                          <div className="font-medium">{lastGuest.name}</div>
+                          {lastGuest.nationality && (
+                            <div className="text-xs text-muted-foreground">{lastGuest.nationality}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {lastGuest?.checkinTime ? new Date(lastGuest.checkinTime).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {lastGuest?.checkoutTime ? new Date(lastGuest.checkoutTime).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell>{capsule.lastCleanedAt ? new Date(capsule.lastCleanedAt).toLocaleDateString() : 'Never'}</TableCell>
+                    <TableCell>{capsule.lastCleanedBy || '-'}</TableCell>
+                    <TableCell>
+                      <UndoCleanedDialog capsule={capsule} onSuccess={handleRefresh} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         );
@@ -501,18 +564,34 @@ export default function CapsuleCleaningStatus() {
                 return new Date(b.lastCleanedAt).getTime() - new Date(a.lastCleanedAt).getTime();
               })
               .slice(0, 6) // Show only recent 6 cleaned capsules
-              .map((capsule) => (
-                <div key={capsule.id} className="flex items-center justify-between rounded-md border border-green-200 bg-green-50 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{capsule.number}</span>
-                    <Badge className={capsule.toRent !== false ? "bg-green-600 text-white" : "bg-red-500 text-white"}>
-                      {capsule.toRent !== false ? "Yes" : "No"}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground capitalize">{capsule.section}</span>
+              .map((capsule) => {
+                const lastGuest = getLastGuestForCapsule(capsule.number);
+                return (
+                  <div key={capsule.id} className="rounded-md border border-green-200 bg-green-50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{capsule.number}</span>
+                        <Badge className="bg-green-600 text-white text-xs">Clean</Badge>
+                        <span className="text-xs text-muted-foreground capitalize">{capsule.section}</span>
+                      </div>
+                      <UndoCleanedDialog capsule={capsule} onSuccess={handleRefresh} />
+                    </div>
+                    {lastGuest && (
+                      <div className="text-xs space-y-0.5 border-t border-green-100 pt-2 mt-2">
+                        <div className="font-medium text-gray-700">{lastGuest.name}</div>
+                        {lastGuest.nationality && <div className="text-gray-500">From: {lastGuest.nationality}</div>}
+                        <div className="text-gray-500">
+                          {lastGuest.checkinTime && `In: ${new Date(lastGuest.checkinTime).toLocaleDateString()}`}
+                          {lastGuest.checkoutTime && ` → Out: ${new Date(lastGuest.checkoutTime).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                    )}
+                    <div className="text-xs text-green-600 mt-1">
+                      Cleaned {capsule.lastCleanedAt ? new Date(capsule.lastCleanedAt).toLocaleDateString() : ''} by {capsule.lastCleanedBy}
+                    </div>
                   </div>
-                  <UndoCleanedDialog capsule={capsule} onSuccess={handleRefresh} />
-                </div>
-              ))}
+                );
+              })}
           </div>
         );
       case 'card':
@@ -529,6 +608,7 @@ export default function CapsuleCleaningStatus() {
                   key={capsule.id}
                   capsule={capsule}
                   onRefresh={handleRefresh}
+                  lastGuest={getLastGuestForCapsule(capsule.number)}
                 />
               ))}
           </div>
