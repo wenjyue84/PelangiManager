@@ -340,7 +340,7 @@ export default function CapsuleCleaningStatus() {
 
   // Fetch recently checked out guests to show alongside cleaned capsules
   const { data: guestHistoryResponse } = useQuery<{ data: Guest[]; pagination: any }>({
-    queryKey: ["/api/guests/history", { limit: 100 }],
+    queryKey: ["/api/guests/history?limit=100&sortBy=checkoutTime&sortOrder=desc"],
     staleTime: 30000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
