@@ -16,11 +16,22 @@ interface OfflineIndicatorProps {
   showDetails?: boolean;
 }
 
+// Detect if user is on Android mobile device
+function isAndroidDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const userAgent = navigator.userAgent.toLowerCase();
+  return /android/i.test(userAgent);
+}
+
 export function OfflineIndicator({ className = '', showDetails = false }: OfflineIndicatorProps) {
   const [state, actions] = useOffline();
   const { isOnline, isOffline } = useNetworkStatus();
+  const isAndroid = isAndroidDevice();
 
-  if (isOnline && state.queueSize === 0 && !state.updateAvailable) {
+  // Hide update alert on Android, so adjust the condition
+  const shouldShowUpdateAlert = state.updateAvailable && !isAndroid;
+
+  if (isOnline && state.queueSize === 0 && !shouldShowUpdateAlert) {
     return null; // Don't show anything when everything is normal
   }
 
@@ -79,8 +90,8 @@ export function OfflineIndicator({ className = '', showDetails = false }: Offlin
         </Alert>
       )}
 
-      {/* App Update Available */}
-      {state.updateAvailable && (
+      {/* App Update Available - hidden on Android devices */}
+      {shouldShowUpdateAlert && (
         <Alert className="mb-2 border-green-200 bg-green-50">
           <Download className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800 flex items-center justify-between">
@@ -139,6 +150,7 @@ export function OfflineIndicator({ className = '', showDetails = false }: Offlin
 export function NetworkStatusBadge() {
   const { isOnline } = useNetworkStatus();
   const [state] = useOffline();
+  const isAndroid = isAndroidDevice();
 
   return (
     <div className="flex items-center gap-2">
@@ -156,7 +168,8 @@ export function NetworkStatusBadge() {
         </Badge>
       )}
       
-      {state.updateAvailable && (
+      {/* Hide update badge on Android devices */}
+      {state.updateAvailable && !isAndroid && (
         <Badge variant="default" className="text-xs">
           <Download className="h-3 w-3 mr-1" />
           Update
