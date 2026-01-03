@@ -301,6 +301,9 @@ export default function CheckIn() {
   });
 
   const onSubmit = (data: InsertGuest) => {
+    // Store form data first so it's available for subsequent dialogs
+    setFormDataToSubmit(data);
+    
     // Check if selected capsule has issues
     const selectedCapsule = availableCapsules.find(c => c.number === data.capsuleNumber);
     
@@ -323,8 +326,18 @@ export default function CheckIn() {
       return;
     }
     
-    // Normal flow - no issues
-    setFormDataToSubmit(data);
+    // Check for maintenance issues BEFORE showing confirmation dialog
+    if (showMaintenanceAlert && data.capsuleNumber) {
+      const problems = (selectedCapsule as any)?.activeProblems || [];
+      
+      if (problems.length > 0) {
+        setMaintenanceProblems(problems);
+        setShowMaintenanceDialog(true);
+        return; // Wait for user to acknowledge before showing confirmation
+      }
+    }
+    
+    // Normal flow - no issues, show confirmation dialog
     setShowCheckinConfirmation(true);
     setCurrentStep(2);
   };
@@ -333,15 +346,8 @@ export default function CheckIn() {
     if (formDataToSubmit) {
       setShowCapsuleWarning(false);
       setCapsuleWarningMessage("");
-      // Proceed with check-in despite capsule issues
-      setShowCheckinConfirmation(true);
-      setCurrentStep(2);
-    }
-  };
-
-  const confirmCheckin = () => {
-    if (formDataToSubmit) {
-      // Check if we should show maintenance alert before proceeding
+      
+      // After capsule warning, also check for maintenance issues
       if (showMaintenanceAlert && formDataToSubmit.capsuleNumber) {
         const selectedCapsule = availableCapsules.find(c => c.number === formDataToSubmit.capsuleNumber);
         const problems = (selectedCapsule as any)?.activeProblems || [];
@@ -349,11 +355,28 @@ export default function CheckIn() {
         if (problems.length > 0) {
           setMaintenanceProblems(problems);
           setShowMaintenanceDialog(true);
-          return; // Wait for user to acknowledge
+          return; // Wait for user to acknowledge before showing confirmation
         }
       }
       
-      // Proceed with check-in
+      // Proceed to check-in confirmation dialog
+      setShowCheckinConfirmation(true);
+      setCurrentStep(2);
+    }
+  };
+
+  // Called after user acknowledges maintenance issues - proceed to confirmation dialog
+  const confirmMaintenanceAlert = () => {
+    setShowMaintenanceDialog(false);
+    setMaintenanceProblems([]);
+    // Now show the check-in confirmation dialog
+    setShowCheckinConfirmation(true);
+    setCurrentStep(2);
+  };
+
+  // Called from confirmation dialog - directly proceed with check-in
+  const confirmCheckin = () => {
+    if (formDataToSubmit) {
       proceedWithCheckin();
     }
   };
@@ -955,12 +978,11 @@ Welcome to Pelangi Capsule Hostel! 🌈`;
             </p>
           </div>
         }
-        confirmText="I've Informed the Guest, Proceed"
-        cancelText="Cancel Check-In"
-        onConfirm={proceedWithCheckin}
+        confirmText="I've Informed the Guest, Continue"
+        cancelText="Cancel"
+        onConfirm={confirmMaintenanceAlert}
         variant="warning"
         icon={<AlertTriangle className="h-6 w-6 text-orange-600" />}
-        isLoading={checkinMutation.isPending}
       />
     </div>
   );
