@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { extractDetailedError, createErrorToast } from "@/lib/errorHandler";
+import { phoneUtils } from "@/lib/validation";
 import GuestDetailsModal from "./guest-details-modal";
 import ExtendStayDialog from "./ExtendStayDialog";
 import { CheckoutConfirmationDialog } from "./confirmation-dialog";
@@ -1723,16 +1724,27 @@ export default function SortableGuestTable() {
                       
                       <div className="flex items-center gap-2">
                         {guest.phoneNumber && (
-                          <Button
-                            variant="secondary"
-                            className="h-11 w-11 rounded-full"
-                            asChild
-                            title={`Call ${guest.phoneNumber}`}
-                          >
-                            <a href={`tel:${guest.phoneNumber}`}>
+                          phoneUtils.isCallable(guest.phoneNumber) ? (
+                            <Button
+                              variant="secondary"
+                              className="h-11 w-11 rounded-full"
+                              asChild
+                              title={`Call ${guest.phoneNumber}`}
+                            >
+                              <a href={phoneUtils.getTelHref(guest.phoneNumber)!}>
+                                <Phone className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              className="h-11 w-11 rounded-full opacity-50"
+                              disabled
+                              title={guest.phoneNumber}
+                            >
                               <Phone className="h-4 w-4" />
-                            </a>
-                          </Button>
+                            </Button>
+                          )
                         )}
                         <Button
                           variant="destructive"

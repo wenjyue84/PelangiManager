@@ -7,6 +7,7 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Copy, Phone } from 'lucide-react';
+import { phoneUtils } from '@/lib/validation';
 
 interface CheckinConfirmationProps {
   guest: InsertGuest;
@@ -64,9 +65,13 @@ ${guest.notes ? `*Notes:* 📝 ${guest.notes}` : ''}
           {guest.phoneNumber && (
             <li>
               <strong>Phone:</strong> 
-              <a href={`tel:${guest.phoneNumber}`} className="text-blue-600 hover:underline ml-1">
-                {guest.phoneNumber}
-              </a>
+              {phoneUtils.isCallable(guest.phoneNumber) ? (
+                <a href={phoneUtils.getTelHref(guest.phoneNumber)!} className="text-blue-600 hover:underline ml-1">
+                  {guest.phoneNumber}
+                </a>
+              ) : (
+                <span className="ml-1 text-gray-600">{guest.phoneNumber}</span>
+              )}
             </li>
           )}
           {guest.notes && (

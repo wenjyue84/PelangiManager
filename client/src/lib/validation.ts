@@ -32,25 +32,28 @@ export const clientValidation = {
   },
 
   /**
-   * Validate phone number as user types
+   * Validate phone number as user types - fault tolerant for various formats
    */
   validatePhoneRealTime: (phone: string): { isValid: boolean; message?: string } => {
     if (!phone) return { isValid: true }; // Empty is valid for optional fields
     
-    // Remove spaces and special characters for length check
-    const cleaned = phone.replace(/[\s\-\(\)]/g, "");
+    // Remove all non-digit characters except + for cleaning
+    const digitsOnly = phone.replace(/[^\d+]/g, "");
+    const digitCount = digitsOnly.replace(/\+/g, "").length;
     
-    if (cleaned.length < 7) {
-      return { isValid: false, message: "Phone number too short" };
+    // Very lenient validation - just check minimum digits
+    if (digitCount < 6) {
+      return { isValid: false, message: "Phone number too short (min 6 digits)" };
     }
     
-    if (cleaned.length > 20) {
+    if (digitCount > 20) {
       return { isValid: false, message: "Phone number too long" };
     }
     
-    const phoneRegex = /^[+]?[\d\s\-\(\)]{7,20}$/;
+    // Allow any format with digits, spaces, dashes, parentheses, dots, plus sign
+    const phoneRegex = /^[+]?[\d\s\-\(\).]+$/;
     if (!phoneRegex.test(phone)) {
-      return { isValid: false, message: "Invalid phone number format" };
+      return { isValid: false, message: "Phone number contains invalid characters" };
     }
     
     return { isValid: true };
@@ -304,6 +307,53 @@ export const inputFormatters = {
 };
 
 /**
+ * Phone number utilities for display and tel: links
+ */
+export const phoneUtils = {
+  /**
+   * Clean phone number for tel: links - removes all formatting
+   * Returns null if phone is not valid for calling
+   */
+  cleanForTelLink: (phone: string | null | undefined): string | null => {
+    if (!phone) return null;
+    
+    // Remove all non-digit characters except leading +
+    const hasPlus = phone.trim().startsWith('+');
+    const digitsOnly = phone.replace(/[^\d]/g, '');
+    
+    // Need at least 6 digits to be callable
+    if (digitsOnly.length < 6) return null;
+    
+    return hasPlus ? `+${digitsOnly}` : digitsOnly;
+  },
+
+  /**
+   * Check if a phone number is callable (valid for tel: link)
+   */
+  isCallable: (phone: string | null | undefined): boolean => {
+    if (!phone) return false;
+    const digitsOnly = phone.replace(/[^\d]/g, '');
+    return digitsOnly.length >= 6 && digitsOnly.length <= 20;
+  },
+
+  /**
+   * Format phone for display - keep original format but clean it up
+   */
+  formatForDisplay: (phone: string | null | undefined): string => {
+    if (!phone) return '-';
+    return phone.trim();
+  },
+
+  /**
+   * Get safe tel: href - returns null if not callable
+   */
+  getTelHref: (phone: string | null | undefined): string | null => {
+    const cleaned = phoneUtils.cleanForTelLink(phone);
+    return cleaned ? `tel:${cleaned}` : null;
+  }
+};
+
+/**
  * Custom hooks for form validation
  */
 export const useFormValidation = () => {
@@ -341,8 +391,9 @@ export const quickValidation = {
   },
   
   isPhone: (phone: string): boolean => {
-    const phoneRegex = /^[+]?[\d\s\-\(\)]{7,20}$/;
-    return phoneRegex.test(phone);
+    if (!phone) return false;
+    const digitsOnly = phone.replace(/[^\d]/g, "");
+    return digitsOnly.length >= 6 && digitsOnly.length <= 20;
   },
   
   isName: (name: string): boolean => {
