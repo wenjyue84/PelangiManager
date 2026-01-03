@@ -314,7 +314,7 @@ export default function CapsuleCleaningStatus() {
   const queryClient = useQueryClient();
   const labels = useAccommodationLabels();
   const isMobile = useIsMobile();
-  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'card' | 'list' | 'table'>('table');
 
   useEffect(() => {
     if (isMobile) {
