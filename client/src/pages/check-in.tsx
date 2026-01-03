@@ -301,6 +301,9 @@ export default function CheckIn() {
   });
 
   const onSubmit = (data: InsertGuest) => {
+    // Store data first
+    setFormDataToSubmit(data);
+    
     // Check if selected capsule has issues
     const selectedCapsule = availableCapsules.find(c => c.number === data.capsuleNumber);
     
@@ -323,8 +326,18 @@ export default function CheckIn() {
       return;
     }
     
-    // Normal flow - no issues
-    setFormDataToSubmit(data);
+    // Check for maintenance issues BEFORE confirmation dialog
+    if (showMaintenanceAlert && data.capsuleNumber) {
+      const problems = (selectedCapsule as any)?.activeProblems || [];
+      
+      if (problems.length > 0) {
+        setMaintenanceProblems(problems);
+        setShowMaintenanceDialog(true);
+        return; // Wait for user to acknowledge
+      }
+    }
+    
+    // Normal flow - show confirmation
     setShowCheckinConfirmation(true);
     setCurrentStep(2);
   };
@@ -341,25 +354,7 @@ export default function CheckIn() {
 
   const confirmCheckin = () => {
     if (formDataToSubmit) {
-      // Check if we should show maintenance alert before proceeding
-      if (showMaintenanceAlert && formDataToSubmit.capsuleNumber) {
-        const selectedCapsule = availableCapsules.find(c => c.number === formDataToSubmit.capsuleNumber);
-        const problems = (selectedCapsule as any)?.activeProblems || [];
-        
-        if (problems.length > 0) {
-          setMaintenanceProblems(problems);
-          setShowMaintenanceDialog(true);
-          return; // Wait for user to acknowledge
-        }
-      }
-      
-      // Proceed with check-in
-      proceedWithCheckin();
-    }
-  };
-
-  const proceedWithCheckin = () => {
-    if (formDataToSubmit) {
+      // Proceed with check-in directly (maintenance was already shown before confirmation)
       setCurrentStep(3);
       const payload: InsertGuest = {
         ...formDataToSubmit,
@@ -369,10 +364,16 @@ export default function CheckIn() {
       setCheckedInGuest(formDataToSubmit);
       checkinMutation.mutate(payload);
       setShowCheckinConfirmation(false);
-      setShowMaintenanceDialog(false);
-      setMaintenanceProblems([]);
       setFormDataToSubmit(null);
     }
+  };
+
+  const proceedAfterMaintenanceAlert = () => {
+    // Close maintenance dialog and show confirmation dialog
+    setShowMaintenanceDialog(false);
+    setMaintenanceProblems([]);
+    setShowCheckinConfirmation(true);
+    setCurrentStep(2);
   };
 
   const handleClear = () => {
@@ -955,12 +956,11 @@ Welcome to Pelangi Capsule Hostel! 🌈`;
             </p>
           </div>
         }
-        confirmText="I've Informed the Guest, Proceed"
-        cancelText="Cancel Check-In"
-        onConfirm={proceedWithCheckin}
+        confirmText="I've Informed the Guest, Continue"
+        cancelText="Cancel"
+        onConfirm={proceedAfterMaintenanceAlert}
         variant="warning"
         icon={<AlertTriangle className="h-6 w-6 text-orange-600" />}
-        isLoading={checkinMutation.isPending}
       />
     </div>
   );
