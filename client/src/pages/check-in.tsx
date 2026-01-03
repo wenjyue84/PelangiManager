@@ -9,7 +9,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, User, Bed, Phone, Mail, CreditCard, Calendar, Users } from "lucide-react";
+import { UserPlus, User, Bed, Phone, Mail, CreditCard, Calendar, Users, AlertTriangle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { CapsuleProblem } from "@shared/schema";
 import { insertGuestSchema, type InsertGuest, type Capsule, type Guest } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +66,11 @@ export default function CheckIn() {
   // Add new state for capsule assignment warnings
   const [showCapsuleWarning, setShowCapsuleWarning] = useState(false);
   const [capsuleWarningMessage, setCapsuleWarningMessage] = useState("");
+
+  // Add state for maintenance alert feature
+  const [showMaintenanceAlert, setShowMaintenanceAlert] = useState(true);
+  const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
+  const [maintenanceProblems, setMaintenanceProblems] = useState<CapsuleProblem[]>([]);
 
   // Add state for pre-selected capsule from Dashboard
   const [preSelectedCapsule, setPreSelectedCapsule] = useState<string | null>(null);
@@ -334,6 +341,25 @@ export default function CheckIn() {
 
   const confirmCheckin = () => {
     if (formDataToSubmit) {
+      // Check if we should show maintenance alert before proceeding
+      if (showMaintenanceAlert && formDataToSubmit.capsuleNumber) {
+        const selectedCapsule = availableCapsules.find(c => c.number === formDataToSubmit.capsuleNumber);
+        const problems = (selectedCapsule as any)?.activeProblems || [];
+        
+        if (problems.length > 0) {
+          setMaintenanceProblems(problems);
+          setShowMaintenanceDialog(true);
+          return; // Wait for user to acknowledge
+        }
+      }
+      
+      // Proceed with check-in
+      proceedWithCheckin();
+    }
+  };
+
+  const proceedWithCheckin = () => {
+    if (formDataToSubmit) {
       setCurrentStep(3);
       const payload: InsertGuest = {
         ...formDataToSubmit,
@@ -343,6 +369,8 @@ export default function CheckIn() {
       setCheckedInGuest(formDataToSubmit);
       checkinMutation.mutate(payload);
       setShowCheckinConfirmation(false);
+      setShowMaintenanceDialog(false);
+      setMaintenanceProblems([]);
       setFormDataToSubmit(null);
     }
   };
@@ -833,6 +861,21 @@ Welcome to Pelangi Capsule Hostel! 🌈`;
                 </TooltipContent>
               </Tooltip>
             </div>
+
+            <div className="flex items-center space-x-2 mt-4">
+              <Checkbox
+                id="showMaintenanceAlert"
+                checked={showMaintenanceAlert}
+                onCheckedChange={(checked) => setShowMaintenanceAlert(checked === true)}
+                data-testid="checkbox-maintenance-alert"
+              />
+              <Label 
+                htmlFor="showMaintenanceAlert" 
+                className="text-sm text-muted-foreground cursor-pointer"
+              >
+                Show maintenance issues alert before check-in
+              </Label>
+            </div>
           </form>
           </Form>
           
@@ -879,6 +922,45 @@ Welcome to Pelangi Capsule Hostel! 🌈`;
         onConfirm={confirmCapsuleWarning}
         variant="warning"
         icon={<Bed className="h-6 w-6 text-orange-600" />}
+      />
+
+      {/* Maintenance Alert Dialog - shown after check-in confirmation if capsule has issues */}
+      <ConfirmationDialog
+        open={showMaintenanceDialog}
+        onOpenChange={setShowMaintenanceDialog}
+        title={`⚠️ ${labels.singular} Maintenance Issues`}
+        description={
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-3">
+              This {labels.singular.toLowerCase()} has the following reported issues. Please inform the guest before proceeding:
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 max-h-60 overflow-y-auto">
+              {maintenanceProblems.map((problem, index) => (
+                <div key={problem.id} className={`${index > 0 ? 'mt-3 pt-3 border-t border-orange-200' : ''}`}>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-orange-800">{problem.description}</p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Reported: {problem.reportedAt ? new Date(problem.reportedAt).toLocaleDateString() : 'Unknown'}
+                        {problem.reportedBy && ` by ${problem.reportedBy}`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              You can manage these issues in Settings → {labels.singular} Maintenance
+            </p>
+          </div>
+        }
+        confirmText="I've Informed the Guest, Proceed"
+        cancelText="Cancel Check-In"
+        onConfirm={proceedWithCheckin}
+        variant="warning"
+        icon={<AlertTriangle className="h-6 w-6 text-orange-600" />}
+        isLoading={checkinMutation.isPending}
       />
     </div>
   );
