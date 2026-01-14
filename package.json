@@ -9,9 +9,10 @@
     "dev:frontend": "vite --port 3000",
     "dev:memory": "cross-env NODE_ENV=development PORT=3005 tsx watch --clear-screen=false server/index.ts",
     "dev:build": "npm run build && npm run dev:memory",
+    "dev:unified": "cross-env NODE_ENV=development PORT=4000 tsx watch --clear-screen=false server/index.ts",
     "dev:replit": "npm run build && tsx watch --clear-screen=false server/index.ts",
     "dev:safe": "node scripts/start-dev.js",
-    "dev:clean": "npx kill-port 5000 && npx kill-port 3000 && npm run dev",
+    "dev:clean": "node scripts/cleanup.js && npx kill-port 5000 && npx kill-port 3000 && npm run dev",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "cross-env NODE_ENV=production PORT=5000 node dist/index.js",
     "start:aws": "cross-env NODE_ENV=production PORT=8080 node dist/index.js",
@@ -26,7 +27,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "port:clean": "npx kill-port 5000",
-    "process:clean": "pkill -f \"tsx watch\" || true",
+    "process:clean": "node scripts/cleanup.js",
     "postinstall": "npm install --os=linux --cpu=x64 sharp"
   },
   "dependencies": {
