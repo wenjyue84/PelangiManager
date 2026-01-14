@@ -79,12 +79,14 @@ export const capsules = pgTable("capsules", {
   purchaseDate: date("purchase_date"), // When the capsule was purchased
   position: text("position"), // 'top' or 'bottom' for stacked capsules
   remark: text("remark"), // Additional notes about the capsule
+  branch: text("branch"), // 'Pelangi' or 'JB' for different hostel branches
 }, (table) => ([
   index("idx_capsules_is_available").on(table.isAvailable),
   index("idx_capsules_section").on(table.section),
   index("idx_capsules_cleaning_status").on(table.cleaningStatus),
   index("idx_capsules_position").on(table.position),
   index("idx_capsules_to_rent").on(table.toRent),
+  index("idx_capsules_branch").on(table.branch),
 ]));
 
 // Separate table for tracking all capsule problems
@@ -213,7 +215,7 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     .transform(val => val.trim()),
   capsuleNumber: z.string()
     .min(1, "Please select a capsule for the guest")
-    .regex(/^C\d+$/, "Invalid capsule format. Please use format like C1, C2, or C24 (C followed by numbers)"),
+    .regex(/^[CJR]\d+$/, "Invalid format. Please use format like C1, J1, or R1"),
   paymentAmount: z.string()
     .regex(/^\d*\.?\d{0,2}$/, "Invalid amount format. Please enter numbers only (e.g., 50.00 or 150)")
     .transform(val => val || "0")
@@ -296,8 +298,8 @@ export const insertCapsuleSchema = createInsertSchema(capsules).omit({
   id: true,
 }).extend({
   number: z.string()
-    .min(1, "Capsule number is required")
-    .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
+    .min(1, "Capsule/Room number is required")
+    .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1")
     .transform(val => val.toUpperCase()),
   section: z.enum(["back", "middle", "front"], {
     required_error: "Section must be 'back', 'middle', or 'front'",
@@ -313,6 +315,7 @@ export const insertCapsuleSchema = createInsertSchema(capsules).omit({
   purchaseDate: z.date().optional(),
   position: z.enum(["top", "bottom"]).optional(),
   remark: z.string().max(500, "Remark must not exceed 500 characters").optional(),
+  branch: z.string().max(50, "Branch must not exceed 50 characters").optional(),
   problemDescription: z.string()
     .max(500, "Problem description must not exceed 500 characters")
     .transform(val => val?.trim())
@@ -321,8 +324,8 @@ export const insertCapsuleSchema = createInsertSchema(capsules).omit({
 
 export const updateCapsuleSchema = z.object({
   number: z.string()
-    .min(1, "Capsule number is required")
-    .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
+    .min(1, "Capsule/Room number is required")
+    .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1")
     .transform(val => val.toUpperCase())
     .optional(),
   section: z.enum(["back", "middle", "front"], {
@@ -337,6 +340,7 @@ export const updateCapsuleSchema = z.object({
   purchaseDate: z.date().optional(),
   position: z.enum(["top", "bottom"]).optional(),
   remark: z.string().max(500, "Remark must not exceed 500 characters").optional(),
+  branch: z.string().max(50, "Branch must not exceed 50 characters").optional(),
   problemDescription: z.string()
     .max(500, "Problem description must not exceed 500 characters")
     .transform(val => val?.trim())
@@ -350,7 +354,7 @@ export const checkoutGuestSchema = z.object({
 export const markCapsuleCleanedSchema = z.object({
   capsuleNumber: z.string()
     .min(1, "Capsule number is required")
-    .regex(/^C\d+$/, "Capsule number must be in format like C1, C11, C25"),
+    .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1"),
   cleanedBy: z.string()
     .min(1, "Cleaner name is required")
     .max(50, "Cleaner name must not exceed 50 characters")
@@ -375,7 +379,7 @@ export const googleAuthSchema = z.object({
 export const createCapsuleProblemSchema = z.object({
   capsuleNumber: z.string()
     .min(1, "Capsule number is required")
-    .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
+    .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1")
     .transform(val => val.toUpperCase()),
   description: z.string()
     .min(10, "Problem description must be at least 10 characters long")
@@ -624,7 +628,7 @@ export const guestSelfCheckinSchema = z.object({
 export const createTokenSchema = z.object({
   capsuleNumber: z.string()
     .min(1, "Capsule number is required")
-    .regex(/^C\d+$/, "Capsule number must be in format like C1, C11, C25")
+    .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1")
     .transform(val => val.toUpperCase())
     .optional(),
   autoAssign: z.boolean().optional(),
@@ -692,7 +696,7 @@ export const createTokenSchema = z.object({
 export const updateGuestTokenCapsuleSchema = z.object({
   capsuleNumber: z.string()
     .min(1, "Capsule number is required")
-    .regex(/^C\d+$/, "Capsule number must be in format like C1, C11, C25")
+    .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1")
     .transform(val => val.toUpperCase())
     .optional(),
   autoAssign: z.boolean().optional(),
@@ -994,7 +998,7 @@ export const emailSchema = z.string()
 
 export const capsuleNumberSchema = z.string()
   .min(1, "Capsule number is required")
-  .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24")
+  .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1")
   .transform(val => val.toUpperCase());
 
 export const nameSchema = z.string()
@@ -1076,7 +1080,7 @@ export const updateGuestSchema = z.object({
     .optional(),
   capsuleNumber: z.string()
     .min(1, "Please select a capsule for the guest")
-    .regex(/^C\d+$/, "Invalid capsule format. Please use format like C1, C2, or C24 (C followed by numbers)")
+    .regex(/^[CJR]\d+$/, "Invalid format. Please use format like C1, J1, or R1")
     .optional(),
   paymentAmount: z.string()
     .regex(/^\d*\.?\d{0,2}$/, "Invalid amount format. Please enter numbers only (e.g., 50.00 or 150)")

@@ -21,8 +21,8 @@ import { type CapsuleProblem, type PaginatedResponse } from "@shared/schema";
 // Schema for capsule form validation
 const capsuleFormSchema = z.object({
   number: z.string()
-    .min(1, "Capsule number is required")
-    .regex(/^C\d+$/, "Capsule number must be in format like C1, C2, C24"),
+    .min(1, "Capsule/Room number is required")
+    .regex(/^[CJR]\d+$/, "Number must be in format like C1, J1, or R1"),
   section: z.enum(["back", "middle", "front"], {
     required_error: "Section must be 'back', 'middle', or 'front'",
   }),
@@ -31,6 +31,7 @@ const capsuleFormSchema = z.object({
   purchaseDate: z.string().optional(),
   position: z.enum(["top", "bottom"]).optional(),
   remark: z.string().max(500, "Remark must not exceed 500 characters").optional(),
+  branch: z.string().max(50, "Branch must not exceed 50 characters").optional(),
 });
 
 type CapsuleFormData = z.infer<typeof capsuleFormSchema>;
@@ -92,6 +93,7 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
       purchaseDate: "",
       position: undefined,
       remark: "",
+      branch: "",
     },
   });
 
@@ -105,6 +107,7 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
       purchaseDate: "",
       position: undefined,
       remark: "",
+      branch: "",
     },
   });
 
@@ -197,6 +200,7 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
       purchaseDate: capsule.purchaseDate ? new Date(capsule.purchaseDate).toISOString().split('T')[0] : "",
       position: capsule.position || "",
       remark: capsule.remark || "",
+      branch: capsule.branch || "",
     });
     setEditDialogOpen(true);
   };
@@ -241,6 +245,7 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
     // Prepare CSV data
     const csvHeaders = [
       "Capsule Number",
+      "Branch",
       "Section", 
       "Position",
       "To Rent",
@@ -252,6 +257,7 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
 
     const csvData = items.map(capsule => [
       capsule.number,
+      capsule.branch || "",
       capsule.section,
       capsule.position || "",
       capsule.toRent !== false ? "Yes" : "No",
@@ -539,6 +545,7 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-3 px-4 font-medium text-gray-900">Number</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-900">Branch</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">Section</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">Position</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-900">To Rent</th>
@@ -553,6 +560,15 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
                         <tr key={c.number} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <span className="font-semibold text-gray-900">{c.number}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            {c.branch ? (
+                              <Badge variant="secondary" className="capitalize">
+                                {c.branch}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             <Badge variant="outline" className="capitalize">
@@ -645,10 +661,32 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
                 name="number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Capsule Number *</FormLabel>
+                    <FormLabel>Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="C1, C2, C24..." {...field} />
+                      <Input placeholder="C1, J1, R1..." {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={createCapsuleForm.control}
+                name="branch"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Pelangi">Pelangi</SelectItem>
+                        <SelectItem value="JB">JB</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -790,10 +828,32 @@ export default function CapsulesTab({ capsules, queryClient, toast, labels }: an
                 name="number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Capsule Number *</FormLabel>
+                    <FormLabel>Number *</FormLabel>
                     <FormControl>
-                      <Input placeholder="C1, C2, C24..." {...field} />
+                      <Input placeholder="C1, J1, R1..." {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editCapsuleForm.control}
+                name="branch"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Branch</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Pelangi">Pelangi</SelectItem>
+                        <SelectItem value="JB">JB</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
