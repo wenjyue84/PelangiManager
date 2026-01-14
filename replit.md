@@ -1,6 +1,6 @@
 # Overview
 
-This is the "Pelangi Capsule Hostel" management system, a full-stack web application designed to manage guest check-ins, check-outs, and monitor occupancy across 24 capsules. It features a modern React frontend with TypeScript and a Node.js/Express backend, aimed at providing real-time hostel operations management. The system supports persistent data storage, push notifications for operational updates, and an unauthenticated dashboard access for emergency response.
+This is a multi-branch hostel management system supporting "Pelangi Capsule Hostel" and "JB Capsule Hostel". The full-stack web application manages guest check-ins, check-outs, and monitors occupancy across capsules (C-prefix for Pelangi, J-prefix for JB) and rooms (R-prefix for JB). It features a modern React frontend with TypeScript and a Node.js/Express backend, aimed at providing real-time hostel operations management. The system supports persistent data storage, push notifications for operational updates, branch-based filtering, and an unauthenticated dashboard access for emergency response.
 
 # User Preferences
 
