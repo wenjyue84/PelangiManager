@@ -243,11 +243,13 @@ export const insertGuestSchema = createInsertSchema(guests).omit({
     .refine(val => {
       if (!val) return true; // Optional field
       const date = new Date(val);
-      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
       const maxDate = new Date();
-      maxDate.setFullYear(today.getFullYear() + 1); // Max 1 year from now
-      return date >= today && date <= maxDate;
-    }, "Expected checkout date must be between today and 1 year from now")
+      maxDate.setFullYear(maxDate.getFullYear() + 1); // Max 1 year from now
+      return date >= yesterday && date <= maxDate;
+    }, "Expected checkout date must be between yesterday and 1 year from now")
     .optional(),
   checkInDate: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Check-in date must be in YYYY-MM-DD format")
@@ -440,13 +442,14 @@ export const guestSelfCheckinSchema = z.object({
     .refine(val => {
       if (!val) return false; // Required field
       const date = new Date(val);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
       const maxDate = new Date();
-      maxDate.setFullYear(today.getFullYear() + 1); // Max 1 year from now
+      maxDate.setFullYear(maxDate.getFullYear() + 1); // Max 1 year from now
       maxDate.setHours(0, 0, 0, 0);
-      return date >= today && date <= maxDate;
-    }, "Check-out date must be between today and 1 year from now"),
+      return date >= yesterday && date <= maxDate;
+    }, "Check-out date must be between yesterday and 1 year from now"),
   icNumber: z.string()
     .optional()
     .transform(val => val === "" ? undefined : val) // Convert empty strings to undefined
@@ -644,11 +647,13 @@ export const createTokenSchema = z.object({
     .refine(val => {
       if (!val) return true; // Optional field
       const date = new Date(val);
-      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
       const maxDate = new Date();
-      maxDate.setFullYear(today.getFullYear() + 1); // Max 1 year from now
-      return date >= today && date <= maxDate;
-    }, "Expected checkout date must be between today and 1 year from now")
+      maxDate.setFullYear(maxDate.getFullYear() + 1); // Max 1 year from now
+      return date >= yesterday && date <= maxDate;
+    }, "Expected checkout date must be between yesterday and 1 year from now")
     .optional(),
   checkInDate: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Check-in date must be in YYYY-MM-DD format")
@@ -1109,11 +1114,13 @@ export const updateGuestSchema = z.object({
     .refine(val => {
       if (!val) return true; // Optional field
       const date = new Date(val);
-      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
       const maxDate = new Date();
-      maxDate.setFullYear(today.getFullYear() + 1); // Max 1 year from now
-      return date >= today && date <= maxDate;
-    }, "Expected checkout date must be between today and 1 year from now")
+      maxDate.setFullYear(maxDate.getFullYear() + 1); // Max 1 year from now
+      return date >= yesterday && date <= maxDate;
+    }, "Expected checkout date must be between yesterday and 1 year from now")
     .optional(),
   checkInDate: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Check-in date must be in YYYY-MM-DD format")
