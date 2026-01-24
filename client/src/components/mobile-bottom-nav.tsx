@@ -1,6 +1,6 @@
 import { useContext, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Home, UserPlus, UserX, ListChecks, Settings, MoreHorizontal, DollarSign } from "lucide-react";
+import { Home, UserPlus, UserX, ListChecks, Settings, MoreHorizontal, DollarSign, Clock } from "lucide-react";
 import { AuthContext } from "@/lib/auth";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -39,6 +39,14 @@ const mainNavigationItems = [
 ];
 
 const moreNavigationItems = [
+  { 
+    path: "/history", 
+    label: "History", 
+    icon: Clock, 
+    requireAuth: true,
+    color: "text-purple-600 bg-purple-50",
+    tooltip: "View past guests and check-out history"
+  },
   { 
     path: "/finance", 
     label: "Finance", 
