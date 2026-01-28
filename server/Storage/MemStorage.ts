@@ -384,8 +384,10 @@ export class MemStorage implements IStorage {
         bVal = b.name;
       } else if (sortBy === 'capsuleNumber') {
         // Natural sort for capsule numbers (C1, C2, ..., C10, C11 instead of C1, C10, C11, C2)
+        // Handles both formats: "C1", "C11" and "C-01", "A-02"
         const parseCapNum = (cap: string) => {
-          const match = cap?.match(/^([A-Za-z]+)(\d+)$/);
+          // Match formats like "C1", "C11", "C-01", "A-02", "R3"
+          const match = cap?.match(/^([A-Za-z]+)-?(\d+)$/);
           if (match) {
             return { prefix: match[1].toUpperCase(), num: parseInt(match[2], 10) };
           }
