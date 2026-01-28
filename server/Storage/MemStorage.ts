@@ -383,8 +383,25 @@ export class MemStorage implements IStorage {
         aVal = a.name;
         bVal = b.name;
       } else if (sortBy === 'capsuleNumber') {
-        aVal = a.capsuleNumber;
-        bVal = b.capsuleNumber;
+        // Natural sort for capsule numbers (C1, C2, ..., C10, C11 instead of C1, C10, C11, C2)
+        const parseCapNum = (cap: string) => {
+          const match = cap?.match(/^([A-Za-z]+)(\d+)$/);
+          if (match) {
+            return { prefix: match[1].toUpperCase(), num: parseInt(match[2], 10) };
+          }
+          return { prefix: cap || '', num: 0 };
+        };
+        const aParsed = parseCapNum(a.capsuleNumber);
+        const bParsed = parseCapNum(b.capsuleNumber);
+        
+        // Compare by prefix first, then by number
+        if (aParsed.prefix !== bParsed.prefix) {
+          aVal = aParsed.prefix;
+          bVal = bParsed.prefix;
+        } else {
+          aVal = aParsed.num;
+          bVal = bParsed.num;
+        }
       } else if (sortBy === 'checkinTime') {
         aVal = new Date(a.checkinTime).getTime();
         bVal = new Date(b.checkinTime).getTime();
