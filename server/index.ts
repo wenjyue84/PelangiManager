@@ -1,9 +1,18 @@
+import "./loadEnv";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { registerObjectRoutes } from "./routes/index";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeConfig, AppConfig, getConfig, getConfigUtils } from "./configManager";
 import { storage } from "./storage";
+
+// Log storage mode at startup so we can verify cloud DB is used
+const dbUrl = process.env.DATABASE_URL;
+if (dbUrl) {
+  console.log("📦 DATABASE_URL: set (" + (dbUrl.includes("neon.tech") ? "Neon cloud" : "PostgreSQL") + ")");
+} else {
+  console.log("📦 DATABASE_URL: not set → using in-memory storage");
+}
 
 const app = express();
 // Increase body size limits to accommodate small images embedded as Base64 in JSON
